@@ -91,7 +91,7 @@ export default function PropertiesPage() {
   })
 
   useEffect(() => {
-    console.log("data", data)
+    console.log("list data", data)
   }, [data])
 
   const handleStartDateChange = (date: Date | undefined) => {
@@ -254,7 +254,7 @@ export default function PropertiesPage() {
   }
 
   const transformedData =
-  data?.getProperties.map((property : any) => ({
+  data?.properties?.getProperties.map((property : any) => ({
     _id: property._id || "N/A",
     roadLocation: property.roadLocation || "N/A",
     developmentName: property.developmentName || "N/A",

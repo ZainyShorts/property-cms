@@ -3,9 +3,10 @@
 import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Plus, Trash2, Copy, Check, FilePenLine, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
+import { Plus, Trash2, Copy, Check, FilePenLine, ChevronLeft, ChevronRight, ChevronDown, ExternalLink } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import Link from "next/link"
 
 interface DataTableProps {
   headers: string[]
@@ -60,6 +61,10 @@ export function DataTable({ headers, data = [], onAddButton, onDelete, onEdit }:
               <TableHead className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
                 Actions
               </TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
+                   View
+              </TableHead>
+              
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -132,6 +137,12 @@ export function DataTable({ headers, data = [], onAddButton, onDelete, onEdit }:
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
+                <Link href={`/dashboard/properties/${row._id}`}>
+                <ExternalLink className="h-4 w-4"  />
+                </Link>
+
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -187,6 +198,7 @@ export function DataTable({ headers, data = [], onAddButton, onDelete, onEdit }:
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
+          
         </div>
       </div>
     </div>

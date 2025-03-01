@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { ChevronDown, ChevronRight, Filter, MoreHorizontal, Plus, CalendarIcon, Trash2 } from "lucide-react"
+import { ChevronDown, ChevronRight, Filter, MoreHorizontal, Plus, CalendarIcon, Trash2, FileDown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -87,15 +87,14 @@ export function FilterBar({
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="hover:bg-muted">
-                      <Plus className="h-4 w-4 text-foreground" />
-                    </Button>
+                  <FileDown className="cursor-pointer" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Quick add</p>
+                    <p>Export</p>
+                    
                   </TooltipContent>
                 </Tooltip>
-                <Tooltip>
+                {/* <Tooltip>
                   <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" className="hover:bg-muted">
                       <MoreHorizontal className="h-4 w-4 text-foreground" />
@@ -104,7 +103,7 @@ export function FilterBar({
                   <TooltipContent>
                     <p>More options</p>
                   </TooltipContent>
-                </Tooltip>
+                </Tooltip> */}
               </TooltipProvider>
               <Button
                 variant="default"
