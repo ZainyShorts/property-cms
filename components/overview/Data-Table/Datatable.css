@@ -1,0 +1,22 @@
+.dataTableWrapper {
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .tableContainer {
+    overflow-x: auto;
+    overflow-y: auto;
+    flex-grow: 1;
+  }
+  
+  .tableContainer::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .tableContainer {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  
