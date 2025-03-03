@@ -4,16 +4,18 @@ export const GET_PROPERTIES = gql`
   query getProperties( 
     $filter: PropertyFilterInput
     $sortBy: String
-    $sortOrder: String    
-    
-    
- 
+    $sortOrder: String      
+    $limit : String 
+    $page : String
   ) {
     getProperties( 
       filter: $filter
       sortBy: $sortBy
-      sortOrder: $sortOrder 
-    ) {
+      sortOrder: $sortOrder  
+      limit : $limit 
+      page : $page
+    ) { 
+    data {
     _id 
     roadLocation
     developmentName
@@ -37,8 +39,13 @@ export const GET_PROPERTIES = gql`
     Rent
     noOfCheques
     listed
-    createdAt
+    createdAt  
     }
+    totalPages 
+    pageNumber 
+    totalCount
+    } 
+
   }
 `
 

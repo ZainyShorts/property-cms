@@ -19,6 +19,8 @@ import { Loader2 } from "lucide-react"
 import { useDispatch } from "react-redux"
 import { clearAllFilters } from "@/lib/store/slices/filterSlice"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ExportModal } from "./Export-Modal/ExportModal" 
+import { exportToExcel } from "@/lib/exportProperty"
 
 const filter = [
   {
@@ -62,7 +64,7 @@ const tableHeaders = [
   "No of Cheques",
   "Listed",
   "Created At",
-];
+]
 
 export default function PropertiesPage() {
   const [selectionModalOpen, setSelectionModalOpen] = useState(false)
@@ -70,12 +72,16 @@ export default function PropertiesPage() {
   const [fileUploadModalOpen, setFileUploadModalOpen] = useState(false)
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
   const [propertyToEdit, setPropertyToEdit] = useState(null)
-  const [searchFilter, setSearchFilter] = useState({})
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [searchFilter, setSearchFilter] = useState({}) 
+  const [Loading , setLoading] = useState<Boolean>(false);
   const [sortOrder, setSortOrder] = useState("asc")
   const [startDate, setStartDate] = useState<Date | null>(null)
+  const [totalCount, setCount] = useState<number>(0)
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [propertyType, setPropertyType] = useState("")
   const [pendingSearchFilter, setPendingSearchFilter] = useState("")
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   const dispatch = useDispatch()
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
 
@@ -86,12 +92,18 @@ export default function PropertiesPage() {
       filter: searchFilter,
       sortBy: "createdAt",
       sortOrder: sortOrder,
-      limit: 10,
+      limit: "10",
+      page: String(currentPage),
     },
   })
 
   useEffect(() => {
-    console.log("list data", data)
+    if (!data) return
+
+    const totalCount = data?.getProperties?.totalCount || 0
+
+    setCount(totalCount)
+    console.log("data", data)
   }, [data])
 
   const handleStartDateChange = (date: Date | undefined) => {
@@ -179,13 +191,15 @@ export default function PropertiesPage() {
       ...dateFilters,
       ...propertyTypeFilter,
     }
-
+    console.log(newFilters)
     if (Object.keys(newFilters).length > 0) {
       setSearchFilter(newFilters)
       refetch({
         filter: newFilters,
         sortBy: "createdAt",
         sortOrder: sortOrder,
+        limit: "10",
+        page: String(currentPage),
       })
     } else {
       setSearchFilter({})
@@ -193,6 +207,7 @@ export default function PropertiesPage() {
         filter: {},
         sortBy: "createdAt",
         sortOrder: sortOrder,
+        page: String(currentPage),
       })
     }
   }
@@ -241,7 +256,90 @@ export default function PropertiesPage() {
     setAddPropertyModalOpen(true)
   }
 
+  const handleExport = () => {
+    setExportModalOpen(true)
+  } 
+  
+  const handleCloseExportModal = () => {
+    setExportModalOpen(false) 
+    setPropertyToEdit(null)
+  }
+   
+  const handleSubmitExport = async (exportOption: string, count: number) => { 
+    setLoading(true);
+    console.log(`Exporting with option: ${exportOption}`);
+  
+    let dataToExport = null;
+  
+    if (exportOption === "false" || exportOption === false) {
+      try {
+        dataToExport = await refetch({
+          filter: {},
+          sortBy: "createdAt",
+          sortOrder: "asc",
+          limit: count.toString(), 
+        });
+  
+        if (dataToExport?.data?.getProperties?.data) {
+          exportToExcel(dataToExport.data.getProperties.data);
+        } else {
+          console.error("No data available for export");
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    } else {
+      try {
+        const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {};
+  
+        const dateFilters = {
+          ...(startDate && { startDate: startDate.toISOString() }),
+          ...(endDate && { endDate: endDate.toISOString() }),
+        };
+  
+        const propertyTypeFilter = propertyType ? { propertyType } : {};
+        const cleanedSidebarFilters = cleanFilters(sidebarFilters);
+  
+        const newFilters = {
+          ...cleanedSidebarFilters,
+          ...searchFilterObj,
+          ...dateFilters,
+          ...propertyTypeFilter,
+        };
+  
+        console.log("Applying filters:", newFilters);
+  
+        dataToExport = await refetch({
+          filter: newFilters,
+          sortBy: "createdAt",
+          sortOrder: "asc",
+          limit: count.toString(), 
+        });
+        if (dataToExport?.data?.getProperties?.data) {
+          exportToExcel(dataToExport.data.getProperties.data);
+        } else {
+          console.error("No data available for export");
+        }
+        console.log("Mapped export data:", dataToExport);
+        handleCloseExportModal();
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    }
+  
+    setLoading(false);
+  };
+  
+  
+
   if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+  } 
+  if (Loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -249,44 +347,39 @@ export default function PropertiesPage() {
     )
   }
 
+
   if (error) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Error loading properties</div>
   }
 
   const transformedData =
-  data?.properties?.getProperties.map((property : any) => ({
-    _id: property._id || "N/A",
-    roadLocation: property.roadLocation || "N/A",
-    developmentName: property.developmentName || "N/A",
-    subDevelopmentName: property.subDevelopmentName || "N/A",
-    projectName: property.projectName || "N/A",
-    propertyType: property.propertyType || "N/A",
-    propertyHeight: property.propertyHeight || "N/A",
-    projectLocation: property.projectLocation || "N/A",
-    unitNumber: property.unitNumber || "N/A",
-    bedrooms: property.bedrooms || "N/A",
-    unitLandSize: property.unitLandSize || "N/A",
-    unitBua: property.unitBua || "N/A",
-    unitView:
-      Array.isArray(property.unitView) && property.unitView.length > 0
-        ? property.unitView
-        : "N/A",
-    unitLocation: property.unitLocation || "N/A",
-    Purpose: property.Purpose || "N/A",
-    vacancyStatus: property.vacancyStatus || "N/A",
-    primaryPrice: property.primaryPrice || "N/A",
-    resalePrice: property.resalePrice || "N/A",
-    premiumAndLoss:
-      property.resalePrice && property.primaryPrice
-        ? property.resalePrice - property.primaryPrice
-        : "N/A",
-    Rent: property.rent || "N/A",
-    noOfCheques: property.noOfCheques || "N/A",
-    listed: property.listed ? "YES" : "NO",
-    createdAt: property.createdAt
-      ? new Date(property.createdAt).toLocaleString()
-      : "N/A",
-  })) || [];
+    data?.getProperties?.data?.map((property: any) => ({
+      _id: property._id || "N/A",
+      roadLocation: property.roadLocation || "N/A",
+      developmentName: property.developmentName || "N/A",
+      subDevelopmentName: property.subDevelopmentName || "N/A",
+      projectName: property.projectName || "N/A",
+      propertyType: property.propertyType || "N/A",
+      propertyHeight: property.propertyHeight || "N/A",
+      projectLocation: property.projectLocation || "N/A",
+      unitNumber: property.unitNumber || "N/A",
+      bedrooms: property.bedrooms || "N/A",
+      unitLandSize: property.unitLandSize || "N/A",
+      unitBua: property.unitBua || "N/A",
+      unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
+      unitLocation: property.unitLocation || "N/A",
+      Purpose: property.Purpose || "N/A",
+      vacancyStatus: property.vacancyStatus || "N/A",
+      primaryPrice: property.primaryPrice || "N/A",
+      resalePrice: property.resalePrice || "N/A",
+      premiumAndLoss:
+        property.resalePrice && property.primaryPrice ? property.resalePrice - property.primaryPrice : "N/A",
+      Rent: property.rent || "N/A",
+      noOfCheques: property.noOfCheques || "N/A",
+      listed: property.listed ? "YES" : "NO",
+      createdAt: property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
+    })) || []
+
   const handleClearFilters = () => {
     dispatch(clearAllFilters())
     setSearchFilter({})
@@ -301,6 +394,7 @@ export default function PropertiesPage() {
       sortBy: "createdAt",
       sortOrder: "asc",
     })
+    setCurrentPage(1)
   }
   return (
     <div className="min-h-screen bg-background ">
@@ -332,11 +426,15 @@ export default function PropertiesPage() {
         onClear={handleClearFilters}
         selectedOptions={selectedOptions}
         setSelectedOptions={setSelectedOptions}
+        onExport={handleExport}
       />
-      <main className="container mx-auto px-4 py-6">
+      <main className="container mx-auto md:px-4 py-6">
         {transformedData.length > 0 ? (
           <DataTable
             headers={tableHeaders}
+            page={currentPage}
+            setPage={setCurrentPage}
+            Count={totalCount}
             data={transformedData}
             onAddButton={handleAdd}
             onDelete={handleDelete}
@@ -368,6 +466,7 @@ export default function PropertiesPage() {
       <FileUploadModal isOpen={fileUploadModalOpen} onClose={() => setFileUploadModalOpen(false)} />
 
       <PropertyFilterSidebar open={filterSidebarOpen} onOpenChange={setFilterSidebarOpen} />
+      <ExportModal isOpen={exportModalOpen} onClose={handleCloseExportModal} onSubmitExport={handleSubmitExport} />
     </div>
   )
 }

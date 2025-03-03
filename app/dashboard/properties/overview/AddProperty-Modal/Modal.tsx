@@ -95,33 +95,41 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
 
   useEffect(() => {
     if (propertyToEdit) {
-      console.log("Initialized data:", propertyToEdit) // Add this line for debugging
+      console.log("Initialized data:", propertyToEdit) // Debugging
 
       const initialData: Record<string, any> = {}
       Object.entries(propertySections).forEach(([_, section]) => {
         Object.keys(section.fields).forEach((fieldKey) => {
-          if (propertyToEdit.hasOwnProperty(fieldKey)) {
-            initialData[fieldKey] = propertyToEdit[fieldKey]
-          } else if (fieldKey === "unitBUA" && propertyToEdit.hasOwnProperty("unitBua")) {
-            initialData[fieldKey] = propertyToEdit.unitBua
+          let value = propertyToEdit[fieldKey]
+
+          if (fieldKey === "unitBUA" && propertyToEdit.hasOwnProperty("unitBua")) {
+            value = propertyToEdit.unitBua
           } else if (fieldKey === "premiumLoss" && propertyToEdit.hasOwnProperty("premiumAndLoss")) {
-            initialData[fieldKey] = propertyToEdit.premiumAndLoss
+            value = propertyToEdit.premiumAndLoss
           } else if (fieldKey === "rent" && propertyToEdit.hasOwnProperty("Rent")) {
-            initialData[fieldKey] = propertyToEdit.Rent
+            value = propertyToEdit.Rent
           } else if (fieldKey === "purpose" && propertyToEdit.hasOwnProperty("Purpose")) {
-            initialData[fieldKey] = propertyToEdit.Purpose
+            value = propertyToEdit.Purpose
+          }
+
+          if (value !== undefined && value !== "N/A") {
+            initialData[fieldKey] = value
           }
         })
       })
+
       setDataForm(initialData)
       setIsListed(propertyToEdit.listed || false)
       setIsEditing(true)
+
       if (propertyToEdit.propertyImages && propertyToEdit.propertyImages.length > 0) {
         setSelectedImages(propertyToEdit.propertyImages)
       }
-      console.log("Initialized DDDData:", initialData) // Add this line for debugging
-    } else {
+
+      console.log("Initialized DDDData:", initialData) // Debugging
+    } else if (propertyToEdit === null) {
       resetForm()
+      console.log("empty")
     }
   }, [propertyToEdit])
 
@@ -167,7 +175,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       return
     }
 
-    const finalData = {
+    const finalData = Object.entries({
       clerkId: user?.id,
       roadLocation: dataForm.roadLocation,
       developmentName: dataForm.developmentName,
@@ -190,8 +198,14 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       ...(dataForm.premiumLoss && { premiumAndLoss: dataForm.premiumLoss }),
       ...(dataForm.rent && { Rent: dataForm.rent }),
       ...(dataForm.noOfCheques && { noOfCheques: dataForm.noOfCheques }),
-      listed: isListed,
-    }
+      listed:
+        typeof isListed === "boolean" ? isListed : isListed === "YES" ? true : isListed === "NO" ? false : isListed, // Keep it as is if it's not "YES" or "NO"
+    }).reduce((acc, [key, value]) => {
+      if (value !== "N/A" && value !== undefined) {
+        acc[key] = value
+      }
+      return acc
+    }, {})
 
     try {
       let response
@@ -200,7 +214,10 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
 
         console.log(updatedData)
         response = await axios.put(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/updateSingleRecord`, updatedData)
+        resetForm()
       } else {
+        console.log(finalData)
+
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/addSingleRecord`, finalData)
       }
       console.log(response)
@@ -255,7 +272,15 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          resetForm()
+          onClose()
+        }
+      }}
+    >
       <DialogContent className="lg:max-w-5xl bg-background text-foreground">
         <DialogHeader>
           <div className="flex items-center space-x-2">

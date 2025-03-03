@@ -154,10 +154,10 @@ export default function PropertyDetail({ params }: Props) {
             onTouchEnd={handleTouchEnd}
           >
             <Image
-              src={images[currentImageIndex] || DEFAULT_IMAGE}
+              src={"https://cdn.businessday.ng/2021/07/luxury-residential-real-estate.png"}
               alt={propertyData["Project Name"] || "Property image"}
               fill
-              className="object-cover"
+              className="object-contain"
               priority
             />
 

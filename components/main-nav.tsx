@@ -3,16 +3,16 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
+import { Menu } from "lucide-react"
 
-export function MainNav() {
+interface MainNavProps {
+  onOpenSidebar: () => void
+}
+
+export function MainNav({ onOpenSidebar }: MainNavProps) {
   const [isScrolled, setIsScrolled] = useState(false)
   const [darkMode, setDarkMode] = useState(false) // defaults to light mode
 
@@ -47,13 +47,16 @@ export function MainNav() {
   return (
     <div
       className={`sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-background/80 backdrop-blur-sm border-b border-border"
-          : "bg-transparent"
+        isScrolled ? "bg-background/80 backdrop-blur-sm border-b border-border" : "bg-transparent"
       }`}
     >
       <div className="flex h-16 items-center px-4">
         <div className="flex items-center space-x-4">
+          {/* Hamburger menu */}
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={onOpenSidebar}>
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">Open sidebar</span>
+          </Button>
           <nav className="flex items-center space-x-4">
             <Button
               variant="ghost"
@@ -65,26 +68,7 @@ export function MainNav() {
             >
               Data
             </Button>
-            <Button
-              variant="ghost"
-              className={`${
-                isScrolled
-                  ? "text-foreground hover:bg-accent hover:text-accent-foreground"
-                  : "text-primary hover:bg-primary/10 hover:text-primary"
-              }`}
-            >
-              Automations
-            </Button>
-            <Button
-              variant="ghost"
-              className={`${
-                isScrolled
-                  ? "text-foreground hover:bg-accent hover:text-accent-foreground"
-                  : "text-primary hover:bg-primary/10 hover:text-primary"
-              }`}
-            >
-              Interfaces
-            </Button>
+
             <Button
               variant="ghost"
               className={`${
@@ -99,11 +83,7 @@ export function MainNav() {
         </div>
         <div className="ml-auto flex items-center space-x-4">
           {/* Dark mode toggle switch */}
-          <Switch
-            checked={darkMode}
-            onCheckedChange={(checked) => setDarkMode(checked)}
-            className="mr-4"
-          />
+          <Switch checked={darkMode} onCheckedChange={(checked) => setDarkMode(checked)} className="mr-4" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Avatar className="h-8 w-8 cursor-pointer">
@@ -127,3 +107,4 @@ export function MainNav() {
     </div>
   )
 }
+

@@ -3,10 +3,11 @@
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import Image from "next/image"
-import { motion } from "framer-motion"
-import { ChevronRight } from "lucide-react"
+import { motion } from "framer-motion" 
+import { ChevronRight } from "lucide-react" 
+import { useEffect } from "react"
 
-export function PropertyCard({ data }: { data: any }) {
+export function PropertyCard({ data , onDetails }: { data: any , onDetails:any }) { 
   const isArray = (value: any) => Array.isArray(value)
   const isObject = (value: any) => typeof value === "object" && value !== null && !Array.isArray(value)
 
@@ -34,21 +35,23 @@ export function PropertyCard({ data }: { data: any }) {
       ))
     } else {
       return <span className="text-foreground/80">{value}</span>
-    }
-  }
+    } 
+  } 
+ 
 
   return (
     <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }} className="h-full">
       <Card className="overflow-hidden h-full bg-card dark:bg-card/5 hover:shadow-xl transition-all duration-300 border-primary/10">
         {data.image && (
-          <div className="relative aspect-[4/3] overflow-hidden group">
-            <Image
+          <div onClick={()=>{onDetails(data?.PropertyID)}}
+          className="relative aspect-[4/3] cursor-pointer overflow-hidden group">
+            <Image  
               src={data.image || "/placeholder.svg"}
               alt="Property"
               fill
-              className="object-cover transition-transform duration-300 group-hover:scale-110"
+              className="object-cover cursor-pointer transition-transform duration-300 group-hover:scale-110"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t cursor-pointer from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
         )}
 

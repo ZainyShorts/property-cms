@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { ChevronDown, ChevronRight, Filter, MoreHorizontal, Plus, CalendarIcon, Trash2, FileDown } from "lucide-react"
+import { ChevronDown, ChevronRight, Filter, CalendarIcon, Trash2, FileDown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -37,6 +37,7 @@ interface FilterBarProps {
   onClear?: () => void
   selectedOptions: Record<string, string>
   setSelectedOptions: React.Dispatch<React.SetStateAction<Record<string, string>>>
+  onExport?: () => void
 }
 
 export function FilterBar({
@@ -55,6 +56,7 @@ export function FilterBar({
   onClear,
   selectedOptions,
   setSelectedOptions,
+  onExport,
 }: FilterBarProps) {
   const handleOptionSelect = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
@@ -67,9 +69,9 @@ export function FilterBar({
     <div className="space-y-4">
       <div className="border-b border-border bg-background">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <nav className="flex" aria-label="Breadcrumb">
-              <ol className="inline-flex items-center space-x-1">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <nav className="flex overflow-x-auto max-w-full pb-2 sm:pb-0" aria-label="Breadcrumb">
+              <ol className="inline-flex items-center space-x-1 whitespace-nowrap">
                 {breadcrumbs.map((item, index) => (
                   <li key={index} className="inline-flex items-center">
                     {index > 0 && <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />}
@@ -83,28 +85,15 @@ export function FilterBar({
                 ))}
               </ol>
             </nav>
-            <div className="flex items-center gap-4">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                  <FileDown className="cursor-pointer" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Export</p>
-                    
-                  </TooltipContent>
-                </Tooltip>
-                {/* <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="hover:bg-muted">
-                      <MoreHorizontal className="h-4 w-4 text-foreground" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>More options</p>
-                  </TooltipContent>
-                </Tooltip> */}
-              </TooltipProvider>
+            <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
+              <Button
+                variant="default"
+                className="flex items-center gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
+                onClick={onExport}
+              >
+                <FileDown className="cursor-pointer" />
+                Export
+              </Button>
               <Button
                 variant="default"
                 className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
@@ -117,8 +106,8 @@ export function FilterBar({
         </div>
       </div>
 
-      <div className="container mx-auto px-4">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="container mx-auto px-2 sm:px-4">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-4">
           {filters.map((filter, index) => (
             <DropdownMenu key={index}>
               <DropdownMenuTrigger asChild>
@@ -181,36 +170,38 @@ export function FilterBar({
             </>
           )}
 
-          <div className="ml-auto flex items-center gap-4">
+          <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-0">
             <TooltipProvider>
               {onSearch && (
                 <input
                   type="text"
                   placeholder="Search records"
                   onChange={onSearch}
-                  className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-full sm:w-auto h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 />
               )}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={onFilter} variant="outline" size="icon" className="hover:bg-muted">
-                    <Filter className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Filter records</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button onClick={onClear} variant="outline" size="icon" className="hover:bg-muted">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Clear Filters</p>
-                </TooltipContent>
-              </Tooltip>
+              <div className="flex items-center gap-2 sm:gap-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={onFilter} variant="outline" size="icon" className="hover:bg-muted">
+                      <Filter className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Filter records</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button onClick={onClear} variant="outline" size="icon" className="hover:bg-muted">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Clear Filters</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </TooltipProvider>
             <Button
               className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"

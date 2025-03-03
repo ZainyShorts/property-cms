@@ -14,6 +14,7 @@ import {
   FileCheck,
   Contact,
   ChevronDown,
+  X,
 } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
@@ -37,7 +38,8 @@ const sidebarItems = [
   { title: "Maintainance Requests", icon: Contact, items: ["Overview", "Maintainance Request Gallery"] },
 ]
 
-export function Sidebar() {
+// Add props to receive isOpen and onClose
+export function Sidebar({ isOpen = true, onClose = () => {} }) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const pathname = usePathname()
 
@@ -64,8 +66,26 @@ export function Sidebar() {
     )
   }
 
+  // Close sidebar on mobile when navigating
+  const handleNavigation = () => {
+    if (window.innerWidth < 1024) {
+      onClose()
+    }
+  }
+
   return (
-    <div className="pb-12 thin-scrollbar h-screen  w-64 border-r bg-[#913c3c] dark:bg-black text-white">
+    <div
+      className={`pb-12 thin-scrollbar h-screen w-64 border-r bg-[#913c3c] dark:bg-black text-white fixed md:relative z-50 transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      }`}
+    >
+      <div className="flex justify-between items-center p-4 md:hidden">
+        <h1 className="text-xl font-bold">AFS Real Estate</h1>
+        <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/10">
+          <X className="h-5 w-5" />
+        </Button>
+      </div>
+
       <ScrollArea className="h-full py-6 px-4 thin-scrollbar">
         <div className="mb-8 thin-scrollbar px-4">
           <h1 className="text-2xl thin-scrollbar font-bold">AFS Real Estate</h1>
@@ -85,14 +105,12 @@ export function Sidebar() {
                 <div className="flex items-center  gap-3 ">
                   {item.icon && <item.icon className="h-5 w-5" />}
                   <span className="font-medium">{item.title}</span>
-                </div>  
+                </div>
                 <ChevronDown
                   className={`h-4 w-4 mr-2 text-white transition-transform duration-300 ease-in-out ${
-                    selectedItem === item.title ? "" : "hidden"
+                    selectedItem === item.title ? "rotate-180" : "hidden"
                   }`}
-                /> 
-                
-           
+                />
               </Button>
 
               <div
@@ -101,11 +119,11 @@ export function Sidebar() {
                 }`}
               >
                 {item.items.map((subItem) => (
-                  <Link key={subItem} href={generateRoute(item.title, subItem)} passHref>
+                  <Link key={subItem} href={generateRoute(item.title, subItem)} onClick={handleNavigation} passHref>
                     <Button
                       variant="ghost"
                       className={`w-full justify-start pl-12 text-sm text-gray-300 hover:bg-white/10 dark:hover:bg-white/20 hover:text-white transition-colors duration-200 ${
-                        isCurrentPage(item.title, subItem) ? "bg-white/20" : "" 
+                        isCurrentPage(item.title, subItem) ? "bg-white/20" : ""
                       }`}
                     >
                       {subItem}
