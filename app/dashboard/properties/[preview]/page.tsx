@@ -9,9 +9,6 @@ import {
   Phone,
   MapPin,
   BedDouble,
-  Bath,
-  Ruler,
-  Car,
   ChevronLeft,
   ChevronRight,
   Tag,
@@ -23,21 +20,19 @@ import {
   Landmark,
   DollarSign,
   CheckCircle2,
-  Pickaxe, 
-  UserRound, 
-  HousePlus
+  Pickaxe,
+  UserRound,
+  PlusIcon as HousePlus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { useQuery } from "@apollo/client" 
-import { formatDate } from "@/lib/method"
+import { useQuery } from "@apollo/client"
 import { GET_PROPERTY } from "@/lib/query"
 
-// Default image to use when images array is empty
-const DEFAULT_IMAGE = "/placeholder.svg?height=600&width=800"
+const DEFAULT_IMAGE = "https://www.investopedia.com/thmb/XPnvXjFTJnA8j8VBEtNc7DfduN4=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/INV_Real_Property_GettyImages-200478960-001-080ea7835ec1444881eddbe3b2a5a632.jpg"
 
 type Props = {
   params: {
@@ -130,22 +125,21 @@ export default function PropertyDetail({ params }: Props) {
     }
 
     return iconMap[key] || <CheckCircle2 className="h-5 w-5 text-primary" />
-  }  
-  const handleGmail = () => { 
-      const recipient = "recipient@example.com";
-      const subject = "Your Subject";
-      const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(subject)}`;
-      window.open(url, "_blank");
+  }
+  const handleGmail = () => {
+    const recipient = "recipient@example.com"
+    const subject = "Your Subject"
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(subject)}`
+    window.open(url, "_blank")
   }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Property Title Section */}
-       
 
         {/* Image Slider Section */}
-        <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg">
+        <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-background">
           <div
             ref={sliderRef}
             className={`relative h-[60vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
@@ -153,17 +147,50 @@ export default function PropertyDetail({ params }: Props) {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            <Image
-              src={"https://cdn.businessday.ng/2021/07/luxury-residential-real-estate.png"}
-              alt={propertyData["Project Name"] || "Property image"}
-              fill
-              className="object-contain"
-              priority
-            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Image
+                src={
+                  images[currentImageIndex] || "https://cdn.businessday.ng/2021/07/luxury-residential-real-estate.png"
+                }
+                alt={propertyData["Project Name"] || "Property image"}
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+
+            {/* Property Title Overlay */}
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-6 text-white">
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">
+                {propertyData["Project Name"] || "Luxury Property"}
+              </h1>
+              <div className="flex items-center gap-2 text-sm">
+                <MapPin className="h-4 w-4" />
+                <span>{propertyData["Road Location"] || propertyData["Project Location"] || "Prime Location"}</span>
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="absolute top-4 right-4 flex gap-2">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
+              >
+                <Heart className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
+              >
+                <Share2 className="h-5 w-5" />
+              </Button>
+            </div>
 
             {/* Thumbnail navigation */}
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-background/70 p-2 rounded-full">
-              {images.map((_:string, index:number) => (
+              {images.map((_: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => {
@@ -198,7 +225,7 @@ export default function PropertyDetail({ params }: Props) {
             </div>
 
             {/* Image counter */}
-            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="absolute top-4 right-24 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
               {currentImageIndex + 1} / {images.length}
             </div>
           </div>
@@ -209,28 +236,28 @@ export default function PropertyDetail({ params }: Props) {
           {/* Left Column - Key Details */}
           <div className="md:col-span-2 space-y-8">
             {/* Key Stats */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border dark:border-border">
               <CardContent className="p-0">
-                <div className="grid grid-cols-2 sm:grid-cols-4">
-                  <div className="flex flex-col items-center justify-center gap-2 p-6 border-r border-b">
+                <div className="grid grid-cols-2 sm:grid-cols-4 bg-transparent">
+                  <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-r border-b dark:border-border">
                     <BedDouble className="h-6 w-6 text-primary" />
                     <span className="text-lg font-semibold">{propertyData["Bedrooms"] || "N/A"}</span>
                     <span className="text-xs text-muted-foreground">Bedrooms</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center gap-2 p-6 border-b sm:border-r">
+                  <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-b sm:border-r dark:border-border">
                     <HousePlus className="h-6 w-6 text-primary" />
-                    <span className="text-lg font-semibold">{propertyData["unitNumber"] ?? 'N/A'}</span>
+                    <span className="text-lg font-semibold">{propertyData["unitNumber"] ?? "N/A"}</span>
                     <span className="text-xs text-muted-foreground">unitNumber</span>
                   </div>
-                  <div className="flex flex-col items-center justify-center gap-2 p-6 border-r">
+                  <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-r dark:border-border">
                     <Building className="h-6 w-6 text-primary" />
                     <span className="text-lg font-semibold">{propertyData["propertyHeight"] || "N/A"}</span>
                     <span className="text-xs text-muted-foreground">Property Height</span>
                     {/* 67bcb259fe5b650fcb1b1a13 */}
                   </div>
-                  <div className="flex flex-col items-center justify-center gap-2 p-6">
-                    <Pickaxe  className="h-6 w-6 text-primary" />
-                    <span className="text-lg font-semibold">{propertyData["developmentName"] || 'N/A'}</span>
+                  <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6">
+                    <Pickaxe className="h-6 w-6 text-primary" />
+                    <span className="text-lg font-semibold">{propertyData["developmentName"] || "N/A"}</span>
                     <span className="text-xs text-muted-foreground">Developer</span>
                   </div>
                 </div>
@@ -271,23 +298,36 @@ export default function PropertyDetail({ params }: Props) {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Property Details</h2>
               <div className="grid gap-4 sm:grid-cols-2">
-                
-{Object.entries(propertyData)
-  .filter(
-    ([key, value]) =>
-      !["_id", "propertyImages", "listed","bedrooms", "unitView","unitNumber", "__typename", "primaryPrice", "resalePrice", "Rental", "premiumAndLoss", "propertyHeight", "developmentName"].includes(key)
-  )
-  .map(([key, value]) => (
-    <div key={key} className="flex items-center gap-3 p-3 border rounded-lg">
-      {getIconForKey(key)}
-      <div>
-        <span className="text-xs text-muted-foreground capitalize block">{key}</span>
-        <span className="font-medium">
-          {key === "createdAt" ? value.slice(0,10) : value ?? "N/A"}
-        </span>
-      </div>
-    </div>
-  ))}
+                {Object.entries(propertyData)
+                  .filter(
+                    ([key, value]) =>
+                      ![
+                        "_id",
+                        "propertyImages",
+                        "listed",
+                        "bedrooms",
+                        "unitView",
+                        "unitNumber",
+                        "__typename",
+                        "primaryPrice",
+                        "resalePrice",
+                        "Rental",
+                        "premiumAndLoss",
+                        "propertyHeight",
+                        "developmentName",
+                      ].includes(key),
+                  )
+                  .map(([key, value]) => (
+                    <div key={key} className="flex items-center gap-3 p-3 border rounded-lg dark:border-border bg-transparent">
+                      {getIconForKey(key)}
+                      <div>
+                        <span className="text-xs text-muted-foreground capitalize block">{key}</span>
+                        <span className="font-medium">
+                          {key === "createdAt" ? value.slice(0, 10) : (value ?? "N/A")}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           </div>
@@ -295,7 +335,7 @@ export default function PropertyDetail({ params }: Props) {
           {/* Right Column - Price & Contact */}
           <div className="space-y-6">
             {/* Price Card */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border dark:border-border bg-transparent">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
@@ -303,21 +343,21 @@ export default function PropertyDetail({ params }: Props) {
                     <div className="text-md font-normal text-primary">{propertyData["Primary Price"] ?? "N/A"}</div>
                   </div>
 
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Resale Price</div>
-                      <div className="text-md font-normal">{propertyData["Resale Price"] ?? "N/A"}</div>
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">Resale Price</div>
+                    <div className="text-md font-normal">{propertyData["Resale Price"] ?? "N/A"}</div>
+                  </div>
 
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Rental</div>
-                      <div className="text-md font-normal">{propertyData["Rent"] ?? "N/A"}</div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Premium&Loss</div>
-                      <div className="text-md font-normal">{propertyData["premiumAndLoss"] ?? "N/A"}</div>
-                    </div>
-                    
-                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">Rental</div>
+                    <div className="text-md font-normal">{propertyData["Rent"] ?? "N/A"}</div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <div className="text-sm text-muted-foreground">Premium&Loss</div>
+                    <div className="text-md font-normal">{propertyData["premiumAndLoss"] ?? "N/A"}</div>
+                  </div>
+
+                  <Separator className="dark:bg-border" />
 
                   <div className="flex justify-between">
                     <div>
@@ -334,36 +374,35 @@ export default function PropertyDetail({ params }: Props) {
             </Card>
 
             {/* Contact Agent */}
-            <Card>
-  <CardContent className="p-6">
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Contact Agent</h3>
-      <div className="flex items-center space-x-3">
-        <div className="p-2 bg-gray-200 rounded-full">
-          <UserRound className="h-6 w-6 text-gray-600" />
-        </div>
-        <div>
-          <div className="font-semibold">Jane Smith</div>
-          <div className="text-sm text-muted-foreground">Agent ID: AG002</div>
-        </div>
-      </div>
-      <div className="grid gap-3">
-        <Button className="w-full">
-          <Phone className="h-4 w-4 mr-2" />
-          Call Agent
-        </Button>
-        <Button onClick={handleGmail} variant="outline" className="w-full">
-          <Mail className="h-4 w-4 mr-2" />
-          Email Agent
-        </Button>
-      </div>
-    </div>
-  </CardContent>
-</Card>
-
+            <Card className="border dark:border-border bg-transparent">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Contact Agent</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-muted rounded-full">
+                      <UserRound className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Jane Smith</div>
+                      <div className="text-sm text-muted-foreground">Agent ID: AG002</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3">
+                    <Button className="w-full">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Call Agent
+                    </Button>
+                    <Button onClick={handleGmail} variant="outline" className="w-full border  dark:border-border">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email Agent
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Schedule Viewing */}
-            <Card>
+            <Card className="border dark:border-border bg-transparent">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Schedule a Viewing</h3>
