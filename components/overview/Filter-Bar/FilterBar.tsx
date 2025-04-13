@@ -24,7 +24,7 @@ interface BreadcrumbItem {
 interface FilterBarProps {
   filters: FilterOption[]
   breadcrumbs: BreadcrumbItem[]
-  onAddButton: () => void
+  onAddButton?: () => void
   onFilter: () => void
   onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onFilterChange?: (key: string, value: string) => void
@@ -85,7 +85,8 @@ export function FilterBar({
                 ))}
               </ol>
             </nav>
-            <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
+            <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto"> 
+              {onExport && 
               <Button
                 variant="default"
                 className="flex items-center gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
@@ -93,7 +94,9 @@ export function FilterBar({
               >
                 <FileDown className="cursor-pointer" />
                 Export
-              </Button>
+              </Button> 
+              }
+              {onAddButton && 
               <Button
                 variant="default"
                 className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
@@ -101,6 +104,7 @@ export function FilterBar({
               >
                 Add record
               </Button>
+               }
             </div>
           </div>
         </div>

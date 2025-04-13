@@ -11,7 +11,7 @@ import { AddPropertyModal } from "./AddProperty-Modal/Modal"
 import { SelectionModal } from "./Select-Option/SelectionModal"
 import { FileUploadModal } from "./FileUpload/FileUploadModal"
 import { PropertyFilterSidebar } from "./Filteration-sidebar/filteration"
-import { ToastContainer, toast } from "react-toastify"
+import { toast } from "react-toastify"
 import axios from "axios"
 import { GET_PROPERTIES } from "@/lib/query"
 import type { RootState } from "@/lib/store/store"
@@ -36,8 +36,8 @@ const filter = [
 ]
 
 const breadcrumbs = [
-  { label: "Documents", href: "/documents" },
-  { label: "Overview", href: "/documents/overview" },
+  { label: "Properties", href: "/dashboard/properties/overview" },
+  { label: "Overview", href: "/dashboard/properties/overview" },
 ]
 
 const tableHeaders = [
@@ -48,7 +48,8 @@ const tableHeaders = [
   "Project Name",
   "Property Type",
   "Property Height",
-  "Project Location",
+  "Project Location", 
+  "Property Images",
   "Unit Number",
   "Bedrooms",
   "Unit Land Size",
@@ -361,7 +362,8 @@ export default function PropertiesPage() {
       projectName: property.projectName || "N/A",
       propertyType: property.propertyType || "N/A",
       propertyHeight: property.propertyHeight || "N/A",
-      projectLocation: property.projectLocation || "N/A",
+      projectLocation: property.projectLocation || "N/A", 
+      propertyImages : property.propertyImages || "N/A",
       unitNumber: property.unitNumber || "N/A",
       bedrooms: property.bedrooms || "N/A",
       unitLandSize: property.unitLandSize || "N/A",
@@ -398,18 +400,7 @@ export default function PropertiesPage() {
   }
   return (
     <div className="min-h-screen bg-background ">
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        theme="dark"
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-      />
+     
       <FilterBar
         filters={filter}
         breadcrumbs={breadcrumbs}

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google" 
+import { Inter } from "next/font/google"   
+import { ToastContainer } from "react-toastify"
 import { ApolloProvider } from "@/lib/ApolloPovider"
 import "./globals.css" 
 
@@ -28,7 +29,20 @@ export default function RootLayout({
     <ClerkProvider>
     <html lang="en" className="dark">
       <body className={inter.className}>
-      <ApolloProvider>{children}</ApolloProvider>  
+      <ApolloProvider>{children } 
+         <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                theme="dark"
+                hideProgressBar={false}
+                newestOnTop
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+              />
+        </ApolloProvider>  
       </body>
     </html>
     </ClerkProvider>
