@@ -49,7 +49,6 @@ const tableHeaders = [
   "Property Type",
   "Property Height",
   "Project Location", 
-  "Property Images",
   "Unit Number",
   "Bedrooms",
   "Unit Land Size",
@@ -76,7 +75,7 @@ export default function PropertiesPage() {
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [searchFilter, setSearchFilter] = useState({}) 
   const [Loading , setLoading] = useState<Boolean>(false);
-  const [sortOrder, setSortOrder] = useState("asc")
+  const [sortOrder, setSortOrder] = useState("desc")
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [totalCount, setCount] = useState<number>(0)
   const [endDate, setEndDate] = useState<Date | null>(null)
@@ -118,7 +117,7 @@ export default function PropertiesPage() {
   const handleFilterChange = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
     if (key === "sortBy") {
-      setSortOrder(value === "Newest" ? "asc" : "desc")
+      setSortOrder(value === "Newest" ? "desc" : "asc")
     } else if (key === "propertiesManaged") {
       setPropertyType(value)
     }
@@ -238,7 +237,8 @@ export default function PropertiesPage() {
     try {
       const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/deleteProperty`, {
         params: { _id: _id },
-      })
+      }) 
+      console.log('id',_id)
       console.log("Property deleted successfully:", response)
       if (response) {
         toast.success("Property Deleted successfully!")

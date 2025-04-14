@@ -130,49 +130,58 @@ export function FilterBar({
             </DropdownMenu>
           ))}
 
-          {showDatePickers && (
-            <>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  >
-                    {startDate ? format(startDate, "PPP") : "Start Date"}
-                    <CalendarIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate || undefined}
-                    onSelect={(date) => onStartDateChange?.(date || null)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+{showDatePickers && (
+  <>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+        >
+          {startDate ? format(startDate, "PPP") : "Start Date"}
+          <CalendarIcon className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={startDate || undefined}
+          onSelect={(date) => onStartDateChange?.(date || null)}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
 
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-                  >
-                    {endDate ? format(endDate, "PPP") : "End Date"}
-                    <CalendarIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate || undefined}
-                    onSelect={(date) => onEndDateChange?.(date || null)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+        >
+          {endDate ? format(endDate, "PPP") : "End Date"}
+          <CalendarIcon className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={endDate || undefined}
+          onSelect={(date) => {
+            if (date) {
+              // Set time to 23:59:59.999 for end date
+              const endOfDay = new Date(date);
+              endOfDay.setHours(23, 59, 59, 999);
+              onEndDateChange?.(endOfDay);
+            } else {
+              onEndDateChange?.(null);
+            }
+          }}
+          initialFocus
+        />
+      </PopoverContent>
+    </Popover>
+  </>
+)}
 
           <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-0">
             <TooltipProvider>

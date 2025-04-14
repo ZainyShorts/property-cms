@@ -97,96 +97,55 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
               <TableBody>
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-                    {Object.entries(row).map(([key, val]: [string, any], index) => (
-                      <TableCell key={index} className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                        {key === "_id" ? (
-                          <div className="flex items-center space-x-2">
-                            <span>{formatId(val)}</span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleCopy(val)}
-                                    className="h-6 w-6 p-0 hover:bg-muted"
-                                  >
-                                    {copiedId === val ? (
-                                      <Check className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                      <Copy className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{copiedId === val ? "Copied" : "Copy"}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          </div>
-                        ) : key === "unitView" && Array.isArray(val) ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                View <ChevronDown className="ml-2 h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                              {val.map((item: string, i: number) => (
-                                <div key={i} className="px-2 py-1 text-sm">
-                                  {item}
-                                </div>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        ) : key === "propertyImages" && Array.isArray(val) && (val as string[]).length > 0 ? (
-                          <div className="flex items-center gap-1 overflow-x-auto max-w-[200px]">
-                            {(val as string[]).map((imgUrl: string, i: number) => (
-                              <TooltipProvider key={i}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="relative h-12 w-12 rounded-md overflow-hidden border border-border flex-shrink-0">
-                                      {imgUrl?.startsWith("https") ? (
-                                        <img
-                                          src={imgUrl || "/placeholder.svg"}
-                                          alt={`Property image ${i + 1}`}
-                                          className="h-full w-full object-cover"
-                                        />
-                                      ) : (
-                                        <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
-                                          Error
-                                        </div>
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  {/* <TooltipContent>
-          {imgUrl?.startsWith('https') ? (
-            <img
-              src={imgUrl || "/placeholder.svg"}
-              alt={`Property image ${i + 1}`}
-              className="max-h-[200px] max-w-[200px] object-contain"
-            />
-          ) : (
-            <div className="max-h-[200px] max-w-[200px] p-4 flex items-center justify-center bg-muted text-muted-foreground">
-              Image not available
-            </div>
-          )}
-        </TooltipContent> */}
-                                </Tooltip>
-                              </TooltipProvider>
-                            ))}
-                          </div>
-                        ) : key === "propertyImages" && Array.isArray(val) && (val as string[]).length === 0 ? (
-                          <div className="flex items-center gap-1 overflow-x-auto max-w-[200px]">
-                            <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground">
-                              N/A
-                            </div>
-                          </div>
-                        ) : (
-                          val
-                        )}
-                      </TableCell>
-                    ))}
+                   {Object.entries(row)
+  .filter(([key]) => key !== "propertyImages") 
+  .map(([key, val]: [string, any], index) => (
+    <TableCell key={index} className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+      {key === "_id" ? (
+        <div className="flex items-center space-x-2">
+          <span>{formatId(val)}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleCopy(val)}
+                  className="h-6 w-6 p-0 hover:bg-muted"
+                >
+                  {copiedId === val ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{copiedId === val ? "Copied" : "Copy"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      ) : key === "unitView" && Array.isArray(val) ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm">
+              View <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {val.map((item: string, i: number) => (
+              <div key={i} className="px-2 py-1 text-sm">
+                {item}
+              </div>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        val
+      )}
+    </TableCell>
+  ))}
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
                       <Button
                         variant="outline"
@@ -219,9 +178,9 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
                       </Button>
                     </TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link href={`/dashboard/properties/${row._id}`}>
-                        <ExternalLink className="h-4 w-4" />
-                      </Link>
+                    <Link href={`/dashboard/properties/${row._id}`} target="_blank" rel="noopener noreferrer">
+  <ExternalLink className="h-4 w-4" />
+</Link>
                     </TableCell>
                   </TableRow>
                 ))}

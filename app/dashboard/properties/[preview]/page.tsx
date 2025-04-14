@@ -32,7 +32,8 @@ import { Badge } from "@/components/ui/badge"
 import { useQuery } from "@apollo/client"
 import { GET_PROPERTY } from "@/lib/query"
 
-const DEFAULT_IMAGE = "https://www.investopedia.com/thmb/XPnvXjFTJnA8j8VBEtNc7DfduN4=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/INV_Real_Property_GettyImages-200478960-001-080ea7835ec1444881eddbe3b2a5a632.jpg"
+const DEFAULT_IMAGE =
+  "https://formbuilder.ccavenue.com/live/uploads/company_image/488/17316704336156_Event-Image-Not-Found.jpg"
 
 type Props = {
   params: {
@@ -46,6 +47,7 @@ export default function PropertyDetail({ params }: Props) {
   const [isSliding, setIsSliding] = useState(false)
   const sliderRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number>(0)
+  const [propertyImages, setPropertyImages] = useState<any>([])
   const touchEndX = useRef<number>(0)
 
   const { loading, error, data } = useQuery(GET_PROPERTY, {
@@ -57,6 +59,7 @@ export default function PropertyDetail({ params }: Props) {
     if (data) {
       console.log("Query result:", data)
       setPropertyData(data?.getProperty)
+      setPropertyImages(data?.getProperty.propertyImages)
     }
   }, [data])
 
@@ -77,7 +80,8 @@ export default function PropertyDetail({ params }: Props) {
 
   if (error) return <div className="container mx-auto p-8 text-center text-red-500">Error: {error.message}</div>
 
-  const images = propertyData?.images?.length ? propertyData.images : [DEFAULT_IMAGE]
+  const images = propertyImages?.length ? propertyImages : [DEFAULT_IMAGE]
+
   const unitView = Array.isArray(propertyData?.unitView) ? propertyData.unitView : []
 
   if (!propertyData || Object.keys(propertyData).length === 0) {
@@ -149,9 +153,7 @@ export default function PropertyDetail({ params }: Props) {
           >
             <div className="absolute inset-0 flex items-center justify-center">
               <Image
-                src={
-                  images[currentImageIndex] || "https://cdn.businessday.ng/2021/07/luxury-residential-real-estate.png"
-                }
+                src={images[currentImageIndex]?.url || images[currentImageIndex] || DEFAULT_IMAGE}
                 alt={propertyData["Project Name"] || "Property image"}
                 fill
                 className="object-cover"
@@ -318,7 +320,10 @@ export default function PropertyDetail({ params }: Props) {
                       ].includes(key),
                   )
                   .map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-3 p-3 border rounded-lg dark:border-border bg-transparent">
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 p-3 border rounded-lg dark:border-border bg-transparent"
+                    >
                       {getIconForKey(key)}
                       <div>
                         <span className="text-xs text-muted-foreground capitalize block">{key}</span>
@@ -422,4 +427,3 @@ export default function PropertyDetail({ params }: Props) {
     </div>
   )
 }
-

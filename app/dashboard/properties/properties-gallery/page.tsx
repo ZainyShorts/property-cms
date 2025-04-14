@@ -36,7 +36,7 @@ const breadcrumbs = [
 export default function Page() {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
-  const [sortOrder, setSortOrder] = useState("asc")
+  const [sortOrder, setSortOrder] = useState("desc")
   const [searchFilter, setSearchFilter] = useState({})
   const [count, setCount] = useState(0)
 
@@ -66,9 +66,9 @@ export default function Page() {
     setCount(totalCount)
   }, [data])
 
-  const handleDetails = (id: any) => {
-    router.push(`/dashboard/properties/${id}`)
-  }
+  const handleDetails = (id: string) => {
+    window.open(`/dashboard/properties/${id}`, '_blank');
+  };
 
   const handleStartDateChange = (date: Date | undefined) => {
     setStartDate(date || null)
@@ -81,7 +81,7 @@ export default function Page() {
   const handleFilterChange = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
     if (key === "sortBy") {
-      setSortOrder(value === "Newest" ? "DESC" : "ASC")
+      setSortOrder(value === "Newest" ? "desc" : "asc")
     } else if (key === "propertiesManaged") {
       setPropertyType(value)
     }
@@ -197,7 +197,7 @@ export default function Page() {
     refetch({
       filter: {},
       sortBy: "createdAt",
-      sortOrder: "asc",
+      sortOrder: "desc",
       limit: "9",
       page: String(currentPage),
     })
@@ -234,8 +234,12 @@ export default function Page() {
         createdAt: property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
       }
 
+      // Default image if no propertyImages are available
+      const defaultImage = "https://cdn.businessday.ng/2021/07/luxury-residential-real-estate.png"
+
       return {
-        image: property.images?.[0] || "https://cdn.businessday.ng/2021/07/luxury-residential-real-estate.png",
+        image: defaultImage, // Fallback image
+        propertyImages: property.propertyImages || [], // Pass the entire propertyImages array
         PropertyID: transformedData._id,
         "Property Details": {
           Location:

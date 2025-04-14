@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { File, Plus, Minus, Loader2 } from "lucide-react"
+import { File, Plus, Minus } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import axios from "axios"
 import { useUser } from "@clerk/nextjs"
@@ -92,7 +92,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   const [errors, setErrors] = useState<Record<string, boolean>>({})
   const [isListed, setIsListed] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
 
   useEffect(() => {
     if (propertyToEdit) {
@@ -144,24 +144,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     }
   }, [propertyToEdit])
 
-  // Add cleanup function to delete images when modal is closed without submitting
-  useEffect(() => {
-    return () => {
-      // Only delete images if we're not in editing mode or if we're not submitting the form
-      if (!isEditing && selectedImages.length > 0 && dataForm.propertyImageKeys?.length > 0) {
-        // Delete all uploaded images from AWS when component unmounts without submission
-        dataForm.propertyImageKeys.forEach(async (key: string) => {
-          try {
-            await deleteFromAWS(key)
-            console.log(`Cleaned up image: ${key}`)
-          } catch (error) {
-            console.error(`Failed to clean up image: ${key}`, error)
-          }
-        })
-      }
-    }
-  }, [selectedImages, dataForm.propertyImageKeys, isEditing])
-
   const resetForm = () => {
     setDataForm({})
     setSelectedImages([])
@@ -169,6 +151,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     setErrors({})
     setIsListed(false)
     setIsEditing(false)
+    setImagesToDelete([])
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
@@ -184,11 +167,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   }
 
   const uploadImageToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
-    const oversizedFile = file.size > 5 * 1024 * 1024
-    if (oversizedFile) {
-      toast.error("Please upload images smaller than 5MB")
-      return
-    }
+   
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -199,8 +178,8 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
             "Content-Type": "application/json",
           },
         },
-      )
-      const signedUrl = response.data.msg.url
+      ) 
+      const signedUrl = response.data.msg.url 
 
       const uploadResponse = await axios.put(signedUrl, file, {
         headers: {
@@ -264,20 +243,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       return
     }
 
-    setIsSubmitting(true)
-
-    // If in edit mode and there are images marked for deletion, delete them from AWS
-    if (isEditing && dataForm.imagesToDelete && dataForm.imagesToDelete.length > 0) {
-      const deletePromises = dataForm.imagesToDelete.map((key: string) => deleteFromAWS(key))
-      try {
-        await Promise.all(deletePromises)
-        console.log("Successfully deleted marked images from AWS")
-      } catch (error) {
-        console.error("Error deleting marked images from AWS:", error)
-        toast.error("Some images could not be deleted from storage")
-      }
-    }
-
     const finalData = Object.entries({
       clerkId: user?.id,
       roadLocation: dataForm.roadLocation,
@@ -305,7 +270,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       listed:
         typeof isListed === "boolean" ? isListed : isListed === "YES" ? true : isListed === "NO" ? false : isListed, // Keep it as is if it's not "YES" or "NO"
     }).reduce((acc, [key, value]) => {
-      if (value !== "N/A" && value !== undefined && key !== "imagesToDelete") {
+      if (value !== "N/A" && value !== undefined) {
         acc[key] = value
       }
       return acc
@@ -315,6 +280,12 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       let response
       if (isEditing) {
         const updatedData = { ...finalData, _id: propertyToEdit._id }
+
+        // Process any images marked for deletion
+        if (imagesToDelete.length > 0) {
+          const deletePromises = imagesToDelete.map((imageKey) => deleteFromAWS(imageKey))
+          await Promise.all(deletePromises)
+        }
 
         console.log(updatedData)
         response = await axios.put(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/updateSingleRecord`, updatedData)
@@ -335,8 +306,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       toast.error(
         isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again.",
       )
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -357,7 +326,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       const uploadPromises = filesToUpload.map(async (file) => {
         // Upload to AWS and get URL
         const result = await uploadImageToAWS(file, (progress) => {
-          // You could implement progress tracking here if needed
         })
 
         return {
@@ -393,46 +361,46 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     const imageKeys = dataForm.propertyImageKeys || []
     const imageKey = imageKeys[index]
 
-    if (isEditing) {
-      // In edit mode, just remove from preview without deleting from AWS
+    if (isEditing && imageKey) {
+      // In editing mode, just mark for deletion and remove from preview
+      setImagesToDelete((prev) => [...prev, imageKey])
+
+      // Remove from state
       setSelectedImages((prev) => prev.filter((_, i) => i !== index))
 
-      // Mark this image for deletion when form is submitted
+      // Remove from form data
       setDataForm((prev) => ({
         ...prev,
-        imagesToDelete: [...(prev.imagesToDelete || []), imageKey],
         propertyImageKeys: prev.propertyImageKeys.filter((_: string, i: number) => i !== index),
       }))
 
       toast.success("Image removed from preview")
-    } else {
-      if (imageKey) {
-        try {
-          // Show loading toast
-          const loadingToastId = toast.loading("Deleting image...")
+    } else if (imageKey) {
+      try {
+        // Show loading toast
+        const loadingToastId = toast.loading("Deleting image...")
 
-          // Delete from AWS
-          await deleteFromAWS(imageKey)
+        // Delete from AWS
+        await deleteFromAWS(imageKey)
 
-          // Remove from state
-          setSelectedImages((prev) => prev.filter((_, i) => i !== index))
-
-          // Remove from form data
-          setDataForm((prev) => ({
-            ...prev,
-            propertyImageKeys: prev.propertyImageKeys.filter((_: string, i: number) => i !== index),
-          }))
-
-          toast.dismiss(loadingToastId)
-          toast.success("Image deleted successfully")
-        } catch (error) {
-          console.error("Error deleting image:", error)
-          toast.error("Failed to delete image. Please try again.")
-        }
-      } else {
-        // If no key exists (e.g., for newly added images that failed to upload)
+        // Remove from state
         setSelectedImages((prev) => prev.filter((_, i) => i !== index))
+
+        // Remove from form data
+        setDataForm((prev) => ({
+          ...prev,
+          propertyImageKeys: prev.propertyImageKeys.filter((_: string, i: number) => i !== index),
+        }))
+
+        toast.dismiss(loadingToastId)
+        toast.success("Image deleted successfully")
+      } catch (error) {
+        console.error("Error deleting image:", error)
+        toast.error("Failed to delete image. Please try again.")
       }
+    } else {
+      // If no key exists (e.g., for newly added images that failed to upload)
+      setSelectedImages((prev) => prev.filter((_, i) => i !== index))
     }
   }
 
@@ -586,18 +554,8 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
               onClick={handleSubmit}
               type="submit"
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={isSubmitting}
             >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isEditing ? "Updating..." : "Adding..."}
-                </div>
-              ) : isEditing ? (
-                "Update Property"
-              ) : (
-                "Add Property"
-              )}
+              {isEditing ? "Update Property" : "Add Property"}
             </Button>
           </div>
         </ScrollArea>

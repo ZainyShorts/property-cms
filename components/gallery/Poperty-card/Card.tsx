@@ -1,15 +1,31 @@
 "use client"
 
+import type React from "react"
+
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import Image from "next/image"
-import { motion } from "framer-motion" 
-import { ChevronRight } from "lucide-react" 
-import { useEffect } from "react"
+import { motion } from "framer-motion"
+import { ChevronRight, ExternalLink } from "lucide-react"
 
-export function PropertyCard({ data , onDetails }: { data: any , onDetails:any }) { 
+export function PropertyCard({ data, onDetails }: { data: any; onDetails: any }) {
   const isArray = (value: any) => Array.isArray(value)
   const isObject = (value: any) => typeof value === "object" && value !== null && !Array.isArray(value)
+
+  // Get the image URL properly from propertyImages if available
+  const imageUrl =
+    data.propertyImages && data.propertyImages.length > 0
+      ? data.propertyImages[0]
+      : data.image || "/placeholder.svg"
+
+  const handleImageClick = (e: React.MouseEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      window.open(imageUrl, "_blank")
+      e.stopPropagation() 
+    } else {
+      onDetails(data?.PropertyID)
+    }
+  }
 
   const renderValue = (value: any) => {
     if (isArray(value)) {
@@ -35,29 +51,33 @@ export function PropertyCard({ data , onDetails }: { data: any , onDetails:any }
       ))
     } else {
       return <span className="text-foreground/80">{value}</span>
-    } 
-  } 
- 
+    }
+  }
 
   return (
     <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }} className="h-full">
       <Card className="overflow-hidden h-full bg-card dark:bg-card/5 hover:shadow-xl transition-all duration-300 border-primary/10">
-        {data.image && (
-          <div onClick={()=>{onDetails(data?.PropertyID)}}
-          className="relative aspect-[4/3] cursor-pointer overflow-hidden group">
-            <Image  
-              src={data.image || "/placeholder.svg"}
+        {(imageUrl || data.image) && (
+          <div onClick={handleImageClick} className="relative aspect-[4/3] cursor-pointer overflow-hidden group">
+            <Image
+              src={imageUrl || "/placeholder.svg"}
               alt="Property"
               fill
               className="object-cover cursor-pointer transition-transform duration-300 group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-gradient-to-t cursor-pointer from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+            {/* Small hint that Ctrl+Click opens image in new tab */}
+            <div className="absolute top-2 right-2 bg-background/80 p-1 rounded-md backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity">
+              <ExternalLink className="h-4 w-4 text-primary" />
+            </div>
           </div>
         )}
 
         <CardContent className="p-6 space-y-6">
           {Object.entries(data).map(([key, value]: [string, any]) => {
-            if (key === "image") return null
+            // Skip image and propertyImages in the details section
+            if (key === "image" || key === "propertyImages") return null
             return (
               <div key={key} className="space-y-2">
                 <CardHeader className="flex flex-row items-center justify-between p-0">
@@ -75,4 +95,3 @@ export function PropertyCard({ data , onDetails }: { data: any , onDetails:any }
     </motion.div>
   )
 }
-

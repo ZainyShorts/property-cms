@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
-import { Upload, File, Trash2 } from "lucide-react"
+import { useState, useRef, type KeyboardEvent } from "react"
+import { Upload, File, Trash2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 
 interface DocumentModalProps {
   isOpen: boolean
@@ -17,13 +18,13 @@ interface DocumentModalProps {
 
 interface UploadedDocument {
   id: string
-  name: string
   file: File
   preview?: string
 }
 
 export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalProps) {
-  const [documentName, setDocumentName] = useState("")
+  const [tagInput, setTagInput] = useState("")
+  const [tags, setTags] = useState<string[]>([])
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -34,7 +35,6 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
       const newDocuments = newFiles.map((file) => {
         const doc: UploadedDocument = {
           id: Math.random().toString(36).substring(2, 9),
-          name: documentName || file.name,
           file: file,
         }
 
@@ -47,7 +47,6 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
       })
 
       setUploadedDocuments((prev) => [...prev, ...newDocuments].slice(0, 3))
-      setDocumentName("")
 
       // Reset file input
       if (fileInputRef.current) {
@@ -70,15 +69,35 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
     })
   }
 
+  const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && tagInput.trim()) {
+      e.preventDefault()
+      addTag(tagInput.trim())
+      setTagInput("")
+    }
+  }
+
+  const addTag = (tag: string) => {
+    if (!tags.includes(tag)) {
+      setTags((prev) => [...prev, tag])
+    }
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setTags((prev) => prev.filter((tag) => tag !== tagToRemove))
+  }
+
   const handleSubmit = () => {
     // Here you would typically upload the documents to your server
     console.log("Uploading documents for row ID:", rowId)
     console.log("Documents:", uploadedDocuments)
+    console.log("Tags:", tags)
 
     // Close the modal and reset state
     onClose()
     setUploadedDocuments([])
-    setDocumentName("")
+    setTags([])
+    setTagInput("")
   }
 
   return (
@@ -90,13 +109,29 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="document-name">Document Name</Label>
-            <Input
-              id="document-name"
-              placeholder="Enter document name"
-              value={documentName}
-              onChange={(e) => setDocumentName(e.target.value)}
-            />
+            <Label htmlFor="tags-input">Tags</Label>
+            <div className="space-y-2">
+              <Input
+                id="tags-input"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Type tag and press Enter"
+              />
+
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {tags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1 px-2 py-1">
+                      {tag}
+                      <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-muted p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -127,7 +162,7 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
           </div>
 
           {uploadedDocuments.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-[100px] overflow-y-auto">
               <Label>Uploaded Documents</Label>
               <div className="space-y-2">
                 {uploadedDocuments.map((doc) => (
@@ -137,7 +172,7 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
                         <div className="h-10 w-10 rounded overflow-hidden">
                           <img
                             src={doc.preview || "/placeholder.svg"}
-                            alt={doc.name}
+                            alt={doc.file.name}
                             className="h-full w-full object-cover"
                           />
                         </div>
@@ -146,7 +181,7 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.name}</p>
+                      <p className="text-sm font-medium truncate">{doc.file.name}</p>
                       <p className="text-xs text-muted-foreground truncate">{(doc.file.size / 1024).toFixed(1)} KB</p>
                     </div>
                     <Button
