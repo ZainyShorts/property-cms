@@ -14,6 +14,8 @@ import { FilterBar } from "@/components/overview/Filter-Bar/FilterBar"
 import { PropertyFilterSidebar } from "../overview/Filteration-sidebar/filteration"
 import { clearAllFilters } from "@/lib/store/slices/filterSlice"
 import type { RootState } from "@/lib/store/store"
+// Add this import if it's used in the properties-page and needed here
+import { resetRangess } from "@/lib/store/slices/rangeSlice"
 
 const filter = [
   {
@@ -33,6 +35,58 @@ const breadcrumbs = [
   { label: "Gallery", href: "/dashboard/properties/properties-gallery" },
 ]
 
+// Update the cleanFilters function to match the one from properties-page
+const cleanFilters = (filters: any) => {
+  const cleaned: any = {}
+
+  const isEmpty = (value: any) => {
+    if (value === null || value === undefined || value === "") return true
+    if (Array.isArray(value) && value.length === 0) return true
+    if (typeof value === "object" && Object.keys(value).length === 0) return true
+    return false
+  }
+
+  const isDefaultRange = (range: any, defaultMin: number, defaultMax: number) => {
+    return range.min === defaultMin && range.max === defaultMax
+  }
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (isEmpty(value)) return
+
+    if (typeof value === "object" && "min" in value && "max" in value) {
+      switch (key) {
+        case "bedrooms":
+          if (!isDefaultRange(value, 0, 10)) cleaned[key] = value
+          break
+        case "primaryPriceRange":
+        case "resalePriceRange":
+          if (!isDefaultRange(value, 0, 1000000)) cleaned[key] = value
+          break
+        case "rentRange":
+          if (!isDefaultRange(value, 0, 50000)) cleaned[key] = value
+          break
+      }
+      return
+    }
+
+    if (Array.isArray(value)) {
+      if (value.length > 0) cleaned[key] = value
+      return
+    }
+
+    if (typeof value === "string" && value.trim() !== "") {
+      cleaned[key] = value.trim()
+    }
+
+    if (typeof value === "number" && value !== 0) {
+      cleaned[key] = value
+    }
+  })
+
+  return cleaned
+}
+
+// Update the Page component to include the enhanced filtration logic
 export default function Page() {
   const router = useRouter()
   const [currentPage, setCurrentPage] = useState(1)
@@ -49,6 +103,8 @@ export default function Page() {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
 
   const sidebarFilters = useSelector((state: RootState) => state.filter)
+  // Add this if you're using range filters from the properties-page
+  const rangeFilters = useSelector((state: any) => state.range)
 
   const { loading, error, data, refetch } = useQuery(GET_PROPERTIES, {
     variables: {
@@ -67,8 +123,8 @@ export default function Page() {
   }, [data])
 
   const handleDetails = (id: string) => {
-    window.open(`/dashboard/properties/${id}`, '_blank');
-  };
+    window.open(`/dashboard/properties/${id}`, "_blank")
+  }
 
   const handleStartDateChange = (date: Date | undefined) => {
     setStartDate(date || null)
@@ -87,56 +143,7 @@ export default function Page() {
     }
   }
 
-  const cleanFilters = (filters: any) => {
-    const cleaned: any = {}
-
-    const isEmpty = (value: any) => {
-      if (value === null || value === undefined || value === "") return true
-      if (Array.isArray(value) && value.length === 0) return true
-      if (typeof value === "object" && Object.keys(value).length === 0) return true
-      return false
-    }
-
-    const isDefaultRange = (range: any, defaultMin: number, defaultMax: number) => {
-      return range.min === defaultMin && range.max === defaultMax
-    }
-
-    Object.entries(filters).forEach(([key, value]) => {
-      if (isEmpty(value)) return
-
-      if (typeof value === "object" && "min" in value && "max" in value) {
-        switch (key) {
-          case "bedrooms":
-            if (!isDefaultRange(value, 0, 10)) cleaned[key] = value
-            break
-          case "primaryPriceRange":
-          case "resalePriceRange":
-            if (!isDefaultRange(value, 0, 1000000)) cleaned[key] = value
-            break
-          case "rentRange":
-            if (!isDefaultRange(value, 0, 50000)) cleaned[key] = value
-            break
-        }
-        return
-      }
-
-      if (Array.isArray(value)) {
-        if (value.length > 0) cleaned[key] = value
-        return
-      }
-
-      if (typeof value === "string" && value.trim() !== "") {
-        cleaned[key] = value.trim()
-      }
-
-      if (typeof value === "number" && value !== 0) {
-        cleaned[key] = value
-      }
-    })
-
-    return cleaned
-  }
-
+  // Update the handleApplyFilters function to match the enhanced version from properties-page
   const handleApplyFilters = () => {
     const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
@@ -154,6 +161,34 @@ export default function Page() {
       ...searchFilterObj,
       ...dateFilters,
       ...propertyTypeFilter,
+      ...(rangeFilters?.minBed &&
+        rangeFilters?.maxBed && {
+          bedrooms: {
+            min: Number.parseInt(rangeFilters.minBed),
+            max: Number.parseInt(rangeFilters.maxBed),
+          },
+        }),
+      ...(rangeFilters?.minPrimaryPrice &&
+        rangeFilters?.maxPrimaryPrice && {
+          primaryPriceRange: {
+            min: Number.parseInt(rangeFilters.minPrimaryPrice),
+            max: Number.parseInt(rangeFilters.maxPrimaryPrice),
+          },
+        }),
+      ...(rangeFilters?.minRent &&
+        rangeFilters?.maxRent && {
+          rentRange: {
+            min: Number.parseInt(rangeFilters.minRent),
+            max: Number.parseInt(rangeFilters.maxRent),
+          },
+        }),
+      ...(rangeFilters?.minResalePrice &&
+        rangeFilters?.maxResalePrice && {
+          resalePriceRange: {
+            min: Number.parseInt(rangeFilters.minResalePrice),
+            max: Number.parseInt(rangeFilters.maxResalePrice),
+          },
+        }),
     }
 
     if (Object.keys(newFilters).length > 0) {
@@ -187,6 +222,9 @@ export default function Page() {
 
   const handleClearFilters = () => {
     dispatch(clearAllFilters())
+    if (typeof resetRangess === "function") {
+      dispatch(resetRangess())
+    }
     setSearchFilter({})
     setSortOrder("asc")
     setStartDate(null)
@@ -317,10 +355,6 @@ export default function Page() {
         return newPage
       })
     }
-  }
-
-  const handleSortChange = (value: string) => {
-    setSortOrder(value)
   }
 
   return (

@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, type KeyboardEvent } from "react"
+import axios from "axios"
 import { Upload, File, Trash2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -20,12 +21,53 @@ interface UploadedDocument {
   id: string
   file: File
   preview?: string
+  awsUrl?: string
+  key?: string
+}
+
+const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
+  try {
+    const formData = new FormData()
+    formData.append("file", file)
+    const response = await axios.get(
+      `${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/signed-url?fileName=${file.name}&contentType=${file.type}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    )
+    const signedUrl = response.data.msg.url
+
+    const uploadResponse = await axios.put(signedUrl, file, {
+      headers: {
+        "Content-Type": file.type,
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setUploadProgress(progress)
+        }
+      },
+    })
+
+    if (uploadResponse.status === 200) {
+      return { awsUrl: signedUrl.split("?")[0], key: response.data.msg.key }
+    } else {
+      throw new Error("Failed to upload file")
+    }
+  } catch (error) {
+    console.error("Error uploading file:", error)
+    throw new Error("Failed to upload file")
+  }
 }
 
 export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalProps) {
   const [tagInput, setTagInput] = useState("")
   const [tags, setTags] = useState<string[]>([])
   const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([])
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+  const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +80,6 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
           file: file,
         }
 
-        // Create preview for image files
         if (file.type.startsWith("image/")) {
           doc.preview = URL.createObjectURL(file)
         }
@@ -48,7 +89,6 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
 
       setUploadedDocuments((prev) => [...prev, ...newDocuments].slice(0, 3))
 
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
@@ -59,7 +99,6 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
     setUploadedDocuments((prev) => {
       const filtered = prev.filter((doc) => doc.id !== id)
 
-      // Revoke object URLs to prevent memory leaks
       const docToRemove = prev.find((doc) => doc.id === id)
       if (docToRemove?.preview) {
         URL.revokeObjectURL(docToRemove.preview)
@@ -87,17 +126,57 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
     setTags((prev) => prev.filter((tag) => tag !== tagToRemove))
   }
 
-  const handleSubmit = () => {
-    // Here you would typically upload the documents to your server
-    console.log("Uploading documents for row ID:", rowId)
-    console.log("Documents:", uploadedDocuments)
-    console.log("Tags:", tags)
+  const handleSubmit = async () => {
+    setIsUploading(true)
 
-    // Close the modal and reset state
-    onClose()
-    setUploadedDocuments([])
-    setTags([])
-    setTagInput("")
+    try {
+      // Upload each document to AWS
+      const uploadPromises = uploadedDocuments.map(async (doc) => {
+        // Create a function to update progress for this specific document
+        const updateDocumentProgress = (progress: number) => {
+          setUploadProgress((prev) => ({
+            ...prev,
+            [doc.id]: progress,
+          }))
+        }
+
+        // Upload the document
+        const result = await uploadFileToAWS(doc.file, updateDocumentProgress)
+
+        // Update the document with the AWS URL and key
+        setUploadedDocuments((prev) =>
+          prev.map((d) => (d.id === doc.id ? { ...d, awsUrl: result.awsUrl, key: result.key } : d)),
+        )
+
+        return result
+      })
+
+      // Wait for all uploads to complete
+      const results = await Promise.all(uploadPromises)
+
+      // Log the results
+      console.log("Uploaded documents for row ID:", rowId)
+      console.log("Documents:", uploadedDocuments)
+      console.log("AWS Upload Results:", results)
+      console.log("Tags:", tags)
+
+      // Display the URLs in console
+      results.forEach((result, index) => {
+        console.log(`Document ${index + 1} URL:`, result.awsUrl)
+      })
+
+      // Close the modal and reset state
+      onClose()
+      setUploadedDocuments([])
+      setTags([])
+      setTagInput("")
+      setUploadProgress({})
+    } catch (error) {
+      console.error("Error uploading documents:", error)
+      // You might want to show an error message to the user here
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   return (
@@ -164,10 +243,10 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
           {uploadedDocuments.length > 0 && (
             <div className="space-y-2 max-h-[100px] overflow-y-auto">
               <Label>Uploaded Documents</Label>
-              <div className="space-y-2">
+              <div className="space-y-2 ">
                 {uploadedDocuments.map((doc) => (
                   <div key={doc.id} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 ">
                       {doc.preview ? (
                         <div className="h-10 w-10 rounded overflow-hidden">
                           <img
@@ -181,14 +260,23 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.file.name}</p>
+                      <p className="text-sm font-medium truncate">{doc.file.name.slice(0,30)}</p>
                       <p className="text-xs text-muted-foreground truncate">{(doc.file.size / 1024).toFixed(1)} KB</p>
+                      {uploadProgress[doc.id] !== undefined && (
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                          <div
+                            className="bg-primary h-1.5 rounded-full"
+                            style={{ width: `${uploadProgress[doc.id]}%` }}
+                          ></div>
+                        </div>
+                      )}
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => removeDocument(doc.id)}
                       className="flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={isUploading}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -207,9 +295,9 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
             type="button"
             onClick={handleSubmit}
             className="sm:w-auto w-full bg-black text-white dark:bg-white dark:text-black hover:bg-black/80 dark:hover:bg-white/80"
-            disabled={uploadedDocuments.length === 0}
+            disabled={uploadedDocuments.length === 0 || isUploading}
           >
-            Save Documents
+            {isUploading ? "Uploading..." : "Save Documents"}
           </Button>
         </DialogFooter>
       </DialogContent>

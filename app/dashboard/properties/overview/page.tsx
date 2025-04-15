@@ -18,8 +18,10 @@ import type { RootState } from "@/lib/store/store"
 import { Loader2 } from "lucide-react"
 import { useDispatch } from "react-redux"
 import { clearAllFilters } from "@/lib/store/slices/filterSlice"
+import { resetRangess } from "@/lib/store/slices/rangeSlice"
+import { ShareModal } from "./share-modal/shareModal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { ExportModal } from "./Export-Modal/ExportModal" 
+import { ExportModal } from "./Export-Modal/ExportModal"
 import { exportToExcel } from "@/lib/exportProperty"
 
 const filter = [
@@ -48,7 +50,7 @@ const tableHeaders = [
   "Project Name",
   "Property Type",
   "Property Height",
-  "Project Location", 
+  "Project Location",
   "Unit Number",
   "Bedrooms",
   "Unit Land Size",
@@ -73,8 +75,8 @@ export default function PropertiesPage() {
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
   const [propertyToEdit, setPropertyToEdit] = useState(null)
   const [currentPage, setCurrentPage] = useState<number>(1)
-  const [searchFilter, setSearchFilter] = useState({}) 
-  const [Loading , setLoading] = useState<Boolean>(false);
+  const [searchFilter, setSearchFilter] = useState({})
+  const [Loading, setLoading] = useState<boolean>(false)
   const [sortOrder, setSortOrder] = useState("desc")
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [totalCount, setCount] = useState<number>(0)
@@ -84,8 +86,12 @@ export default function PropertiesPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const dispatch = useDispatch()
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
+  // Add a new state for the share modal
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [shareData, setShareData] = useState(null)
 
   const sidebarFilters = useSelector((state: RootState) => state.filter)
+  const rangeFilters = useSelector((state: any) => state.range)
 
   const { loading, error, data, refetch } = useQuery(GET_PROPERTIES, {
     variables: {
@@ -113,7 +119,11 @@ export default function PropertiesPage() {
   const handleEndDateChange = (date: Date | undefined) => {
     setEndDate(date || null)
   }
-
+  // Replace the handleShareButton function with this
+  const handleShareButton = (data: any) => {
+    setShareData(data)
+    setShareModalOpen(true)
+  }
   const handleFilterChange = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
     if (key === "sortBy") {
@@ -184,14 +194,41 @@ export default function PropertiesPage() {
     const propertyTypeFilter = propertyType ? { propertyType } : {}
 
     const cleanedSidebarFilters = cleanFilters(sidebarFilters)
-
     const newFilters = {
       ...cleanedSidebarFilters,
       ...searchFilterObj,
       ...dateFilters,
       ...propertyTypeFilter,
+      ...(rangeFilters.minBed &&
+        rangeFilters.maxBed && {
+          bedrooms: {
+            min: Number.parseInt(rangeFilters.minBed),
+            max: Number.parseInt(rangeFilters.maxBed),
+          },
+        }),
+      ...(rangeFilters.minPrimaryPrice &&
+        rangeFilters.maxPrimaryPrice && {
+          primaryPriceRange: {
+            min: Number.parseInt(rangeFilters.minPrimaryPrice),
+            max: Number.parseInt(rangeFilters.maxPrimaryPrice),
+          },
+        }),
+      ...(rangeFilters.minRent &&
+        rangeFilters.maxRent && {
+          rentRange: {
+            min: Number.parseInt(rangeFilters.minRent),
+            max: Number.parseInt(rangeFilters.maxRent),
+          },
+        }),
+      ...(rangeFilters.minResalePrice &&
+        rangeFilters.maxResalePrice && {
+          resalePriceRange: {
+            min: Number.parseInt(rangeFilters.minResalePrice),
+            max: Number.parseInt(rangeFilters.maxResalePrice),
+          },
+        }),
     }
-    console.log(newFilters)
+    console.log("new", newFilters)
     if (Object.keys(newFilters).length > 0) {
       setSearchFilter(newFilters)
       refetch({
@@ -237,8 +274,8 @@ export default function PropertiesPage() {
     try {
       const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/deleteProperty`, {
         params: { _id: _id },
-      }) 
-      console.log('id',_id)
+      })
+      console.log("id", _id)
       console.log("Property deleted successfully:", response)
       if (response) {
         toast.success("Property Deleted successfully!")
@@ -259,79 +296,105 @@ export default function PropertiesPage() {
 
   const handleExport = () => {
     setExportModalOpen(true)
-  } 
-  
+  }
+
   const handleCloseExportModal = () => {
-    setExportModalOpen(false) 
+    setExportModalOpen(false)
     setPropertyToEdit(null)
   }
-   
-  const handleSubmitExport = async (exportOption: string, count: number) => { 
-    setLoading(true);
-    console.log(`Exporting with option: ${exportOption}`);
-  
-    let dataToExport = null;
-  
+
+  const handleSubmitExport = async (exportOption: any, count: any) => {
+    setLoading(true)
+    console.log(`Exporting with option: ${exportOption}`)
+
+    let dataToExport = null
+
     if (exportOption === "false" || exportOption === false) {
       try {
         dataToExport = await refetch({
           filter: {},
           sortBy: "createdAt",
           sortOrder: "asc",
-          limit: count.toString(), 
-        });
-  
+          limit: count.toString(),
+        })
+
         if (dataToExport?.data?.getProperties?.data) {
-          exportToExcel(dataToExport.data.getProperties.data);
+          exportToExcel(dataToExport.data.getProperties.data)
         } else {
-          console.error("No data available for export");
+          console.error("No data available for export")
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data:", error)
       }
     } else {
       try {
-        const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {};
-  
+        const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
+
         const dateFilters = {
           ...(startDate && { startDate: startDate.toISOString() }),
           ...(endDate && { endDate: endDate.toISOString() }),
-        };
-  
-        const propertyTypeFilter = propertyType ? { propertyType } : {};
-        const cleanedSidebarFilters = cleanFilters(sidebarFilters);
-  
+        }
+
+        const propertyTypeFilter = propertyType ? { propertyType } : {}
+        const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+
         const newFilters = {
           ...cleanedSidebarFilters,
           ...searchFilterObj,
           ...dateFilters,
           ...propertyTypeFilter,
-        };
-  
-        console.log("Applying filters:", newFilters);
-  
+          ...(rangeFilters.minBed &&
+            rangeFilters.maxBed && {
+              bedrooms: {
+                min: Number.parseInt(rangeFilters.minBed),
+                max: Number.parseInt(rangeFilters.maxBed),
+              },
+            }),
+          ...(rangeFilters.minPrimaryPrice &&
+            rangeFilters.maxPrimaryPrice && {
+              primaryPriceRange: {
+                min: Number.parseInt(rangeFilters.minPrimaryPrice),
+                max: Number.parseInt(rangeFilters.maxPrimaryPrice),
+              },
+            }),
+          ...(rangeFilters.minRent &&
+            rangeFilters.maxRent && {
+              rentRange: {
+                min: Number.parseInt(rangeFilters.minRent),
+                max: Number.parseInt(rangeFilters.maxRent),
+              },
+            }),
+          ...(rangeFilters.minResalePrice &&
+            rangeFilters.maxResalePrice && {
+              resalePriceRange: {
+                min: Number.parseInt(rangeFilters.minResalePrice),
+                max: Number.parseInt(rangeFilters.maxResalePrice),
+              },
+            }),
+        }
+
+        console.log("Applying filters:", newFilters)
+
         dataToExport = await refetch({
           filter: newFilters,
           sortBy: "createdAt",
           sortOrder: "asc",
-          limit: count.toString(), 
-        });
+          limit: count.toString(),
+        })
         if (dataToExport?.data?.getProperties?.data) {
-          exportToExcel(dataToExport.data.getProperties.data);
+          exportToExcel(dataToExport.data.getProperties.data)
         } else {
-          console.error("No data available for export");
+          console.error("No data available for export")
         }
-        console.log("Mapped export data:", dataToExport);
-        handleCloseExportModal();
+        console.log("Mapped export data:", dataToExport)
+        handleCloseExportModal()
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching data:", error)
       }
     }
-  
-    setLoading(false);
-  };
-  
-  
+
+    setLoading(false)
+  }
 
   if (loading) {
     return (
@@ -339,7 +402,7 @@ export default function PropertiesPage() {
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     )
-  } 
+  }
   if (Loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -347,7 +410,6 @@ export default function PropertiesPage() {
       </div>
     )
   }
-
 
   if (error) {
     return <div className="min-h-screen bg-background flex items-center justify-center">Error loading properties</div>
@@ -362,8 +424,8 @@ export default function PropertiesPage() {
       projectName: property.projectName || "N/A",
       propertyType: property.propertyType || "N/A",
       propertyHeight: property.propertyHeight || "N/A",
-      projectLocation: property.projectLocation || "N/A", 
-      propertyImages : property.propertyImages || "N/A",
+      projectLocation: property.projectLocation || "N/A",
+      propertyImages: property.propertyImages || "N/A",
       unitNumber: property.unitNumber || "N/A",
       bedrooms: property.bedrooms || "N/A",
       unitLandSize: property.unitLandSize || "N/A",
@@ -384,8 +446,9 @@ export default function PropertiesPage() {
 
   const handleClearFilters = () => {
     dispatch(clearAllFilters())
+    dispatch(resetRangess())
     setSearchFilter({})
-    setSortOrder("asc")
+    setSortOrder("desc")
     setStartDate(null)
     setEndDate(null)
     setPropertyType("")
@@ -394,13 +457,12 @@ export default function PropertiesPage() {
     refetch({
       filter: {},
       sortBy: "createdAt",
-      sortOrder: "asc",
+      sortOrder: "desc",
     })
     setCurrentPage(1)
   }
   return (
     <div className="min-h-screen bg-background ">
-     
       <FilterBar
         filters={filter}
         breadcrumbs={breadcrumbs}
@@ -428,6 +490,7 @@ export default function PropertiesPage() {
             Count={totalCount}
             data={transformedData}
             onAddButton={handleAdd}
+            onShare={handleShareButton}
             onDelete={handleDelete}
             onEdit={handleUpdate}
           />
@@ -458,7 +521,16 @@ export default function PropertiesPage() {
 
       <PropertyFilterSidebar open={filterSidebarOpen} onOpenChange={setFilterSidebarOpen} />
       <ExportModal isOpen={exportModalOpen} onClose={handleCloseExportModal} onSubmitExport={handleSubmitExport} />
+      {/* Add the ShareModal component at the end of the return statement, just before the closing </div> */}
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        onShare={(options) => {
+          console.log("Share options:", options)
+          console.log("Share data:", shareData)
+          setShareModalOpen(false)
+        }}
+      />
     </div>
   )
 }
-

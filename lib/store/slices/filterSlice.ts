@@ -14,11 +14,7 @@ interface FilterState {
   projectLocation: string
   unitNumber: string
   unitLocation: string
-  vacancyStatus: string
-  bedrooms: PriceRange
-  primaryPriceRange: PriceRange
-  resalePriceRange: PriceRange
-  rentRange: PriceRange
+  vacancyStatus: string 
   unitView: string[]
 }
 
@@ -30,11 +26,7 @@ const initialState: FilterState = {
   projectLocation: "",
   unitNumber: "",
   unitLocation: "",
-  vacancyStatus: "",
-  bedrooms: { min: 0, max: 10 },
-  primaryPriceRange: { min: 0, max: 1000000 },
-  resalePriceRange: { min: 0, max: 1000000 },
-  rentRange: { min: 0, max: 50000 },
+  vacancyStatus: "", 
   unitView: [],
 }
 
@@ -48,21 +40,12 @@ export const filterSlice = createSlice({
     updateUnitView: (state, action: PayloadAction<string[]>) => {
       state.unitView = action.payload
     },
-    updateRangeFilter: (
-      state,
-      action: PayloadAction<{
-        field: "bedrooms" | "primaryPriceRange" | "resalePriceRange" | "rentRange"
-        value: PriceRange
-      }>,
-    ) => {
-      const { field, value } = action.payload
-      state[field] = value
-    },
+   
     resetFilters: () => initialState,
     clearAllFilters: () => initialState, // This is the new action we're adding
   },
 })
 
-export const { updateFilter, updateUnitView, updateRangeFilter, resetFilters, clearAllFilters } = filterSlice.actions
+export const { updateFilter, updateUnitView, resetFilters, clearAllFilters } = filterSlice.actions
 export default filterSlice.reducer
 
