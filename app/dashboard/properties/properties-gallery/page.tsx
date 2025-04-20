@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useSelector, useDispatch } from "react-redux"
 import { FilterBar } from "@/components/overview/Filter-Bar/FilterBar"
-import { PropertyFilterSidebar } from "../overview/Filteration-sidebar/filteration"
+import { PropertyFilterSidebar } from "../units/Filteration-sidebar/filteration"
 import { clearAllFilters } from "@/lib/store/slices/filterSlice"
 import type { RootState } from "@/lib/store/store"
 // Add this import if it's used in the properties-page and needed here

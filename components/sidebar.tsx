@@ -23,7 +23,7 @@ const sidebarItems = [
   {
     title: "Properties",
     icon: Building2,
-    items: ["Overview", "Properties gallery", "Properties dashboard"],
+    items: ["Master Development" , " Sub Development" ,"Units", "Properties gallery", "Properties dashboard" ],
   },
   { title: "Agents", icon: Users, items: ["Overview", "Agents Gallery", "Agents Dashboard"] },
   { title: "Clients", icon: UserCircle, items: ["Overview"] },
@@ -38,7 +38,6 @@ const sidebarItems = [
   { title: "Maintainance Requests", icon: Contact, items: ["Overview", "Maintainance Request Gallery"] },
 ]
 
-// Add props to receive isOpen and onClose
 export function Sidebar({ isOpen = true, onClose = () => {} }) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null)
   const pathname = usePathname()
