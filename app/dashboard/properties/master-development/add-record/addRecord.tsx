@@ -7,7 +7,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { X, ImageIcon, Upload } from "lucide-react"
-import { toast } from "react-toastify"
+import { toast } from "react-toastify" 
 import axios from "axios"
 import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -17,15 +17,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import type { MasterDevelopment } from "../page"
+import { Progress } from "@/components/ui/progress"
 
 const formSchema = z.object({
   roadLocation: z.string().min(1, "Road location is required"),
   developmentName: z.string().min(1, "Development name is required"),
   locationQuality: z.string().min(1, "Location quality is required"),
-  buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "BUA area is required"),
-  facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Facilities area is required"),
-  amentiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Amenities area is required"),
-  totalAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Total area is required"),
+  buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "BUA area is required"),
+  facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Facilities area is required"),
+  amentiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Amenities area is required"),
+  totalAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Total area is required"),
   facilitiesCategories: z.array(z.string()).min(1, "Select at least one facility category"),
   amentiesCategories: z.array(z.string()).min(1, "Select at least one amenity category"),
   pictures: z.array(z.any()).optional(),
@@ -39,14 +40,22 @@ interface AddRecordModalProps {
   onRecordSaved?: () => void
 }
 
+interface ImageData {
+  file: File
+  preview: string
+  awsUrl?: string
+  awsKey?: string
+  isExisting?: boolean
+}
+
 export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
-  const [pictures, setPictures] = useState<Array<{ file: File; preview: string } | null>>(Array(6).fill(null))
+  const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const isEditMode = !!editRecord
 
-  // Initialize form with default values or edit record values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -77,6 +86,22 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         amentiesCategories: editRecord.amentiesCategories || [],
         pictures: [],
       })
+
+      // Initialize pictures from existing record
+      if (editRecord.pictures && editRecord.pictures.length > 0) {
+        const newPictures = Array(6).fill(null)
+        editRecord.pictures.forEach((url, index) => {
+          if (index < 6) {
+            newPictures[index] = {
+              file: new File([], `image-${index}.jpg`),
+              preview: url,
+              awsUrl: url,
+              isExisting: true
+            }
+          }
+        })
+        setPictures(newPictures)
+      }
     } else {
       form.reset({
         roadLocation: "",
@@ -90,29 +115,10 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         amentiesCategories: [],
         pictures: [],
       })
+      setPictures(Array(6).fill(null))
     }
   }, [editRecord, form])
 
-  // Set up pictures from edit record
-  useEffect(() => {
-    if (editRecord && editRecord.pictures && editRecord.pictures.length > 0) {
-      const newPictures = Array(6).fill(null)
-
-      editRecord.pictures.forEach((url, index) => {
-        if (index < 6) {
-          // Create a dummy file object for existing pictures
-          newPictures[index] = {
-            file: new File([], `image-${index}.jpg`, { type: "image/jpeg" }),
-            preview: url,
-          }
-        }
-      })
-
-      setPictures(newPictures)
-    }
-  }, [editRecord])
-
-  // Watch the area fields to calculate total area
   const buaAreaSqFt = useWatch({
     control: form.control,
     name: "buaAreaSqFt",
@@ -131,134 +137,290 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     defaultValue: editRecord?.amentiesAreaSqFt || 0,
   })
 
-  // Calculate total area whenever component areas change
+  const handleCheckChangedFields = () => {
+    const currentValues = form.getValues()
+    const changedFields: Record<string, any> = {}
+    
+    Object.entries(currentValues).forEach(([key, value]) => {
+      if (key === 'pictures') return
+
+      const editValue = editRecord?.[key as keyof typeof editRecord]
+      
+      if (Array.isArray(value) && Array.isArray(editValue)) {
+        const sortedValue = [...value].sort()
+        const sortedEditValue = [...editValue].sort()
+        if (JSON.stringify(sortedValue) !== JSON.stringify(sortedEditValue)) {
+          changedFields[key] = value
+        }
+      } else if (value !== editValue) {
+        changedFields[key] = value
+      }
+    })
+
+    const currentPictures = pictures
+      .filter(pic => pic !== null)
+      .map(pic => pic?.awsUrl || pic?.preview)
+    
+    const originalPictures = editRecord?.pictures || []
+    
+    if (JSON.stringify(currentPictures) !== JSON.stringify(originalPictures)) {
+      changedFields.pictures = currentPictures
+    }
+
+    return changedFields
+  }
+
+  const uploadImageToAWS = async (file: File, index: number): Promise<{ awsUrl: string; key: string }> => {
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/signed-url?fileName=${file.name}&contentType=${file.type}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      )
+      
+      const signedUrl = response.data.msg.url
+
+      await axios.put(signedUrl, file, {
+        headers: {
+          "Content-Type": file.type,
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            setUploadProgress(prev => {
+              const newProgress = [...prev]
+              newProgress[index] = progress
+              return newProgress
+            })
+          }
+        },
+      })
+
+      return {
+        awsUrl: signedUrl.split("?")[0],
+        key: response.data.msg.key
+      }
+    } catch (error) {
+      console.error("Error uploading file:", error)
+      throw new Error("Failed to upload file")
+    }
+  }
+
+  const deleteFromAWS = async (filename: string): Promise<void> => {
+    try {
+      await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+    } catch (error) {
+      console.error("Error deleting file:", error)
+      throw new Error("Failed to delete file")
+    }
+  }
+
   useEffect(() => {
     const totalArea = Number(buaAreaSqFt || 0) + Number(facilitiesAreaSqFt || 0) + Number(amentiesAreaSqFt || 0)
     form.setValue("totalAreaSqFt", totalArea)
   }, [buaAreaSqFt, facilitiesAreaSqFt, amentiesAreaSqFt, form])
 
-  // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0]
       const newPictures = [...pictures]
-
+      
+      // Create local preview
       newPictures[index] = {
         file,
-        preview: URL.createObjectURL(file),
+        preview: URL.createObjectURL(file)
       }
-
+      
       setPictures(newPictures)
-      setActiveImageIndex(null) // Reset active index after selection
+      setActiveImageIndex(null)
     }
   }
 
-  // Remove a picture
-  const removePicture = (index: number) => {
-    const newPictures = [...pictures]
-    if (newPictures[index]) {
-      // Only revoke if it's a blob URL (not an external URL)
-      if (newPictures[index]!.preview.startsWith("blob:")) {
-        URL.revokeObjectURL(newPictures[index]!.preview)
+  const removePicture = async (index: number) => {
+    const image = pictures[index]
+    if (!image) return
+
+    try {
+      if (image.isExisting && image.awsUrl) {
+        const filename = image.awsUrl.split('/').pop()
+        if (filename) {
+          await deleteFromAWS(filename)
+          toast.success("Image deleted from cloud storage")
+        }
       }
+
+      if (image.preview && image.preview.startsWith("blob:")) {
+        URL.revokeObjectURL(image.preview)
+      }
+
+      const newPictures = [...pictures]
       newPictures[index] = null
       setPictures(newPictures)
+    } catch (error) {
+      toast.error("Failed to delete image")
+      console.error("Error removing picture:", error)
     }
   }
 
-  // Set active image index when clicking on an empty box
   const handleImageBoxClick = (index: number) => {
     setActiveImageIndex(index)
-    if (fileInputRefs.current && fileInputRefs.current[index]) {
+    if (fileInputRefs.current[index]) {
       fileInputRefs.current[index]!.click()
     }
   }
 
-  // Handle form submission
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
-
     try {
-      // Create a regular JavaScript object for submission
-      const submitData: Record<string, any> = {
-        roadLocation: data.roadLocation,
-        developmentName: data.developmentName,
-        locationQuality: data.locationQuality,
-        buaAreaSqFt: data.buaAreaSqFt,
-        facilitiesAreaSqFt: data.facilitiesAreaSqFt,
-        amentiesAreaSqFt: data.amentiesAreaSqFt,
-        pictures: [],
-        totalAreaSqFt: data.totalAreaSqFt,
-        facilitiesCategories: data.facilitiesCategories,
-        amentiesCategories: data.amentiesCategories,
-      }
-
-      const validPictures = pictures.filter((pic) => pic !== null)
-
-      if (validPictures.length > 0) {
-        validPictures.forEach((pic) => {
-          if (pic) {
-            submitData.pictures.push(pic.preview)
+      const uploadPromises = pictures.map(async (pic, index) => {
+        if (pic && !pic.isExisting && pic.file) {
+          try {
+            const result = await uploadImageToAWS(pic.file, index)
+            return { ...pic, ...result }
+          } catch (error) {
+            console.error(`Failed to upload image ${index}:`, error)
+            return null
           }
-        })
+        }
+        return pic
+      })
+
+      const uploadedPictures = await Promise.all(uploadPromises)
+
+      const submitData = {
+        ...data,
+        pictures: uploadedPictures
+          .filter((pic): pic is NonNullable<typeof pic> => pic !== null)
+          .map(pic => pic.awsUrl)
       }
 
-      try {
-        let response
-
-        if (isEditMode && editRecord) {
-          // Update existing record
-          response = await axios.put(
-            `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${editRecord._id}`,
-            submitData,
-          )
-          toast.success("Master development record has been updated successfully.")
+      if (isEditMode && editRecord) {
+        const changedFields = handleCheckChangedFields()
+        
+        if (Object.keys(changedFields).length === 0) {
+          toast.info("No changes detected")
         } else {
-          // Create new record
-          response = await axios.post(
-            `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
-            submitData,
+          const response = await axios.patch(
+            `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${editRecord._id}`,
+            changedFields
           )
-          toast.success("Master development record has been added successfully.")
+          toast.success("Master development record has been updated successfully")
         }
-
-        // Call the callback to refresh the records
-        if (onRecordSaved) {
-          onRecordSaved()
-        }
-
-        setIsModalOpen(false)
-      } catch (error: any) {
-        console.error("API Error:", error)
-
-        // Handle specific error cases
-        if (error.response && error.response.status === 400) {
-          toast.error(error.response.data.message || "Bad Request: Please check your input data")
-        } else {
-          toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
-        }
+      } else {
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
+          submitData
+        )
+        toast.success("Master development record has been added successfully")
       }
-    } catch (error) {
+
+      if (onRecordSaved) {
+        onRecordSaved()
+      }
+      setIsModalOpen(false)
+    } catch (error: any) {
       console.error("Error submitting form:", error)
-      toast.error("There was a problem with the form. Please check your inputs.")
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message || "Bad Request: Please check your input data")
+      }  
+     else if (error.response?.status === 504) {
+        toast.error(error.response.data.message || "Bad Request")
+      } 
+      else {
+        toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
+      }
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const facilitiesCategoriesOptions = ["Shops", "Hospitals", "Public Transport"]
-
+  const facilitiesCategoriesOptions = [
+    "Shops",
+    "School",
+    "Petrol Pump",
+    "Hospitals",
+    "Clinics",
+    "Malls",
+    "Public Transport"
+  ]
+  
   const amenitiesCategoriesOptions = [
     "Gym",
     "Swimming Pool",
-    "Clubhouse",
-    "Children Play Area",
-    "Banquet Hall",
-    "CCTV Surveillance",
-    "Rainwater Harvesting",
-    "Spa",
+    "Sauna",
+    "Steam Room",
+    "Yoga Room",
+    "Aerobics Studio",
+    "Jogging / walking tracks",
     "Tennis Court",
-    "Yoga Deck",
+    "Badminton Court",
+    "Basketball Court",
+    "Cricket Ground",
+    "Table Tennis",
+    "Billiards",
+    "Clubhouse",
+    "Dance Studio",
+    "Mini Golf",
+    "Padel Tennis",
+    "Landscaped Garden",
+    "Park",
+    "Playground",
+    "Picnic Area",
+    "Barbecue / grill stations",
+    "Pet Park",
+    "Water Park",
+    "Roof gardens, Sky Decks",
+    "Community farming, Garden plots",
+    "Children Play Area",
+    "Daycare / Nursery",
+    "Kids Pool",
+    "Teen lounge / Game zone",
+    "Education center / Library",
+    "Grocery",
+    "ATM / Bank Kios",
+    "Café / Restaurant/ Food Court",
+    "Laundry",
+    "Business Center",
+    "Lockers",
+    "Concierge / Help Desk",
+    "Covered Parking",
+    "Visitor Parking",
+    "EV Charging Station",
+    "Bicycle racks / storage",
+    "Shuttle Service / Transport access",
+    "24/7 Security",
+    "CCTV Surveillance",
+    "Gated Access",
+    "Intercom system",
+    "Fire Safety Systems",
+    "Rainwater Harvesting",
+    "Solar Panels",
+    "Smart Home Features",
+    "Banquet Hall",
+    "Private theater / Mini cinema",
+    "Amphitheater",
+    "Music Room / Jamming studio",
+    "Karaoke Room",
+    "Lounge / Rooftop Bar",
+    "Hobby Room",
+    "Community Kitchen",
+    "Book café or Reading Lounge",
+    "On-call medical services / Nurse station",
+    "Prayer Hall",
+    "Handyman on-call services",
+    "Pest control & Fumigation Support",
+    "Green Building Certification",
+    "Community Recycling Points"
   ]
 
   return (
@@ -408,6 +570,17 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                           alt={`Property ${index + 1}`}
                           className="w-full h-full object-cover rounded-md transition-transform duration-300 group-hover:scale-105"
                         />
+                        {uploadProgress[index] > 0 && uploadProgress[index] < 100 && (
+                          <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-2">
+                            <span className="text-white text-xs mb-2 text-center">
+                              Uploading... {uploadProgress[index]}%
+                            </span>
+                            <Progress 
+                              value={uploadProgress[index]} 
+                              className="w-full h-2" 
+                            />
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                           <Button
                             type="button"
@@ -415,6 +588,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                             size="icon"
                             className="h-8 w-8 rounded-full"
                             onClick={() => removePicture(index)}
+                            disabled={uploadProgress[index] > 0 && uploadProgress[index] < 100}
                           >
                             <X className="h-4 w-4" />
                           </Button>
@@ -448,10 +622,10 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                   </div>
                 ))}
             </div>
-            <p className="text-xs text-muted-foreground">Select up to 6 images</p>
+            <p className="text-xs text-muted-foreground">Select up to 6 images. All images will be stored in cloud storage.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
             <FormField
               control={form.control}
               name="facilitiesCategories"

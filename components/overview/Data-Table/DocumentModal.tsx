@@ -2,27 +2,47 @@
 
 import type React from "react"
 
-import { useState, useRef, type KeyboardEvent } from "react"
+import { useState, useRef } from "react"
 import axios from "axios"
-import { Upload, File, Trash2, X } from "lucide-react"
+import { Upload, File, Trash2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+// Define the file type enum
+export enum FileType {
+  DOCX = 'docx',
+  XLSX = 'xlsx',
+  CSV = 'csv',
+  IMAGE = 'image',
+  PDF = 'pdf',
+}
+
+// Define the document data interface that will be returned to the parent
+export interface DocumentData {
+  refId: string;
+  documentUrl: string;
+  title: string;
+  type: FileType;
+}
 
 interface DocumentModalProps {
-  isOpen: boolean
-  onClose: () => void
-  rowId: string | null
+  isOpen: boolean;
+  onClose: () => void;
+  rowId: string | null;
+  onDocumentSave: (documentData: DocumentData) => void;
 }
 
 interface UploadedDocument {
-  id: string
-  file: File
-  preview?: string
-  awsUrl?: string
-  key?: string
+  id: string;
+  file: File;
+  preview?: string;
+  awsUrl?: string;
+  key?: string;
+  title: string;
+  type: FileType;
 }
 
 const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
@@ -62,32 +82,54 @@ const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number)
   }
 }
 
-export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalProps) {
-  const [tagInput, setTagInput] = useState("")
-  const [tags, setTags] = useState<string[]>([])
-  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([])
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
+// Helper function to determine file type from extension
+const getFileTypeFromExtension = (fileName: string): FileType | null => {
+  const extension = fileName.split('.').pop()?.toLowerCase() || '';
+  
+  if (extension === 'docx') return FileType.DOCX;
+  if (extension === 'xlsx') return FileType.XLSX;
+  if (extension === 'csv') return FileType.CSV;
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) return FileType.IMAGE;
+  if (extension === 'pdf') return FileType.PDF;
+  
+  return null;
+}
+
+export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }: DocumentModalProps) {
+  const [documentTitle, setDocumentTitle] = useState("")
+  const [documentType, setDocumentType] = useState<FileType | "">("")
+  const [uploadedDocument, setUploadedDocument] = useState<UploadedDocument | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      const newFiles = Array.from(e.target.files).slice(0, 3 - uploadedDocuments.length)
+      const file = e.target.files[0]
+      
+      // Detect file type from extension
+      const detectedType = getFileTypeFromExtension(file.name);
+      
+      if (!detectedType) {
+        alert("Invalid file type. Please upload DOCX, XLSX, CSV, Image, or PDF files.");
+        return;
+      }
 
-      const newDocuments = newFiles.map((file) => {
-        const doc: UploadedDocument = {
-          id: Math.random().toString(36).substring(2, 9),
-          file: file,
-        }
+      // Set the detected type in the dropdown
+      setDocumentType(detectedType);
+      
+      const doc: UploadedDocument = {
+        id: Math.random().toString(36).substring(2, 9),
+        file: file,
+        title: documentTitle || file.name.split(".")[0],
+        type: detectedType
+      }
 
-        if (file.type.startsWith("image/")) {
-          doc.preview = URL.createObjectURL(file)
-        }
+      if (file.type.startsWith("image/")) {
+        doc.preview = URL.createObjectURL(file)
+      }
 
-        return doc
-      })
-
-      setUploadedDocuments((prev) => [...prev, ...newDocuments].slice(0, 3))
+      setUploadedDocument(doc)
 
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
@@ -95,85 +137,55 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
     }
   }
 
-  const removeDocument = (id: string) => {
-    setUploadedDocuments((prev) => {
-      const filtered = prev.filter((doc) => doc.id !== id)
-
-      const docToRemove = prev.find((doc) => doc.id === id)
-      if (docToRemove?.preview) {
-        URL.revokeObjectURL(docToRemove.preview)
-      }
-
-      return filtered
-    })
-  }
-
-  const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && tagInput.trim()) {
-      e.preventDefault()
-      addTag(tagInput.trim())
-      setTagInput("")
+  const removeDocument = () => {
+    if (uploadedDocument?.preview) {
+      URL.revokeObjectURL(uploadedDocument.preview)
     }
-  }
-
-  const addTag = (tag: string) => {
-    if (!tags.includes(tag)) {
-      setTags((prev) => [...prev, tag])
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setTags((prev) => prev.filter((tag) => tag !== tagToRemove))
+    setUploadedDocument(null)
+    setDocumentType("")
   }
 
   const handleSubmit = async () => {
+    if (!uploadedDocument || !rowId || !documentType) return
+
     setIsUploading(true)
 
     try {
-      // Upload each document to AWS
-      const uploadPromises = uploadedDocuments.map(async (doc) => {
-        // Create a function to update progress for this specific document
-        const updateDocumentProgress = (progress: number) => {
-          setUploadProgress((prev) => ({
-            ...prev,
-            [doc.id]: progress,
-          }))
-        }
+      // Update document title and type if changed
+      const docWithTitle = {
+        ...uploadedDocument,
+        title: documentTitle || uploadedDocument.title,
+        type: documentType as FileType
+      }
 
-        // Upload the document
-        const result = await uploadFileToAWS(doc.file, updateDocumentProgress)
+      // Upload the document to AWS
+      const updateDocumentProgress = (progress: number) => {
+        setUploadProgress(progress)
+      }
 
-        // Update the document with the AWS URL and key
-        setUploadedDocuments((prev) =>
-          prev.map((d) => (d.id === doc.id ? { ...d, awsUrl: result.awsUrl, key: result.key } : d)),
-        )
+      // Upload the document
+      const result = await uploadFileToAWS(docWithTitle.file, updateDocumentProgress)
 
-        return result
-      })
+      // Create the document data to return to parent
+      const documentData: DocumentData = {
+        refId: rowId,
+        documentUrl: result.awsUrl,
+        title: docWithTitle.title,
+        type: docWithTitle.type
+      }
 
-      // Wait for all uploads to complete
-      const results = await Promise.all(uploadPromises)
+      // Pass the document data to the parent component
+      onDocumentSave(documentData)
 
-      // Log the results
-      console.log("Uploaded documents for row ID:", rowId)
-      console.log("Documents:", uploadedDocuments)
-      console.log("AWS Upload Results:", results)
-      console.log("Tags:", tags)
-
-      // Display the URLs in console
-      results.forEach((result, index) => {
-        console.log(`Document ${index + 1} URL:`, result.awsUrl)
-      })
-
-      // Close the modal and reset state
+      // Reset state and close modal
       onClose()
-      setUploadedDocuments([])
-      setTags([])
-      setTagInput("")
-      setUploadProgress({})
+      setUploadedDocument(null)
+      setDocumentTitle("")
+      setDocumentType("")
+      setUploadProgress(0)
     } catch (error) {
-      console.error("Error uploading documents:", error)
-      // You might want to show an error message to the user here
+      console.error("Error uploading document:", error)
+      alert("Failed to upload document. Please try again.")
     } finally {
       setIsUploading(false)
     }
@@ -183,106 +195,94 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Upload Documents</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Upload Document</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="tags-input">Tags</Label>
-            <div className="space-y-2">
-              <Input
-                id="tags-input"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                placeholder="Type tag and press Enter"
-              />
-
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {tags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="flex items-center gap-1 px-2 py-1">
-                      {tag}
-                      <button onClick={() => removeTag(tag)} className="ml-1 rounded-full hover:bg-muted p-0.5">
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+            <Label htmlFor="document-title">Document Title</Label>
+            <Input
+              id="document-title"
+              value={documentTitle}
+              onChange={(e) => setDocumentTitle(e.target.value)}
+              placeholder="Enter document title"
+            />
           </div>
 
           <div className="space-y-2">
-            <Label>Upload Document</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                className="hidden"
-                id="document-upload"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                disabled={uploadedDocuments.length >= 3}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-dashed border-2 h-24 flex flex-col items-center justify-center gap-2"
-                disabled={uploadedDocuments.length >= 3}
-              >
-                <Upload className="h-6 w-6" />
-                <span className="text-sm text-center">
-                  {uploadedDocuments.length >= 3 ? "Maximum 3 files allowed" : "Click to upload document"}
-                </span>
-              </Button>
-            </div>
+            <Label htmlFor="document-type">Document Type</Label>
+            <Select 
+              value={documentType} 
+              onValueChange={(value) => setDocumentType(value as FileType)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select document type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={FileType.DOCX}>DOCX</SelectItem>
+                <SelectItem value={FileType.XLSX}>XLSX</SelectItem>
+                <SelectItem value={FileType.CSV}>CSV</SelectItem>
+                <SelectItem value={FileType.IMAGE}>Image</SelectItem>
+                <SelectItem value={FileType.PDF}>PDF</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {uploadedDocuments.length > 0 && (
-            <div className="space-y-2 max-h-[100px] overflow-y-auto">
-              <Label>Uploaded Documents</Label>
-              <div className="space-y-2 ">
-                {uploadedDocuments.map((doc) => (
-                  <div key={doc.id} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
-                    <div className="flex-shrink-0 ">
-                      {doc.preview ? (
-                        <div className="h-10 w-10 rounded overflow-hidden">
-                          <img
-                            src={doc.preview || "/placeholder.svg"}
-                            alt={doc.file.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <File className="h-10 w-10 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{doc.file.name.slice(0,30)}</p>
-                      <p className="text-xs text-muted-foreground truncate">{(doc.file.size / 1024).toFixed(1)} KB</p>
-                      {uploadProgress[doc.id] !== undefined && (
-                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                          <div
-                            className="bg-primary h-1.5 rounded-full"
-                            style={{ width: `${uploadProgress[doc.id]}%` }}
-                          ></div>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeDocument(doc.id)}
-                      className="flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      disabled={isUploading}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+          <div className="flex items-center justify-center">
+            <Input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              className="hidden"
+              id="document-upload"
+              accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.gif"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-12 h-12 rounded-full p-0 flex items-center justify-center"
+            >
+              <Upload className="h-5 w-5" />
+              <span className="sr-only">Upload document</span>
+            </Button>
+          </div>
+
+          {uploadedDocument && (
+            <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+              <div className="flex-shrink-0">
+                {uploadedDocument.preview ? (
+                  <div className="h-10 w-10 rounded overflow-hidden">
+                    <img
+                      src={uploadedDocument.preview || "/placeholder.svg"}
+                      alt={uploadedDocument.file.name}
+                      className="h-full w-full object-cover"
+                    />
                   </div>
-                ))}
+                ) : (
+                  <File className="h-10 w-10 text-muted-foreground" />
+                )}
               </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{uploadedDocument.file.name.slice(0, 30)}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {(uploadedDocument.file.size / 1024).toFixed(1)} KB
+                </p>
+                {uploadProgress > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                    <div className="bg-primary h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={removeDocument}
+                className="flex-shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                disabled={isUploading}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           )}
         </div>
@@ -295,9 +295,9 @@ export default function DocumentModal({ isOpen, onClose, rowId }: DocumentModalP
             type="button"
             onClick={handleSubmit}
             className="sm:w-auto w-full bg-black text-white dark:bg-white dark:text-black hover:bg-black/80 dark:hover:bg-white/80"
-            disabled={uploadedDocuments.length === 0 || isUploading}
+            disabled={!uploadedDocument || !documentType || isUploading}
           >
-            {isUploading ? "Uploading..." : "Save Documents"}
+            {isUploading ? "Uploading..." : "Save Document"}
           </Button>
         </DialogFooter>
       </DialogContent>

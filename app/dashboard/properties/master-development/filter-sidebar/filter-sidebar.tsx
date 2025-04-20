@@ -3,14 +3,24 @@ import { X } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Checkbox } from "@/components/ui/checkbox" 
+import { useDispatch, useSelector } from "react-redux"
+import { setDevelopmentName , 
+  setRoadLocation,
+  setLocationQuality,
+  setBuaAreaSqFtRange,
+  setTotalAreaSqFtRange,
+  setFacilitiesCategories,
+  setAmentiesCategories,
+ } from "@/lib/store/slices/masterFilterSlice"
+import { RootState } from "@/store"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface FilterSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onApplyFilters: (filters: FilterValues) => void
 }
 
 export interface FilterValues {
@@ -38,35 +48,26 @@ const amenitiesCategoriesOptions = [
   "Yoga Deck",
 ]
 
-export function FilterSidebar({ open, onOpenChange, onApplyFilters }: FilterSidebarProps) {
-  const [filters, setFilters] = useState<FilterValues>({
-    developmentName: "",
-    roadLocation: "",
-    locationQuality: "",
-    buaAreaSqFtRange: { min: undefined, max: undefined },
-    totalAreaSqFtRange: { min: undefined, max: undefined },
-    facilitiesCategories: [],
-    amentiesCategories: [],
-  })
+const locationQualityOptions = ["A", "B", "C"]
+
+export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) { 
+  const dispatch = useDispatch()
+  const filters = useSelector((state: RootState) => state.masterFilter)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
-    setFilters((prev) => ({ ...prev, [name]: value }))
+    switch (name) {
+      case "developmentName":
+        dispatch(setDevelopmentName(value))
+        break
+      case "roadLocation":
+        dispatch(setRoadLocation(value))
+        break
+    }
   }
 
-  const handleRangeChange = (
-    rangeType: "buaAreaSqFtRange" | "totalAreaSqFtRange",
-    field: "min" | "max",
-    value: string
-  ) => {
-    const numValue = value === "" ? undefined : Number(value)
-    setFilters((prev) => ({
-      ...prev,
-      [rangeType]: {
-        ...prev[rangeType],
-        [field]: numValue,
-      },
-    }))
+  const handleLocationQualityChange = (value: string) => {
+    dispatch(setLocationQuality(value))
   }
 
   const handleCheckboxChange = (
@@ -74,32 +75,16 @@ export function FilterSidebar({ open, onOpenChange, onApplyFilters }: FilterSide
     value: string,
     checked: boolean
   ) => {
-    setFilters((prev) => {
-      const currentValues = prev[category] || []
-      return {
-        ...prev,
-        [category]: checked
-          ? [...currentValues, value]
-          : currentValues.filter((item) => item !== value),
-      }
-    })
-  }
+    const currentValues = filters[category] || []
+    const updated = checked
+      ? [...currentValues, value]
+      : currentValues.filter((item) => item !== value)
 
-  const handleApplyFilters = () => {
-    onApplyFilters(filters)
-    onOpenChange(false)
-  }
-
-  const handleResetFilters = () => {
-    setFilters({
-      developmentName: "",
-      roadLocation: "",
-      locationQuality: "",
-      buaAreaSqFtRange: { min: undefined, max: undefined },
-      totalAreaSqFtRange: { min: undefined, max: undefined },
-      facilitiesCategories: [],
-      amentiesCategories: [],
-    })
+    if (category === "facilitiesCategories") {
+      dispatch(setFacilitiesCategories(updated))
+    } else {
+      dispatch(setAmentiesCategories(updated))
+    }
   }
 
   return (
@@ -135,64 +120,24 @@ export function FilterSidebar({ open, onOpenChange, onApplyFilters }: FilterSide
             />
           </div>
 
-          {/* Location Quality */}
+          {/* Location Quality - Now a dropdown */}
           <div className="space-y-2">
-            <Label htmlFor="locationQuality">Location Quality</Label>
-            <Input
-              id="locationQuality"
-              name="locationQuality"
-              placeholder="Enter location quality"
-              value={filters.locationQuality}
-              onChange={handleInputChange}
-            />
-          </div>
-
-          <Separator />
-
-          {/* BUA Area Range */}
-          <div className="space-y-2">
-            <Label>BUA Area (Sq Ft) Range</Label>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.buaAreaSqFtRange?.min || ""}
-                  onChange={(e) => handleRangeChange("buaAreaSqFtRange", "min", e.target.value)}
-                />
-              </div>
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.buaAreaSqFtRange?.max || ""}
-                  onChange={(e) => handleRangeChange("buaAreaSqFtRange", "max", e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Total Area Range */}
-          <div className="space-y-2">
-            <Label>Total Area (Sq Ft) Range</Label>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.totalAreaSqFtRange?.min || ""}
-                  onChange={(e) => handleRangeChange("totalAreaSqFtRange", "min", e.target.value)}
-                />
-              </div>
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.totalAreaSqFtRange?.max || ""}
-                  onChange={(e) => handleRangeChange("totalAreaSqFtRange", "max", e.target.value)}
-                />
-              </div>
-            </div>
+            <Label>Location Quality</Label>
+            <Select 
+              value={filters.locationQuality || ""}
+              onValueChange={handleLocationQualityChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select location quality" />
+              </SelectTrigger>
+              <SelectContent>
+                {locationQualityOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Separator />
@@ -237,13 +182,6 @@ export function FilterSidebar({ open, onOpenChange, onApplyFilters }: FilterSide
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="flex justify-between pt-4">
-            <Button variant="outline" onClick={handleResetFilters}>
-              Reset Filters
-            </Button>
-            <Button onClick={handleApplyFilters}>Apply Filters</Button>
           </div>
         </div>
       </SheetContent>

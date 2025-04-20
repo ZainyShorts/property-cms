@@ -1,12 +1,14 @@
 "use client"
 import { configureStore } from '@reduxjs/toolkit'
 import filterReducer from './slices/filterSlice' 
-import rangeReducer from './slices/rangeSlice'
+import rangeReducer from './slices/rangeSlice' 
+import masterReducer from './slices/masterFilterSlice'
 
 export const store = configureStore({
   reducer: {
     filter: filterReducer, 
-    range : rangeReducer
+    range : rangeReducer,
+    masterFilter : masterReducer
   },
 })
 
