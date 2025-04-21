@@ -1,34 +1,35 @@
-import { useState } from "react"
-import { X } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet"
+"use client"
+
+import type React from "react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox" 
+import { Checkbox } from "@/components/ui/checkbox"
 import { useDispatch, useSelector } from "react-redux"
-import { setDevelopmentName , 
-  setRoadLocation,
-  setLocationQuality,
-  setBuaAreaSqFtRange,
-  setTotalAreaSqFtRange,
+import {
+  setSubDevelopment,
+  setPlotNumber,
+  setPlotPermission,
+  setPlotStatus,
   setFacilitiesCategories,
   setAmentiesCategories,
- } from "@/lib/store/slices/masterFilterSlice"
-import { RootState } from "@/store"
+  resetSubDevFilter,
+} from "@/lib/store/slices/subDevFilterSlice"
+import type { RootState } from "@/store"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-interface FilterSidebarProps {
+interface SubDevFilterSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
-export interface FilterValues {
-  developmentName?: string
-  roadLocation?: string
-  locationQuality?: string
-  buaAreaSqFtRange?: { min?: number; max?: number }
-  totalAreaSqFtRange?: { min?: number; max?: number }
+export interface SubDevFilterValues {
+  subDevelopment?: string
+  plotNumber?: number
+  plotPermission?: string
+  plotStatus?: string
   facilitiesCategories?: string[]
   amentiesCategories?: string[]
 }
@@ -40,7 +41,7 @@ const facilitiesCategoriesOptions = [
   "Hospitals",
   "Clinics",
   "Malls",
-  "Public Transport"
+  "Public Transport",
 ]
 
 const amenitiesCategoriesOptions = [
@@ -109,40 +110,46 @@ const amenitiesCategoriesOptions = [
   "Handyman on-call services",
   "Pest control & Fumigation Support",
   "Green Building Certification",
-  "Community Recycling Points"
+  "Community Recycling Points",
 ]
 
-const locationQualityOptions = ["A", "B", "C"]
+const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
+const plotPermissionOptions = ["Residential", "Commercial", "Mixed Use", "Industrial"]
 
-export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) { 
+export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarProps) {
   const dispatch = useDispatch()
-  const filters = useSelector((state: RootState) => state.masterFilter)
+  const filters = useSelector((state: RootState) => state.subDevFilter)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     switch (name) {
-      case "developmentName":
-        dispatch(setDevelopmentName(value))
+      case "subDevelopment":
+        dispatch(setSubDevelopment(value))
         break
-      case "roadLocation":
-        dispatch(setRoadLocation(value))
+      case "plotNumber":
+        const plotNum = value ? Number.parseInt(value, 10) : undefined
+        if (!isNaN(plotNum as number)) {
+          dispatch(setPlotNumber(plotNum as number))
+        }
         break
     }
   }
 
-  const handleLocationQualityChange = (value: string) => {
-    dispatch(setLocationQuality(value))
+  const handlePlotPermissionChange = (value: string) => {
+    dispatch(setPlotPermission(value))
+  }
+
+  const handlePlotStatusChange = (value: string) => {
+    dispatch(setPlotStatus(value))
   }
 
   const handleCheckboxChange = (
     category: "facilitiesCategories" | "amentiesCategories",
     value: string,
-    checked: boolean
+    checked: boolean,
   ) => {
     const currentValues = filters[category] || []
-    const updated = checked
-      ? [...currentValues, value]
-      : currentValues.filter((item) => item !== value)
+    const updated = checked ? [...currentValues, value] : currentValues.filter((item) => item !== value)
 
     if (category === "facilitiesCategories") {
       dispatch(setFacilitiesCategories(updated))
@@ -151,51 +158,70 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     }
   }
 
+  const handleReset = () => {
+    dispatch(resetSubDevFilter())
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
         <SheetHeader className="mb-5">
-          <SheetTitle className="text-xl">Property Filter</SheetTitle>
-          <SheetDescription>Adjust the filters to find your perfect property.</SheetDescription>
+          <SheetTitle className="text-xl">Sub-Development Filter</SheetTitle>
+          <SheetDescription>Adjust the filters to find your perfect plot.</SheetDescription>
         </SheetHeader>
 
         <div className="space-y-6">
-          {/* Road Location */}
+          {/* Sub Development */}
           <div className="space-y-2">
-            <Label htmlFor="roadLocation">Road Location</Label>
+            <Label htmlFor="subDevelopment">Sub Development</Label>
             <Input
-              id="roadLocation"
-              name="roadLocation"
-              placeholder="Enter road location"
-              value={filters.roadLocation}
+              id="subDevelopment"
+              name="subDevelopment"
+              placeholder="Enter sub development name"
+              value={filters.subDevelopment || ""}
               onChange={handleInputChange}
             />
           </div>
 
-          {/* Development Name */}
+          {/* Plot Number */}
           <div className="space-y-2">
-            <Label htmlFor="developmentName">Development Name</Label>
+            <Label htmlFor="plotNumber">Plot Number</Label>
             <Input
-              id="developmentName"
-              name="developmentName"
-              placeholder="Enter development name"
-              value={filters.developmentName}
+              id="plotNumber"
+              name="plotNumber"
+              type="number"
+              placeholder="Enter plot number"
+              value={filters.plotNumber || ""}
               onChange={handleInputChange}
             />
           </div>
 
-          {/* Location Quality - Now a dropdown */}
+          {/* Plot Permission */}
           <div className="space-y-2">
-            <Label>Location Quality</Label>
-            <Select 
-              value={filters.locationQuality || ""}
-              onValueChange={handleLocationQualityChange}
-            >
+            <Label>Plot Permission</Label>
+            <Select value={filters.plotPermission || ""} onValueChange={handlePlotPermissionChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select location quality" />
+                <SelectValue placeholder="Select plot permission" />
               </SelectTrigger>
               <SelectContent>
-                {locationQualityOptions.map((option) => (
+                {plotPermissionOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Plot Status */}
+          <div className="space-y-2">
+            <Label>Plot Status</Label>
+            <Select value={filters.plotStatus || ""} onValueChange={handlePlotStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select plot status" />
+              </SelectTrigger>
+              <SelectContent>
+                {plotStatusOptions.map((option) => (
                   <SelectItem key={option} value={option}>
                     {option}
                   </SelectItem>
@@ -246,6 +272,13 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Reset Button */}
+          <div className="pt-4">
+            <Button variant="outline" onClick={handleReset} className="w-full">
+              Reset Filters
+            </Button>
           </div>
         </div>
       </SheetContent>

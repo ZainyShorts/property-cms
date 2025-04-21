@@ -17,18 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { SimpleDatePicker } from "./date-picker/date-picker"
-import { AddRecordModal } from "./add-record/addRecord"
+import { SubDevAddRecordModal } from "./add-record/add-record"
 import { Skeleton } from "@/components/ui/skeleton"
-import { DeleteConfirmationModal } from "./delete-confirmation-modal"
-import { ImportRecordsModal } from "./import-records/import-records"
+import { DeleteConfirmationModal } from "../master-development/delete-confirmation-modal"
 import DocumentModal, { type DocumentData } from "@/components/overview/Data-Table/DocumentModal"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
-import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
-import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
+import { SubDevFilterSidebar } from "./filter-sidebar/filter-sidebar"
+import { resetSubDevFilter } from "@/lib/store/slices/subDevFilterSlice"
 import { ExportModal } from "../units/Export-Modal/ExportModal"
-export interface MasterDevelopment {
+
+// Define the MasterDevelopment type
+interface MasterDevelopment {
   _id: string
   roadLocation: string
   developmentName: string
@@ -44,23 +45,49 @@ export interface MasterDevelopment {
   updatedAt: string
 }
 
+// Define the SubDevelopSlice"ment type
+interface SubDevelopment {
+  _id: string
+  masterDevelopment: MasterDevelopment
+  subDevelopment: string
+  plotNumber: number
+  plotHeight: number
+  plotPermission: string
+  plotSizeSqFt: number
+  plotBUASqFt: number
+  plotStatus: string
+  buaAreaSqFt: number
+  facilitiesAreaSqFt: number
+  amenitiesAreaSqFt: number
+  totalSizeSqFt: number
+  pictures: string[]
+  facilitiesCategories: string[]
+  amentiesCategories: string[]
+  createdAt: string
+  updatedAt: string
+}
+
 interface ApiResponse {
-  data: MasterDevelopment[]
+  data: SubDevelopment[]
   totalCount: number
   totalPages: number
   pageNumber: number
 }
 
-export default function MasterDevelopmentPage() {
+interface FilterValues {
+  [key: string]: any
+}
+
+export default function SubDevelopmentPage() {
   const { theme } = useTheme()
-  const filters = useSelector((state: any) => state.masterFilter)
+  const filters = useSelector((state: any) => state.subDevFilter)
   const dispatch = useDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentPage = Number(searchParams.get("page") || 1)
   const sortOrder = "desc"
 
-  const [records, setRecords] = useState<MasterDevelopment[]>([])
+  const [records, setRecords] = useState<SubDevelopment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
@@ -73,7 +100,7 @@ export default function MasterDevelopmentPage() {
     totalPages: 1,
     pageNumber: 1,
   })
-  const [editRecord, setEditRecord] = useState<MasterDevelopment | null>(null)
+  const [editRecord, setEditRecord] = useState<SubDevelopment | null>(null)
   const [recordToDelete, setRecordToDelete] = useState<string | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [pageInputValue, setPageInputValue] = useState(currentPage.toString())
@@ -84,15 +111,19 @@ export default function MasterDevelopmentPage() {
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [isAttachingDocument, setIsAttachingDocument] = useState(false)
 
+  // Updated table headers for SubDevelopment
   const tableHeaders = [
     { key: "_id", label: "ID" },
+    { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
     { key: "roadLocation", label: "ROAD LOCATION" },
-    { key: "developmentName", label: "DEVELOPMENT NAME" },
-    { key: "locationQuality", label: "LOCATION QUALITY" },
-    { key: "buaAreaSqFt", label: "BUA AREA (SQ FT)" },
-    { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" },
-    { key: "amentiesAreaSqFt", label: "AMENITIES AREA (SQ FT)" },
-    { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
+    { key: "subDevelopment", label: "SUB DEVELOPMENT" },
+    { key: "plotNumber", label: "PLOT NUMBER" },
+    { key: "plotHeight", label: "PLOT HEIGHT" },
+    { key: "plotPermission", label: "PLOT PERMISSION" },
+    { key: "plotSizeSqFt", label: "PLOT SIZE (SQ FT)" },
+    { key: "plotBUASqFt", label: "PLOT BUA (SQ FT)" },
+    { key: "plotStatus", label: "PLOT STATUS" },
+    { key: "totalSizeSqFt", label: "TOTAL SIZE (SQ FT)" },
     { key: "facilitiesCategories", label: "FACILITIES" },
     { key: "amentiesCategories", label: "AMENITIES" },
     { key: "attachDocument", label: "DOCUMENT" },
@@ -108,13 +139,13 @@ export default function MasterDevelopmentPage() {
     setPageInputValue(currentPage.toString())
   }, [currentPage])
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (reset? : any) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       params.append("page", currentPage.toString())
       params.append("sort", sortOrder)
-
+       if (!reset) {
       if (searchTerm) {
         params.append("search", searchTerm)
       }
@@ -127,50 +158,40 @@ export default function MasterDevelopmentPage() {
         params.append("endDate", endDate.toISOString())
       }
 
-      if (activeFilters.roadLocation) {
-        params.append("roadLocation", activeFilters.roadLocation)
+      // Apply filters from the filter state
+      if (filters.subDevelopment) {
+        params.append("subDevelopment", filters.subDevelopment)
       }
 
-      if (activeFilters.developmentName) {
-        params.append("developmentName", activeFilters.developmentName)
+      if (filters.plotNumber) {
+        params.append("plotNumber", filters.plotNumber.toString())
       }
 
-      if (activeFilters.locationQuality) {
-        params.append("locationQuality", activeFilters.locationQuality)
+      if (filters.plotPermission) {
+        params.append("plotPermission", filters.plotPermission)
       }
 
-      if (activeFilters.buaAreaSqFtRange?.min) {
-        params.append("buaAreaSqFtMin", activeFilters.buaAreaSqFtRange.min.toString())
+      if (filters.plotStatus) {
+        params.append("plotStatus", filters.plotStatus)
       }
 
-      if (activeFilters.buaAreaSqFtRange?.max) {
-        params.append("buaAreaSqFtMax", activeFilters.buaAreaSqFtRange.max.toString())
-      }
-
-      if (activeFilters.totalAreaSqFtRange?.min) {
-        params.append("totalAreaSqFtMin", activeFilters.totalAreaSqFtRange.min.toString())
-      }
-
-      if (activeFilters.totalAreaSqFtRange?.max) {
-        params.append("totalAreaSqFtMax", activeFilters.totalAreaSqFtRange.max.toString())
-      }
-
-      if (activeFilters.facilitiesCategories?.length) {
-        activeFilters.facilitiesCategories.forEach((facility) => {
+      if (filters.facilitiesCategories?.length) {
+        filters.facilitiesCategories.forEach((facility: string) => {
           params.append("facilitiesCategories", facility)
         })
       }
 
-      if (activeFilters.amentiesCategories?.length) {
-        activeFilters.amentiesCategories.forEach((amenity) => {
+      if (filters.amentiesCategories?.length) {
+        filters.amentiesCategories.forEach((amenity: string) => {
           params.append("amentiesCategories", amenity)
         })
-      }
-
+      } 
+    }
       const response = await axios.get<ApiResponse>(
-        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`,
-      )
-
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
+      ) 
+      
+      console.log('response',response);
       setRecords(response.data.data)
       setPagination({
         totalCount: response.data.totalCount,
@@ -190,7 +211,7 @@ export default function MasterDevelopmentPage() {
 
     const params = new URLSearchParams(searchParams)
     params.set("page", page.toString())
-    router.push(`/master-development?${params.toString()}`)
+    router.push(`/sub-development?${params.toString()}`)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,10 +228,11 @@ export default function MasterDevelopmentPage() {
     }
   }
 
-  const handleSortChange = async (value: string) => {
-    setLoading(true)
+  const handleSortChange = async (value: string) => { 
+    console.log(value)
+    setLoading(true)  
     const response = await axios.get<ApiResponse>(
-      `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?sortBy=${value})}`,
+      `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&sortOrder=${value}`,
     )
     setLoading(false)
 
@@ -223,10 +245,10 @@ export default function MasterDevelopmentPage() {
   }
 
   const handleResetFilters = () => {
-    dispatch(resetFilters())
+    dispatch(resetSubDevFilter())
     setStartDate(null)
     setEndDate(null)
-    fetchRecords()
+    fetchRecords("reset")
     toast.success("Filters have been reset")
   }
 
@@ -264,20 +286,16 @@ export default function MasterDevelopmentPage() {
     try {
       // Create a filter object with all possible filters
       const allFilters: Record<string, any> = {
-        developmentName: filters.developmentName,
-        roadLocation: filters.roadLocation,
-        locationQuality: filters.locationQuality,
-        buaAreaSqFtRange: filters.buaAreaSqFtRange,
-        totalAreaSqFtRange: filters.totalAreaSqFtRange,
+        subDevelopment: filters.subDevelopment,
+        plotNumber: filters.plotNumber,
+        plotPermission: filters.plotPermission,
+        plotStatus: filters.plotStatus,
         facilitiesCategories: filters.facilitiesCategories,
         amentiesCategories: filters.amentiesCategories,
       }
 
       // Clean the filter object to remove empty values
       const cleanedFilters = cleanObject(allFilters)
-
-      // Log the cleaned filters
-      console.log("Applying filters:", cleanedFilters)
 
       // Create the request data object with only non-empty values
       const requestData: Record<string, any> = {
@@ -292,7 +310,6 @@ export default function MasterDevelopmentPage() {
         const formattedStartDate = new Date(startDate)
         formattedStartDate.setHours(0, 0, 0, 0)
         requestData.startDate = formattedStartDate.toISOString()
-        console.log("Start date:", requestData.startDate)
       }
 
       if (endDate) {
@@ -300,11 +317,7 @@ export default function MasterDevelopmentPage() {
         const formattedEndDate = new Date(endDate)
         formattedEndDate.setHours(23, 59, 59, 999)
         requestData.endDate = formattedEndDate.toISOString()
-        console.log("End date:", requestData.endDate)
       }
-
-      // Log the final request data
-      console.log("API request data:", requestData)
 
       // Convert the request data to URL parameters
       const params = new URLSearchParams()
@@ -314,18 +327,10 @@ export default function MasterDevelopmentPage() {
       params.append("sort", requestData.sort)
 
       // Add string filters
-      if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
-      if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
-      if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
-
-      // Add range objects as JSON strings
-      if (requestData.buaAreaSqFtRange) {
-        params.append("buaAreaSqFtRange", JSON.stringify(requestData.buaAreaSqFtRange))
-      }
-
-      if (requestData.totalAreaSqFtRange) {
-        params.append("totalAreaSqFtRange", JSON.stringify(requestData.totalAreaSqFtRange))
-      }
+      if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
+      if (requestData.plotNumber) params.append("plotNumber", requestData.plotNumber.toString())
+      if (requestData.plotPermission) params.append("plotPermission", requestData.plotPermission)
+      if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
 
       // Add array filters
       if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
@@ -344,11 +349,9 @@ export default function MasterDevelopmentPage() {
       if (requestData.startDate) params.append("startDate", requestData.startDate)
       if (requestData.endDate) params.append("endDate", requestData.endDate)
 
-      console.log("API params:", params.toString())
-
       // Directly call the API with the filter parameters
       axios
-        .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`)
+        .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`)
         .then((response) => {
           setRecords(response.data.data)
           setPagination({
@@ -356,7 +359,6 @@ export default function MasterDevelopmentPage() {
             totalPages: response.data.totalPages,
             pageNumber: response.data.pageNumber,
           })
-          console.log("API response:", response.data)
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
@@ -395,7 +397,7 @@ export default function MasterDevelopmentPage() {
       })
   }
 
-  const handleEditRecord = (record: MasterDevelopment) => {
+  const handleEditRecord = (record: SubDevelopment) => {
     setEditRecord(record)
     setIsModalOpen(true)
   }
@@ -414,15 +416,11 @@ export default function MasterDevelopmentPage() {
     setIsAttachingDocument(true)
 
     try {
-      console.log("Document data to save:", documentData)
-
       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
-       console.log(response);
       toast.success("Document attached successfully")
 
       setIsDocumentModalOpen(false)
       setSelectedRowId(null)
-
     } catch (error) {
       console.error("Error attaching document:", error)
       toast.error("Failed to attach document. Please try again.")
@@ -447,11 +445,10 @@ export default function MasterDevelopmentPage() {
 
       if (withFilters) {
         const allFilters: Record<string, any> = {
-          developmentName: filters.developmentName,
-          roadLocation: filters.roadLocation,
-          locationQuality: filters.locationQuality,
-          buaAreaSqFtRange: filters.buaAreaSqFtRange,
-          totalAreaSqFtRange: filters.totalAreaSqFtRange,
+          subDevelopment: filters.subDevelopment,
+          plotNumber: filters.plotNumber,
+          plotPermission: filters.plotPermission,
+          plotStatus: filters.plotStatus,
           facilitiesCategories: filters.facilitiesCategories,
           amentiesCategories: filters.amentiesCategories,
         }
@@ -474,27 +471,11 @@ export default function MasterDevelopmentPage() {
           requestData.endDate = formattedEndDate.toISOString()
         }
 
-        if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
-        if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
-        if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
-
-        if (requestData.buaAreaSqFtRange) {
-          if (requestData.buaAreaSqFtRange.min) {
-            params.append("buaAreaSqFtMin", requestData.buaAreaSqFtRange.min.toString())
-          }
-          if (requestData.buaAreaSqFtRange.max) {
-            params.append("buaAreaSqFtMax", requestData.buaAreaSqFtRange.max.toString())
-          }
-        }
-
-        if (requestData.totalAreaSqFtRange) {
-          if (requestData.totalAreaSqFtRange.min) {
-            params.append("totalAreaSqFtMin", requestData.totalAreaSqFtRange.min.toString())
-          }
-          if (requestData.totalAreaSqFtRange.max) {
-            params.append("totalAreaSqFtMax", requestData.totalAreaSqFtRange.max.toString())
-          }
-        }
+        // Add string filters
+        if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
+        if (requestData.plotNumber) params.append("plotNumber", requestData.plotNumber.toString())
+        if (requestData.plotPermission) params.append("plotPermission", requestData.plotPermission)
+        if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
 
         // Add array filters
         if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
@@ -515,23 +496,26 @@ export default function MasterDevelopmentPage() {
       }
 
       const response = await axios.get<ApiResponse>(
-        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`,
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&?${params.toString()}`,
       )
 
       const exportData = response.data.data
 
       let csvContent =
-        "Road Location,Development Name,Location Quality,BUA Area (Sq Ft),Facilities Area (Sq Ft),Amenities Area (Sq Ft),Total Area (Sq Ft),Facilities Count,Amenities Count\n"
+        "Master Development,Road Location,Sub Development,Plot Number,Plot Height,Plot Permission,Plot Size (Sq Ft),Plot BUA (Sq Ft),Plot Status,Total Size (Sq Ft),Facilities Count,Amenities Count\n"
 
       exportData.forEach((record) => {
         const row = [
-          record.roadLocation,
-          record.developmentName,
-          record.locationQuality,
-          record.buaAreaSqFt,
-          record.facilitiesAreaSqFt,
-          record.amentiesAreaSqFt,
-          record.totalAreaSqFt,
+          record.masterDevelopment.developmentName,
+          record.masterDevelopment.roadLocation,
+          record.subDevelopment,
+          record.plotNumber,
+          record.plotHeight,
+          record.plotPermission,
+          record.plotSizeSqFt,
+          record.plotBUASqFt,
+          record.plotStatus,
+          record.totalSizeSqFt,
           record.facilitiesCategories.length,
           record.amentiesCategories.length,
         ]
@@ -552,7 +536,7 @@ export default function MasterDevelopmentPage() {
       const url = URL.createObjectURL(blob)
 
       link.setAttribute("href", url)
-      link.setAttribute("download", `master-development-export-${new Date().toISOString().split("T")[0]}.csv`)
+      link.setAttribute("download", `sub-development-export-${new Date().toISOString().split("T")[0]}.csv`)
       link.style.visibility = "hidden"
 
       document.body.appendChild(link)
@@ -575,7 +559,7 @@ export default function MasterDevelopmentPage() {
     if (!recordToDelete) return
 
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`)
+      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/${recordToDelete}`)
       toast.success("Record deleted successfully")
       fetchRecords() // Refresh the list
     } catch (error: any) {
@@ -599,7 +583,7 @@ export default function MasterDevelopmentPage() {
     }
   }
 
-  const renderCellContent = (record: MasterDevelopment, key: string) => {
+  const renderCellContent = (record: SubDevelopment, key: string) => {
     switch (key) {
       case "_id":
         return (
@@ -622,11 +606,22 @@ export default function MasterDevelopmentPage() {
             </Button>
           </div>
         )
+      case "masterDevelopment":
+        return record.masterDevelopment.developmentName
+      case "roadLocation":
+        return record.masterDevelopment.roadLocation
+      case "plotNumber":
+      case "plotHeight":
+      case "plotPermission":
+      case "plotSizeSqFt":
+      case "plotBUASqFt":
+      case "plotStatus":
       case "buaAreaSqFt":
       case "facilitiesAreaSqFt":
-      case "amentiesAreaSqFt":
-      case "totalAreaSqFt":
-        return record[key].toLocaleString()
+      case "amenitiesAreaSqFt":
+      case "totalSizeSqFt":
+      case "subDevelopment":
+        return record[key]
       case "facilitiesCategories":
         return (
           <HoverCard>
@@ -737,7 +732,7 @@ export default function MasterDevelopmentPage() {
           </Button>
         )
       default:
-        return record[key as keyof MasterDevelopment]
+        return null
     }
   }
 
@@ -748,7 +743,7 @@ export default function MasterDevelopmentPage() {
           <div className="flex items-center space-x-2">
             <h2 className="text-lg font-semibold">Properties</h2>
             <span className="text-muted-foreground">&gt;</span>
-            <h2 className="text-lg font-semibold">Overview</h2>
+            <h2 className="text-lg font-semibold">Sub Development</h2>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
@@ -763,7 +758,11 @@ export default function MasterDevelopmentPage() {
               <DialogTrigger asChild>
                 <Button className="gap-2">Add record</Button>
               </DialogTrigger>
-              <AddRecordModal setIsModalOpen={handleModalClose} editRecord={editRecord} onRecordSaved={fetchRecords} />
+              <SubDevAddRecordModal
+                setIsModalOpen={handleModalClose}
+                editRecord={editRecord}
+                onRecordSaved={fetchRecords}
+              />
             </Dialog>
           </div>
         </div>
@@ -827,11 +826,16 @@ export default function MasterDevelopmentPage() {
                         className={cn(
                           "whitespace-nowrap text-center",
                           header.key === "_id" && "w-[120px]",
-                          header.key === "locationQuality" && "w-[150px]",
-                          header.key === "buaAreaSqFt" && "w-[150px]",
-                          header.key === "facilitiesAreaSqFt" && "w-[180px]",
-                          header.key === "amentiesAreaSqFt" && "w-[180px]",
-                          header.key === "totalAreaSqFt" && "w-[150px]",
+                          header.key === "masterDevelopment" && "w-[180px]",
+                          header.key === "roadLocation" && "w-[150px]",
+                          header.key === "subDevelopment" && "w-[180px]",
+                          header.key === "plotNumber" && "w-[120px]",
+                          header.key === "plotHeight" && "w-[120px]",
+                          header.key === "plotPermission" && "w-[150px]",
+                          header.key === "plotSizeSqFt" && "w-[150px]",
+                          header.key === "plotBUASqFt" && "w-[150px]",
+                          header.key === "plotStatus" && "w-[120px]",
+                          header.key === "totalSizeSqFt" && "w-[150px]",
                           header.key === "facilitiesCategories" && "w-[120px]",
                           header.key === "amentiesCategories" && "w-[120px]",
                           header.key === "attachDocument" && "w-[120px]",
@@ -879,7 +883,7 @@ export default function MasterDevelopmentPage() {
               </Table>
             </div>
 
-            {/* Pagination - Updated to match the image */}
+            {/* Pagination */}
             {pagination.totalPages > 0 && (
               <div className="flex items-center justify-center p-4 border-t">
                 <div className="flex items-center gap-2">
@@ -941,8 +945,7 @@ export default function MasterDevelopmentPage() {
       />
 
       {/* Filter Sidebar */}
-      <FilterSidebar open={isFilterSidebarOpen} onOpenChange={setIsFilterSidebarOpen} />
-      <ImportRecordsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
+      <SubDevFilterSidebar open={isFilterSidebarOpen} onOpenChange={setIsFilterSidebarOpen} />
 
       {/* Export Modal */}
       <ExportModal
