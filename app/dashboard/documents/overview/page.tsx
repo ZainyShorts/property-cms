@@ -5,14 +5,13 @@ import type React from "react"
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Loader2, Copy, Trash2 } from "lucide-react"
-import { ToastContainer, toast } from "react-toastify"
+import { Loader2, Trash2, Cloud } from "lucide-react"
+import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import { DeleteConfirmationModal } from "../../properties/master-development/delete-confirmation-modal"
 
 interface Document {
-  _id: string
-  refId: string
+  _id: any
   type: string
   documentUrl: string
   title: string
@@ -146,26 +145,12 @@ export default function DocumentsPage() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-900 text-sm">
-                  <tr>
-                    {Object.keys(documents[0]).map(
-                      (key) =>
-                        key !== "__v" && (
-                          <th key={key} className="px-4 py-3 text-left font-medium whitespace-nowrap">
-                            {key === "_id"
-                              ? "ID"
-                              : key === "refId"
-                                ? "Reference ID"
-                                : key === "documentUrl"
-                                  ? "Document URL"
-                                  : key === "createdAt"
-                                    ? "Created At"
-                                    : key === "updatedAt"
-                                      ? "Updated At"
-                                      : key.charAt(0).toUpperCase() + key.slice(1)}
-                          </th>
-                        ),
-                    )}
+                <thead className="bg-gray-50 dark:bg-gray-900 text-sm ">
+                  <tr className=" gap-12 w-full mx-auto" >
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Title</th>
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Type</th>
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Document</th>
+                    <th className="px-4 py-3 text-left font-medium whitespace-nowrap">Created At</th>
                     <th className="px-4 py-3 text-left font-medium">Actions</th>
                   </tr>
                 </thead>
@@ -175,44 +160,34 @@ export default function DocumentsPage() {
                       key={doc._id}
                       className="border-t border-gray-200 hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-900 text-sm"
                     >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center">
-                          <span className="truncate max-w-[120px]">{doc._id}</span>
-                          <button
-                            onClick={() => copyToClipboard(doc._id)}
-                            className="ml-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                            aria-label="Copy ID"
-                          >
-                            <Copy size={16} />
-                          </button>
-                        </div>
+                      <td className="px-4 py-3">{doc.title}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-1 rounded-full text-white ${
+                            doc.type.toLowerCase().includes("pdf")
+                              ? "bg-red-500"
+                              : doc.type.toLowerCase().includes("doc")
+                                ? "bg-blue-500"
+                                : doc.type.toLowerCase().includes("xls")
+                                  ? "bg-green-500"
+                                  : "bg-gray-500"
+                          }`}
+                        >
+                          {doc.type}
+                        </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center">
-                          <span className="truncate max-w-[120px]">{doc.refId}</span>
-                          <button
-                            onClick={() => copyToClipboard(doc.refId)}
-                            className="ml-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                            aria-label="Copy Reference ID"
-                          >
-                            <Copy size={16} />
-                          </button>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">{doc.type}</td>
                       <td className="px-4 py-3">
                         <a
                           href={doc.documentUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 hover:underline truncate max-w-[200px] inline-block"
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                          title="Download document"
                         >
-                          {doc.documentUrl}
+                          <Cloud className="w-5 h-5" />
                         </a>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">{doc.title}</td>
                       <td className="px-4 py-3 whitespace-nowrap">{new Date(doc.createdAt).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 whitespace-nowrap">{new Date(doc.updatedAt).toLocaleDateString()}</td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <Button
                           variant="destructive"
@@ -234,8 +209,6 @@ export default function DocumentsPage() {
       </div>
 
       <DeleteConfirmationModal isOpen={deleteModalOpen} onClose={closeDeleteModal} onConfirm={confirmDelete} />
-
-      
     </div>
   )
 }
