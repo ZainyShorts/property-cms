@@ -5,7 +5,19 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Download, Filter, ChevronLeft, ChevronRight, Trash2, Edit, Info, Upload, Copy, Check } from "lucide-react"
+import {
+  Download,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Edit,
+  Info,
+  Upload,
+  Copy,
+  Check,
+  Settings,
+} from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import axios from "axios"
@@ -27,6 +39,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { SubDevFilterSidebar } from "./filter-sidebar/filter-sidebar"
 import { resetSubDevFilter } from "@/lib/store/slices/subDevFilterSlice"
 import { ExportModal } from "../units/Export-Modal/ExportModal"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // Define the MasterDevelopment type
 interface MasterDevelopment {
@@ -78,6 +91,26 @@ interface FilterValues {
   [key: string]: any
 }
 
+// Updated table headers for SubDevelopment
+const tableHeaders = [
+  { key: "_id", label: "ID" },
+  { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
+  { key: "roadLocation", label: "ROAD LOCATION" },
+  { key: "subDevelopment", label: "SUB DEVELOPMENT" },
+  { key: "plotNumber", label: "PLOT NUMBER" },
+  { key: "plotHeight", label: "PLOT HEIGHT" },
+  { key: "plotPermission", label: "PLOT PERMISSION" },
+  { key: "plotSizeSqFt", label: "PLOT SIZE (SQ FT)" },
+  { key: "plotBUASqFt", label: "PLOT BUA (SQ FT)" },
+  { key: "plotStatus", label: "PLOT STATUS" },
+  { key: "totalSizeSqFt", label: "TOTAL SIZE (SQ FT)" },
+  { key: "facilitiesCategories", label: "FACILITIES" },
+  { key: "amentiesCategories", label: "AMENITIES" },
+  { key: "attachDocument", label: "DOCUMENT" },
+  { key: "edit", label: "EDIT" },
+  { key: "delete", label: "DELETE" },
+]
+
 export default function SubDevelopmentPage() {
   const { theme } = useTheme()
   const filters = useSelector((state: any) => state.subDevFilter)
@@ -110,26 +143,11 @@ export default function SubDevelopmentPage() {
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [isAttachingDocument, setIsAttachingDocument] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
+    tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
+  )
 
-  // Updated table headers for SubDevelopment
-  const tableHeaders = [
-    { key: "_id", label: "ID" },
-    { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
-    { key: "roadLocation", label: "ROAD LOCATION" },
-    { key: "subDevelopment", label: "SUB DEVELOPMENT" },
-    { key: "plotNumber", label: "PLOT NUMBER" },
-    { key: "plotHeight", label: "PLOT HEIGHT" },
-    { key: "plotPermission", label: "PLOT PERMISSION" },
-    { key: "plotSizeSqFt", label: "PLOT SIZE (SQ FT)" },
-    { key: "plotBUASqFt", label: "PLOT BUA (SQ FT)" },
-    { key: "plotStatus", label: "PLOT STATUS" },
-    { key: "totalSizeSqFt", label: "TOTAL SIZE (SQ FT)" },
-    { key: "facilitiesCategories", label: "FACILITIES" },
-    { key: "amentiesCategories", label: "AMENITIES" },
-    { key: "attachDocument", label: "DOCUMENT" },
-    { key: "edit", label: "EDIT" },
-    { key: "delete", label: "DELETE" },
-  ]
+  
 
   useEffect(() => {
     fetchRecords()
@@ -139,59 +157,59 @@ export default function SubDevelopmentPage() {
     setPageInputValue(currentPage.toString())
   }, [currentPage])
 
-  const fetchRecords = async (reset? : any) => {
+  const fetchRecords = async (reset?: any) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
       params.append("page", currentPage.toString())
       params.append("sort", sortOrder)
-       if (!reset) {
-      if (searchTerm) {
-        params.append("search", searchTerm)
-      }
+      if (!reset) {
+        if (searchTerm) {
+          params.append("search", searchTerm)
+        }
 
-      if (startDate) {
-        params.append("startDate", startDate.toISOString())
-      }
+        if (startDate) {
+          params.append("startDate", startDate.toISOString())
+        }
 
-      if (endDate) {
-        params.append("endDate", endDate.toISOString())
-      }
+        if (endDate) {
+          params.append("endDate", endDate.toISOString())
+        }
 
-      // Apply filters from the filter state
-      if (filters.subDevelopment) {
-        params.append("subDevelopment", filters.subDevelopment)
-      }
+        // Apply filters from the filter state
+        if (filters.subDevelopment) {
+          params.append("subDevelopment", filters.subDevelopment)
+        }
 
-      if (filters.plotNumber) {
-        params.append("plotNumber", filters.plotNumber.toString())
-      }
+        if (filters.plotNumber) {
+          params.append("plotNumber", filters.plotNumber.toString())
+        }
 
-      if (filters.plotPermission) {
-        params.append("plotPermission", filters.plotPermission)
-      }
+        if (filters.plotPermission) {
+          params.append("plotPermission", filters.plotPermission)
+        }
 
-      if (filters.plotStatus) {
-        params.append("plotStatus", filters.plotStatus)
-      }
+        if (filters.plotStatus) {
+          params.append("plotStatus", filters.plotStatus)
+        }
 
-      if (filters.facilitiesCategories?.length) {
-        filters.facilitiesCategories.forEach((facility: string) => {
-          params.append("facilitiesCategories", facility)
-        })
-      }
+        if (filters.facilitiesCategories?.length) {
+          filters.facilitiesCategories.forEach((facility: string) => {
+            params.append("facilitiesCategories", facility)
+          })
+        }
 
-      if (filters.amentiesCategories?.length) {
-        filters.amentiesCategories.forEach((amenity: string) => {
-          params.append("amentiesCategories", amenity)
-        })
-      } 
-    }
+        if (filters.amentiesCategories?.length) {
+          filters.amentiesCategories.forEach((amenity: string) => {
+            params.append("amentiesCategories", amenity)
+          })
+        }
+      }
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
-      ) 
-      
-      console.log('response',response);
+      )
+
+      console.log("response", response)
       setRecords(response.data.data)
       setPagination({
         totalCount: response.data.totalCount,
@@ -228,9 +246,9 @@ export default function SubDevelopmentPage() {
     }
   }
 
-  const handleSortChange = async (value: string) => { 
+  const handleSortChange = async (value: string) => {
     console.log(value)
-    setLoading(true)  
+    setLoading(true)
     const response = await axios.get<ApiResponse>(
       `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&sortOrder=${value}`,
     )
@@ -249,7 +267,6 @@ export default function SubDevelopmentPage() {
     setStartDate(null)
     setEndDate(null)
     fetchRecords("reset")
-    toast.success("Filters have been reset")
   }
 
   const isEmpty = (value: any): boolean => {
@@ -351,7 +368,9 @@ export default function SubDevelopmentPage() {
 
       // Directly call the API with the filter parameters
       axios
-        .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`)
+        .get<ApiResponse>(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
+        )
         .then((response) => {
           setRecords(response.data.data)
           setPagination({
@@ -583,6 +602,13 @@ export default function SubDevelopmentPage() {
     }
   }
 
+  const toggleColumnVisibility = (columnKey: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [columnKey]: !prev[columnKey],
+    }))
+  }
+
   const renderCellContent = (record: SubDevelopment, key: string) => {
     switch (key) {
       case "_id":
@@ -800,6 +826,35 @@ export default function SubDevelopmentPage() {
             >
               <Filter className="h-4 w-4" />
             </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="p-2">
+                  <p className="text-sm font-medium mb-2">Toggle Columns</p>
+                  <div className="space-y-2">
+                    {tableHeaders.map((header) => (
+                      <div key={header.key} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`column-${header.key}`}
+                          checked={visibleColumns[header.key]}
+                          onChange={() => toggleColumnVisibility(header.key)}
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor={`column-${header.key}`} className="text-sm">
+                          {header.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="icon" onClick={handleResetFilters}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -820,32 +875,34 @@ export default function SubDevelopmentPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {tableHeaders.map((header) => (
-                      <TableHead
-                        key={header.key}
-                        className={cn(
-                          "whitespace-nowrap text-center",
-                          header.key === "_id" && "w-[120px]",
-                          header.key === "masterDevelopment" && "w-[180px]",
-                          header.key === "roadLocation" && "w-[150px]",
-                          header.key === "subDevelopment" && "w-[180px]",
-                          header.key === "plotNumber" && "w-[120px]",
-                          header.key === "plotHeight" && "w-[120px]",
-                          header.key === "plotPermission" && "w-[150px]",
-                          header.key === "plotSizeSqFt" && "w-[150px]",
-                          header.key === "plotBUASqFt" && "w-[150px]",
-                          header.key === "plotStatus" && "w-[120px]",
-                          header.key === "totalSizeSqFt" && "w-[150px]",
-                          header.key === "facilitiesCategories" && "w-[120px]",
-                          header.key === "amentiesCategories" && "w-[120px]",
-                          header.key === "attachDocument" && "w-[120px]",
-                          header.key === "edit" && "w-[100px]",
-                          header.key === "delete" && "w-[100px]",
-                        )}
-                      >
-                        {header.label}
-                      </TableHead>
-                    ))}
+                    {tableHeaders
+                      .filter((header) => visibleColumns[header.key])
+                      .map((header) => (
+                        <TableHead
+                          key={header.key}
+                          className={cn(
+                            "whitespace-nowrap text-center",
+                            header.key === "_id" && "w-[120px]",
+                            header.key === "masterDevelopment" && "w-[180px]",
+                            header.key === "roadLocation" && "w-[150px]",
+                            header.key === "subDevelopment" && "w-[180px]",
+                            header.key === "plotNumber" && "w-[120px]",
+                            header.key === "plotHeight" && "w-[120px]",
+                            header.key === "plotPermission" && "w-[150px]",
+                            header.key === "plotSizeSqFt" && "w-[150px]",
+                            header.key === "plotBUASqFt" && "w-[150px]",
+                            header.key === "plotStatus" && "w-[120px]",
+                            header.key === "totalSizeSqFt" && "w-[150px]",
+                            header.key === "facilitiesCategories" && "w-[120px]",
+                            header.key === "amentiesCategories" && "w-[120px]",
+                            header.key === "attachDocument" && "w-[120px]",
+                            header.key === "edit" && "w-[100px]",
+                            header.key === "delete" && "w-[100px]",
+                          )}
+                        >
+                          {header.label}
+                        </TableHead>
+                      ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -855,26 +912,33 @@ export default function SubDevelopmentPage() {
                       .fill(0)
                       .map((_, index) => (
                         <TableRow key={index}>
-                          {tableHeaders.map((header) => (
-                            <TableCell key={`${index}-${header.key}`}>
-                              <Skeleton className="h-4 w-full" />
-                            </TableCell>
-                          ))}
+                          {tableHeaders
+                            .filter((header) => visibleColumns[header.key])
+                            .map((header) => (
+                              <TableCell key={`${index}-${header.key}`}>
+                                <Skeleton className="h-4 w-full" />
+                              </TableCell>
+                            ))}
                         </TableRow>
                       ))
                   ) : records.length > 0 ? (
                     records.map((record) => (
                       <TableRow key={record._id}>
-                        {tableHeaders.map((header) => (
-                          <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                            {renderCellContent(record, header.key)}
-                          </TableCell>
-                        ))}
+                        {tableHeaders
+                          .filter((header) => visibleColumns[header.key])
+                          .map((header) => (
+                            <TableCell key={`${record._id}-${header.key}`} className="text-center">
+                              {renderCellContent(record, header.key)}
+                            </TableCell>
+                          ))}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={tableHeaders.length} className="text-center py-10">
+                      <TableCell
+                        colSpan={tableHeaders.filter((header) => visibleColumns[header.key]).length}
+                        className="text-center py-10"
+                      >
                         Your records will be shown here
                       </TableCell>
                     </TableRow>

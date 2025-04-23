@@ -571,9 +571,24 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     "Community Recycling Points",
   ]
 
-  const plotPermissionOptions = ["Residential", "Commercial", "Mixed Use", "Industrial", "Apartment"]
-  const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction", "Ready"]
-
+  const plotPermissionOptions = [
+    'Apartment',
+    'Shops',
+    'Offices',
+    'Hotel',
+    'Townhouse',
+    'Villas',
+    'Mansions',
+    'Showroom',
+    'Warehouse',
+    'Labour Camp',
+    'Hospital',
+    'School',
+    'Bungalow'
+  ];
+  
+  const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
+  
   return (
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
@@ -678,18 +693,26 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
             {/* Plot Permission */}
             <FormField
-              control={form.control}
-              name="plotPermission"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Plot Permission</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Apartment" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                          control={form.control}
+                          name="plotPermission"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Plot Permission</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select plot permission" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {plotPermissionOptions.map((status) => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+              </FormItem>
+                          )} />
 
             {/* Plot Size SqFt */}
             <FormField
@@ -723,18 +746,28 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
             {/* Plot Status */}
             <FormField
-              control={form.control}
-              name="plotStatus"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Plot Status</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Ready" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                          control={form.control}
+                          name="plotStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Plot Status</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select plot status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {plotStatusOptions.map((status) => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+              </FormItem>
               )}
-            />
+              />
+
 
             {/* BUA Area SqFt */}
             <FormField

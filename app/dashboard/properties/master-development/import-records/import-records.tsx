@@ -12,6 +12,7 @@ import "react-toastify/dist/ReactToastify.css"
 interface ImportRecordsModalProps {
   isOpen: boolean
   onClose: () => void
+  fetchRecords:any
 }
 
 interface ImportResponse {
@@ -21,7 +22,7 @@ interface ImportResponse {
   totalEntries: number
 }
 
-export function ImportRecordsModal({ isOpen, onClose }: ImportRecordsModalProps) {
+export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecordsModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -76,7 +77,7 @@ export function ImportRecordsModal({ isOpen, onClose }: ImportRecordsModalProps)
 
       if (response.ok && data.success) {
         setUploadStatus("success")
-
+        fetchRecords()
         // Show toast with import results using react-toastify
         toast.success(
           `Import successful: ${data.insertedEntries} entries added, ${data.skippedDuplicateEntires} duplicates skipped.`,

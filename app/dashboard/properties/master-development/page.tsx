@@ -5,7 +5,19 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Download, Filter, ChevronLeft, ChevronRight, Trash2, Edit, Info, Upload, Copy, Check } from "lucide-react"
+import {
+  Download,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Edit,
+  Info,
+  Upload,
+  Copy,
+  Check,
+  Settings,
+} from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import axios from "axios"
@@ -28,6 +40,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
 import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
 import { ExportModal } from "../units/Export-Modal/ExportModal"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 export interface MasterDevelopment {
   _id: string
   roadLocation: string
@@ -50,6 +63,21 @@ interface ApiResponse {
   totalPages: number
   pageNumber: number
 }
+const tableHeaders = [
+  { key: "_id", label: "ID" },
+  { key: "roadLocation", label: "ROAD LOCATION" },
+  { key: "developmentName", label: "DEVELOPMENT NAME" },
+  { key: "locationQuality", label: "LOCATION QUALITY" },
+  { key: "buaAreaSqFt", label: "BUA AREA (SQ FT)" },
+  { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" },
+  { key: "amentiesAreaSqFt", label: "AMENITIES AREA (SQ FT)" },
+  { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
+  { key: "facilitiesCategories", label: "FACILITIES" },
+  { key: "amentiesCategories", label: "AMENITIES" },
+  { key: "attachDocument", label: "DOCUMENT" },
+  { key: "edit", label: "EDIT" },
+  { key: "delete", label: "DELETE" },
+]
 
 export default function MasterDevelopmentPage() {
   const { theme } = useTheme()
@@ -83,22 +111,11 @@ export default function MasterDevelopmentPage() {
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [isAttachingDocument, setIsAttachingDocument] = useState(false)
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
+    tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
+  )
 
-  const tableHeaders = [
-    { key: "_id", label: "ID" },
-    { key: "roadLocation", label: "ROAD LOCATION" },
-    { key: "developmentName", label: "DEVELOPMENT NAME" },
-    { key: "locationQuality", label: "LOCATION QUALITY" },
-    { key: "buaAreaSqFt", label: "BUA AREA (SQ FT)" },
-    { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" },
-    { key: "amentiesAreaSqFt", label: "AMENITIES AREA (SQ FT)" },
-    { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
-    { key: "facilitiesCategories", label: "FACILITIES" },
-    { key: "amentiesCategories", label: "AMENITIES" },
-    { key: "attachDocument", label: "DOCUMENT" },
-    { key: "edit", label: "EDIT" },
-    { key: "delete", label: "DELETE" },
-  ]
+  
 
   useEffect(() => {
     fetchRecords()
@@ -227,7 +244,6 @@ export default function MasterDevelopmentPage() {
     setStartDate(null)
     setEndDate(null)
     fetchRecords()
-    toast.success("Filters have been reset")
   }
 
   const isEmpty = (value: any): boolean => {
@@ -417,12 +433,11 @@ export default function MasterDevelopmentPage() {
       console.log("Document data to save:", documentData)
 
       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
-       console.log(response);
+      console.log(response)
       toast.success("Document attached successfully")
 
       setIsDocumentModalOpen(false)
       setSelectedRowId(null)
-
     } catch (error) {
       console.error("Error attaching document:", error)
       toast.error("Failed to attach document. Please try again.")
@@ -597,6 +612,13 @@ export default function MasterDevelopmentPage() {
     if (!open) {
       setEditRecord(null)
     }
+  }
+
+  const toggleColumnVisibility = (columnKey: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [columnKey]: !prev[columnKey],
+    }))
   }
 
   const renderCellContent = (record: MasterDevelopment, key: string) => {
@@ -801,6 +823,35 @@ export default function MasterDevelopmentPage() {
             >
               <Filter className="h-4 w-4" />
             </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="p-2">
+                  <p className="text-sm font-medium mb-2">Toggle Columns</p>
+                  <div className="space-y-2">
+                    {tableHeaders.map((header) => (
+                      <div key={header.key} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`column-${header.key}`}
+                          checked={visibleColumns[header.key]}
+                          onChange={() => toggleColumnVisibility(header.key)}
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <label htmlFor={`column-${header.key}`} className="text-sm">
+                          {header.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="icon" onClick={handleResetFilters}>
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -821,27 +872,29 @@ export default function MasterDevelopmentPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {tableHeaders.map((header) => (
-                      <TableHead
-                        key={header.key}
-                        className={cn(
-                          "whitespace-nowrap text-center",
-                          header.key === "_id" && "w-[120px]",
-                          header.key === "locationQuality" && "w-[150px]",
-                          header.key === "buaAreaSqFt" && "w-[150px]",
-                          header.key === "facilitiesAreaSqFt" && "w-[180px]",
-                          header.key === "amentiesAreaSqFt" && "w-[180px]",
-                          header.key === "totalAreaSqFt" && "w-[150px]",
-                          header.key === "facilitiesCategories" && "w-[120px]",
-                          header.key === "amentiesCategories" && "w-[120px]",
-                          header.key === "attachDocument" && "w-[120px]",
-                          header.key === "edit" && "w-[100px]",
-                          header.key === "delete" && "w-[100px]",
-                        )}
-                      >
-                        {header.label}
-                      </TableHead>
-                    ))}
+                    {tableHeaders
+                      .filter((header) => visibleColumns[header.key])
+                      .map((header) => (
+                        <TableHead
+                          key={header.key}
+                          className={cn(
+                            "whitespace-nowrap text-center",
+                            header.key === "_id" && "w-[120px]",
+                            header.key === "locationQuality" && "w-[150px]",
+                            header.key === "buaAreaSqFt" && "w-[150px]",
+                            header.key === "facilitiesAreaSqFt" && "w-[180px]",
+                            header.key === "amentiesAreaSqFt" && "w-[180px]",
+                            header.key === "totalAreaSqFt" && "w-[150px]",
+                            header.key === "facilitiesCategories" && "w-[120px]",
+                            header.key === "amentiesCategories" && "w-[120px]",
+                            header.key === "attachDocument" && "w-[120px]",
+                            header.key === "edit" && "w-[100px]",
+                            header.key === "delete" && "w-[100px]",
+                          )}
+                        >
+                          {header.label}
+                        </TableHead>
+                      ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -851,26 +904,33 @@ export default function MasterDevelopmentPage() {
                       .fill(0)
                       .map((_, index) => (
                         <TableRow key={index}>
-                          {tableHeaders.map((header) => (
-                            <TableCell key={`${index}-${header.key}`}>
-                              <Skeleton className="h-4 w-full" />
-                            </TableCell>
-                          ))}
+                          {tableHeaders
+                            .filter((header) => visibleColumns[header.key])
+                            .map((header) => (
+                              <TableCell key={`${index}-${header.key}`}>
+                                <Skeleton className="h-4 w-full" />
+                              </TableCell>
+                            ))}
                         </TableRow>
                       ))
                   ) : records.length > 0 ? (
                     records.map((record) => (
                       <TableRow key={record._id}>
-                        {tableHeaders.map((header) => (
-                          <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                            {renderCellContent(record, header.key)}
-                          </TableCell>
-                        ))}
+                        {tableHeaders
+                          .filter((header) => visibleColumns[header.key])
+                          .map((header) => (
+                            <TableCell key={`${record._id}-${header.key}`} className="text-center">
+                              {renderCellContent(record, header.key)}
+                            </TableCell>
+                          ))}
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={tableHeaders.length} className="text-center py-10">
+                      <TableCell
+                        colSpan={tableHeaders.filter((header) => visibleColumns[header.key]).length}
+                        className="text-center py-10"
+                      >
                         Your records will be shown here
                       </TableCell>
                     </TableRow>
@@ -942,7 +1002,11 @@ export default function MasterDevelopmentPage() {
 
       {/* Filter Sidebar */}
       <FilterSidebar open={isFilterSidebarOpen} onOpenChange={setIsFilterSidebarOpen} />
-      <ImportRecordsModal isOpen={isImportModalOpen} onClose={() => setIsImportModalOpen(false)} />
+      <ImportRecordsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        fetchRecords={fetchRecords}
+      />
 
       {/* Export Modal */}
       <ExportModal
