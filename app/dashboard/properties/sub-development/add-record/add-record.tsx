@@ -219,7 +219,6 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     }
   }, [editRecord, form])
 
-  // Watch form values for auto-calculation
   const buaAreaSqFt = useWatch({
     control: form.control,
     name: "buaAreaSqFt",

@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import axios from "axios"
-import { Upload, File, Trash2 } from 'lucide-react'
+import { Upload, File, Trash2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,36 +13,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 // Define the file type enum
 export enum FileType {
-  DOCX = 'docx',
-  XLSX = 'xlsx',
-  CSV = 'csv',
-  IMAGE = 'image',
-  PDF = 'pdf',
+  DOCX = "docx",
+  XLSX = "xlsx",
+  CSV = "csv",
+  IMAGE = "image",
+  PDF = "pdf",
+  VIDEO = "mp4",
 }
 
 // Define the document data interface that will be returned to the parent
 export interface DocumentData {
-  refId: string;
-  documentUrl: string;
-  title: string;
-  type: FileType;
+  refId: string
+  documentUrl: string
+  title: string
+  type: FileType
 }
 
 interface DocumentModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  rowId: string | null;
-  onDocumentSave: (documentData: DocumentData) => void;
+  isOpen: boolean
+  onClose: () => void
+  rowId: string | null
+  onDocumentSave: (documentData: DocumentData) => void
 }
 
 interface UploadedDocument {
-  id: string;
-  file: File;
-  preview?: string;
-  awsUrl?: string;
-  key?: string;
-  title: string;
-  type: FileType;
+  id: string
+  file: File
+  preview?: string
+  awsUrl?: string
+  key?: string
+  title: string
+  type: FileType
 }
 
 const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
@@ -84,15 +85,35 @@ const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number)
 
 // Helper function to determine file type from extension
 const getFileTypeFromExtension = (fileName: string): FileType | null => {
-  const extension = fileName.split('.').pop()?.toLowerCase() || '';
-  
-  if (extension === 'docx') return FileType.DOCX;
-  if (extension === 'xlsx') return FileType.XLSX;
-  if (extension === 'csv') return FileType.CSV;
-  if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) return FileType.IMAGE;
-  if (extension === 'pdf') return FileType.PDF;
-  
-  return null;
+  const extension = fileName.split(".").pop()?.toLowerCase() || ""
+
+  if (extension === "docx") return FileType.DOCX
+  if (extension === "xlsx") return FileType.XLSX
+  if (extension === "csv") return FileType.CSV
+  if (extension === "mp4") return FileType.VIDEO
+  if (["jpg", "jpeg", "png", "gif", "webp", "avif"].includes(extension)) return FileType.IMAGE
+  if (extension === "pdf") return FileType.PDF
+
+  return null
+}
+
+const getAcceptAttributeForType = (type: FileType | ""): string => {
+  switch (type) {
+    case FileType.DOCX:
+      return ".docx"
+    case FileType.XLSX:
+      return ".xlsx"
+    case FileType.CSV:
+      return ".csv"
+    case FileType.IMAGE:
+      return ".jpg,.jpeg,.png,.gif,.webp,.avif"
+    case FileType.PDF:
+      return ".pdf"
+    case FileType.VIDEO:
+      return ".mp4"
+    default:
+      return ".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.gif,.webp,.avif,.mp4"
+  }
 }
 
 export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }: DocumentModalProps) {
@@ -106,23 +127,23 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0]
-      
+
       // Detect file type from extension
-      const detectedType = getFileTypeFromExtension(file.name);
-      
+      const detectedType = getFileTypeFromExtension(file.name)
+
       if (!detectedType) {
-        alert("Invalid file type. Please upload DOCX, XLSX, CSV, Image, or PDF files.");
-        return;
+        alert("Invalid file type. Please upload DOCX, XLSX, CSV, Image, or PDF files.")
+        return
       }
 
       // Set the detected type in the dropdown
-      setDocumentType(detectedType);
-      
+      setDocumentType(detectedType)
+
       const doc: UploadedDocument = {
         id: Math.random().toString(36).substring(2, 9),
         file: file,
         title: documentTitle || file.name.split(".")[0],
-        type: detectedType
+        type: detectedType,
       }
 
       if (file.type.startsWith("image/")) {
@@ -155,7 +176,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
       const docWithTitle = {
         ...uploadedDocument,
         title: documentTitle || uploadedDocument.title,
-        type: documentType as FileType
+        type: documentType as FileType,
       }
 
       // Upload the document to AWS
@@ -171,7 +192,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
         refId: rowId,
         documentUrl: result.awsUrl,
         title: docWithTitle.title,
-        type: docWithTitle.type
+        type: docWithTitle.type,
       }
 
       // Pass the document data to the parent component
@@ -211,10 +232,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
 
           <div className="space-y-2">
             <Label htmlFor="document-type">Document Type</Label>
-            <Select 
-              value={documentType} 
-              onValueChange={(value) => setDocumentType(value as FileType)}
-            >
+            <Select value={documentType} onValueChange={(value) => setDocumentType(value as FileType)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select document type" />
               </SelectTrigger>
@@ -224,6 +242,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
                 <SelectItem value={FileType.CSV}>CSV</SelectItem>
                 <SelectItem value={FileType.IMAGE}>Image</SelectItem>
                 <SelectItem value={FileType.PDF}>PDF</SelectItem>
+                <SelectItem value={FileType.VIDEO}>Video</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -235,7 +254,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
               onChange={handleFileChange}
               className="hidden"
               id="document-upload"
-              accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png,.gif"
+              accept={getAcceptAttributeForType(documentType as FileType)}
             />
             <Button
               type="button"

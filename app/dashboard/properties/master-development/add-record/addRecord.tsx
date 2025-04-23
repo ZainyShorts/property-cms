@@ -441,7 +441,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                 <FormItem>
                   <FormLabel>Road Location</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Al Barsha South" {...field} />
+                    <Input placeholder="Type Here" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -455,7 +455,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                 <FormItem>
                   <FormLabel>Development Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Heights" {...field} />
+                    <Input placeholder="Type here " {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

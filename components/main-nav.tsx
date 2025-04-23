@@ -58,27 +58,7 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
             <span className="sr-only">Open sidebar</span>
           </Button>
           <nav className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              className={`${
-                isScrolled
-                  ? "text-foreground hover:bg-accent hover:text-accent-foreground"
-                  : "text-primary hover:bg-primary/10 hover:text-primary"
-              }`}
-            >
-              Data
-            </Button>
-
-            <Button
-              variant="ghost"
-              className={`${
-                isScrolled
-                  ? "text-foreground hover:bg-accent hover:text-accent-foreground"
-                  : "text-primary hover:bg-primary/10 hover:text-primary"
-              }`}
-            >
-              Forms
-            </Button>
+       
           </nav>
         </div>
         <div className="ml-auto flex items-center space-x-4">

@@ -748,7 +748,7 @@ export default function MasterDevelopmentPage() {
           <div className="flex items-center space-x-2">
             <h2 className="text-lg font-semibold">Properties</h2>
             <span className="text-muted-foreground">&gt;</span>
-            <h2 className="text-lg font-semibold">Overview</h2>
+            <h2 className="text-lg font-semibold">Master Development</h2>
           </div>
           <div className="flex items-center space-x-2">
             <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
