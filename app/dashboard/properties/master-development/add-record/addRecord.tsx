@@ -7,7 +7,7 @@ import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { X, ImageIcon, Upload } from "lucide-react"
-import { toast } from "react-toastify" 
+import { toast } from "react-toastify"
 import axios from "axios"
 import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -96,7 +96,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
               file: new File([], `image-${index}.jpg`),
               preview: url,
               awsUrl: url,
-              isExisting: true
+              isExisting: true,
             }
           }
         })
@@ -140,12 +140,12 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const handleCheckChangedFields = () => {
     const currentValues = form.getValues()
     const changedFields: Record<string, any> = {}
-    
+
     Object.entries(currentValues).forEach(([key, value]) => {
-      if (key === 'pictures') return
+      if (key === "pictures") return // Skip pictures here, we'll handle them separately
 
       const editValue = editRecord?.[key as keyof typeof editRecord]
-      
+
       if (Array.isArray(value) && Array.isArray(editValue)) {
         const sortedValue = [...value].sort()
         const sortedEditValue = [...editValue].sort()
@@ -157,15 +157,8 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       }
     })
 
-    const currentPictures = pictures
-      .filter(pic => pic !== null)
-      .map(pic => pic?.awsUrl || pic?.preview)
-    
-    const originalPictures = editRecord?.pictures || []
-    
-    if (JSON.stringify(currentPictures) !== JSON.stringify(originalPictures)) {
-      changedFields.pictures = currentPictures
-    }
+    // We'll handle pictures separately in the onSubmit function
+    // to ensure all new images are uploaded to AWS first
 
     return changedFields
   }
@@ -174,7 +167,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     try {
       const formData = new FormData()
       formData.append("file", file)
-      
+
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/signed-url?fileName=${file.name}&contentType=${file.type}`,
         {
@@ -183,7 +176,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
           },
         },
       )
-      
+
       const signedUrl = response.data.msg.url
 
       await axios.put(signedUrl, file, {
@@ -193,7 +186,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-            setUploadProgress(prev => {
+            setUploadProgress((prev) => {
               const newProgress = [...prev]
               newProgress[index] = progress
               return newProgress
@@ -204,7 +197,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
 
       return {
         awsUrl: signedUrl.split("?")[0],
-        key: response.data.msg.key
+        key: response.data.msg.key,
       }
     } catch (error) {
       console.error("Error uploading file:", error)
@@ -234,13 +227,14 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0]
       const newPictures = [...pictures]
-      
-      // Create local preview
+
+      // Mark this as a new image that needs to be uploaded to AWS
       newPictures[index] = {
         file,
-        preview: URL.createObjectURL(file)
+        preview: URL.createObjectURL(file),
+        isExisting: false, // Explicitly mark as not existing
       }
-      
+
       setPictures(newPictures)
       setActiveImageIndex(null)
     }
@@ -252,9 +246,10 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
 
     try {
       if (image.isExisting && image.awsUrl) {
-        const filename = image.awsUrl.split('/').pop()
-        if (filename) {
-          await deleteFromAWS(filename)
+        // Extract the key from the AWS URL (the filename is the last part of the URL path)
+        const key = image.awsUrl.split("/").pop()
+        if (key) {
+          await deleteFromAWS(key)
           toast.success("Image deleted from cloud storage")
         }
       }
@@ -282,14 +277,23 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
     try {
+      // Upload all images to AWS and get their URLs
       const uploadPromises = pictures.map(async (pic, index) => {
-        if (pic && !pic.isExisting && pic.file) {
-          try {
-            const result = await uploadImageToAWS(pic.file, index)
-            return { ...pic, ...result }
-          } catch (error) {
-            console.error(`Failed to upload image ${index}:`, error)
-            return null
+        if (pic) {
+          // If it's an existing image that hasn't changed, just return it
+          if (pic.isExisting && pic.awsUrl) {
+            return pic
+          }
+
+          // If it's a new image (either in add mode or edit mode), upload it to AWS
+          if (pic.file) {
+            try {
+              const { awsUrl, key } = await uploadImageToAWS(pic.file, index)
+              return { ...pic, awsUrl, awsKey: key, isExisting: false }
+            } catch (error) {
+              console.error(`Failed to upload image ${index}:`, error)
+              return null
+            }
           }
         }
         return pic
@@ -297,29 +301,37 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
 
       const uploadedPictures = await Promise.all(uploadPromises)
 
+      // Extract AWS URLs from the uploaded pictures
+      const pictureUrls = uploadedPictures
+        .filter((pic): pic is NonNullable<typeof pic> => pic !== null)
+        .map((pic) => pic.awsUrl)
+
+      // Prepare the data to submit, including AWS URLs for images
       const submitData = {
         ...data,
-        pictures: uploadedPictures
-          .filter((pic): pic is NonNullable<typeof pic> => pic !== null)
-          .map(pic => pic.awsUrl)
+        pictures: pictureUrls,
       }
 
       if (isEditMode && editRecord) {
+        // In edit mode, always include the pictures array in changedFields
         const changedFields = handleCheckChangedFields()
-        
+
+        // Force include pictures in changedFields to ensure they're updated
+        changedFields.pictures = pictureUrls
+
         if (Object.keys(changedFields).length === 0) {
           toast.info("No changes detected")
         } else {
           const response = await axios.patch(
             `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${editRecord._id}`,
-            changedFields
+            changedFields,
           )
           toast.success("Master development record has been updated successfully")
         }
       } else {
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
-          submitData
+          submitData,
         )
         toast.success("Master development record has been added successfully")
       }
@@ -332,11 +344,9 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       console.error("Error submitting form:", error)
       if (error.response?.status === 400) {
         toast.error(error.response.data.message || "Bad Request: Please check your input data")
-      }  
-     else if (error.response?.status === 504) {
+      } else if (error.response?.status === 504) {
         toast.error(error.response.data.message || "Bad Request")
-      } 
-      else {
+      } else {
         toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
       }
     } finally {
@@ -351,9 +361,9 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     "Hospitals",
     "Clinics",
     "Malls",
-    "Public Transport"
+    "Public Transport",
   ]
-  
+
   const amenitiesCategoriesOptions = [
     "Gym",
     "Swimming Pool",
@@ -420,7 +430,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     "Handyman on-call services",
     "Pest control & Fumigation Support",
     "Green Building Certification",
-    "Community Recycling Points"
+    "Community Recycling Points",
   ]
 
   return (
@@ -575,10 +585,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                             <span className="text-white text-xs mb-2 text-center">
                               Uploading... {uploadProgress[index]}%
                             </span>
-                            <Progress 
-                              value={uploadProgress[index]} 
-                              className="w-full h-2" 
-                            />
+                            <Progress value={uploadProgress[index]} className="w-full h-2" />
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
@@ -622,7 +629,9 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                   </div>
                 ))}
             </div>
-            <p className="text-xs text-muted-foreground">Select up to 6 images. All images will be stored in cloud storage.</p>
+            <p className="text-xs text-muted-foreground">
+              Select up to 6 images. All images will be stored in cloud storage.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-1 gap-6">

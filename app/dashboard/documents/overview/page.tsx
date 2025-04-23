@@ -9,6 +9,7 @@ import { Loader2, Trash2, Download } from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import { DeleteConfirmationModal } from "../../properties/master-development/delete-confirmation-modal"
+import axios from "axios"
 
 interface Document {
   _id: any
@@ -34,6 +35,20 @@ export default function DocumentsPage() {
   const [hasSearched, setHasSearched] = useState(false)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [documentToDelete, setDocumentToDelete] = useState<string | null>(null)
+
+  const deleteFromAWS = async (filename: string): Promise<void> => {
+    try {
+     const res =  await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }) 
+      console.log(res);
+    } catch (error) {
+      console.error("Error deleting file:", error)
+      throw new Error("Failed to delete file")
+    }
+  }
 
   const fetchDocuments = async () => {
     if (!refId.trim()) {
@@ -82,6 +97,23 @@ export default function DocumentsPage() {
 
     setLoading(true)
     try {
+      // Find the document to get its URL
+      const docToDelete = documents.find((doc) => doc._id === documentToDelete)
+
+      if (!docToDelete) {
+        throw new Error("Document not found")
+      }
+
+      // Extract filename from the document URL
+      const documentUrl = docToDelete.documentUrl
+      const filename = documentUrl.split("/").pop()
+
+      if (filename) {
+        // Delete from AWS first
+        await deleteFromAWS(filename)
+      }
+
+      // Then delete from CMS
       const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/${documentToDelete}`, {
         method: "DELETE",
       })

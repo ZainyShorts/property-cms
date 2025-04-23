@@ -15,14 +15,16 @@ import {
   Info,
   Upload,
   Copy,
-  Check,
+  Check, 
+  ArrowLeft,
   Settings,
 } from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 import axios from "axios"
 import { useSelector, useDispatch } from "react-redux"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ui/button" 
+import { Switch } from "./switch"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -39,7 +41,8 @@ import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
 import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
-import { ExportModal } from "../units/Export-Modal/ExportModal"
+import { ExportModal } from "../units/Export-Modal/ExportModal" 
+import { locationDetails , overview , facilities } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 export interface MasterDevelopment {
   _id: string
@@ -125,13 +128,14 @@ export default function MasterDevelopmentPage() {
     setPageInputValue(currentPage.toString())
   }, [currentPage])
 
-  const fetchRecords = async () => {
+  const fetchRecords = async (reset? : any) => {
     setLoading(true)
-    try {
+    try { 
       const params = new URLSearchParams()
       params.append("page", currentPage.toString())
       params.append("sort", sortOrder)
-
+      
+      if (!reset) {
       if (searchTerm) {
         params.append("search", searchTerm)
       }
@@ -183,11 +187,11 @@ export default function MasterDevelopmentPage() {
           params.append("amentiesCategories", amenity)
         })
       }
-
+    }
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`,
       )
-
+      console.log('response',response)
       setRecords(response.data.data)
       setPagination({
         totalCount: response.data.totalCount,
@@ -243,7 +247,7 @@ export default function MasterDevelopmentPage() {
     dispatch(resetFilters())
     setStartDate(null)
     setEndDate(null)
-    fetchRecords()
+    fetchRecords("reset")
   }
 
   const isEmpty = (value: any): boolean => {
@@ -424,7 +428,7 @@ export default function MasterDevelopmentPage() {
   const handleAttachDocument = (recordId: string) => {
     setSelectedRowId(recordId)
     setIsDocumentModalOpen(true)
-  }
+  } 
 
   const handleDocumentSave = async (documentData: DocumentData) => {
     setIsAttachingDocument(true)
@@ -592,7 +596,7 @@ export default function MasterDevelopmentPage() {
     try {
       await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`)
       toast.success("Record deleted successfully")
-      fetchRecords() // Refresh the list
+      fetchRecords() 
     } catch (error: any) {
       console.error("Error deleting record:", error)
       if (error.response && error.response.status === 400) {
@@ -612,15 +616,62 @@ export default function MasterDevelopmentPage() {
     if (!open) {
       setEditRecord(null)
     }
-  }
+  } 
+  const [checkState , setCheckState] = useState<any>("all"); 
+  const [showHeaderCategories, setShowHeaderCategories] = useState(false);
 
-  const toggleColumnVisibility = (columnKey: string) => {
-    setVisibleColumns((prev) => ({
+
+  const toggleColumnVisibility = (columnKey: string , headers? : any , ) => {  
+    if (headers) {  
+      if (headers === "locationDetails")  { 
+        setCheckState("locationDetails")
+        setVisibleColumns(prev => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = locationDetails.includes(key);
+            return acc;
+          }, {});
+          return updated;
+        });
+    } else if (headers === "overview") { 
+      setCheckState("overview")
+      setVisibleColumns(prev => {
+        const updated = Object.keys(prev).reduce((acc: any, key) => {
+          acc[key] = overview.includes(key);
+          return acc;
+        }, {});
+        return updated;
+      });
+    } 
+    else if (headers === "facilities") { 
+      setCheckState("facilities")
+      setVisibleColumns(prev => {
+        const updated = Object.keys(prev).reduce((acc: any, key) => {
+          acc[key] = facilities.includes(key);
+          return acc;
+        }, {});
+        return updated;
+      });
+    }  
+    else if (headers === "all") {
+      setCheckState("all");
+      setVisibleColumns(prev => {
+        const updated = Object.keys(prev).reduce((acc, key) => {
+          acc[key] = true;
+          return acc;
+        }, {} as Record<string, boolean>);
+        return updated;
+      });
+    }
+    }
+      
+          
+   else { setVisibleColumns((prev) => ({
       ...prev,
       [columnKey]: !prev[columnKey],
-    }))
+    })) 
   }
-
+  }
+  
   const renderCellContent = (record: MasterDevelopment, key: string) => {
     switch (key) {
       case "_id":
@@ -761,8 +812,14 @@ export default function MasterDevelopmentPage() {
       default:
         return record[key as keyof MasterDevelopment]
     }
+  }  
+  const [mounted , setMounted] = useState<any>(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted) {
+    return null; 
   }
-
   return (
     <div className="min-h-screen w-full">
       <div className="border-b">
@@ -807,7 +864,7 @@ export default function MasterDevelopmentPage() {
           <SimpleDatePicker placeholder="Start Date" date={startDate} setDate={setStartDate} />
 
           <SimpleDatePicker placeholder="End Date" date={endDate} setDate={setEndDate} />
-
+        
           <div className="flex-1 flex justify-end gap-2">
             <Button
               variant="outline"
@@ -826,9 +883,9 @@ export default function MasterDevelopmentPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Settings className="h-4 w-4" />
-                </Button>
+              <Button variant="outline" disabled={checkState !== 'all'} size="icon">
+  <Settings className="h-4 w-4" />
+</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <div className="p-2">
@@ -867,10 +924,102 @@ export default function MasterDevelopmentPage() {
 
         {/* Table */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent className="p-0">  
+            
+          <div className="flex w-full justify-centre items-center mb-2 ml-2 mt-2 h-10">
+        <Switch 
+          enabled={showHeaderCategories}  
+          onChange={() => setShowHeaderCategories(!showHeaderCategories)} 
+          label="Show Headers" 
+        />
+      </div> 
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+              <Table> 
+              
+                <TableHeader> 
+              
+              {showHeaderCategories && 
+                <TableRow>
+                {(checkState === 'locationDetails' || checkState === 'all') && (
+    <TableHead
+      onClick={() => toggleColumnVisibility('a', 'locationDetails')}
+      colSpan={4}
+      className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
+    >
+      Location Details
+      {checkState === 'locationDetails' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleColumnVisibility('a', 'all');
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+      )}
+    </TableHead>
+  )}
+
+  {(checkState === 'overview' || checkState === 'all') && (
+    <TableHead
+      onClick={() => toggleColumnVisibility('a', 'overview')}
+      colSpan={4}
+      className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
+    >
+      Overview
+      {checkState === 'overview' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleColumnVisibility('a', 'all');
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+      )}
+    </TableHead>
+  )}
+
+  {(checkState === 'facilities' || checkState === 'all') && (
+    <TableHead
+      onClick={() => toggleColumnVisibility('a', 'facilities')}
+      colSpan={2}
+      className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
+    >
+      Facilities & Amenities
+      {checkState === 'facilities' && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleColumnVisibility('a', 'all');
+          }}
+          className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+      )}
+    </TableHead>
+  )}
+
+
+  {(checkState === 'actions' || checkState === 'all') && (
+    <TableHead
+      onClick={() => toggleColumnVisibility('a','actions')}
+      colSpan={5}
+      className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+    >
+      Other Actions
+    </TableHead>
+  )}
+                </TableRow>
+               }
+                
+
                   <TableRow>
                     {tableHeaders
                       .filter((header) => visibleColumns[header.key])
@@ -895,11 +1044,10 @@ export default function MasterDevelopmentPage() {
                           {header.label}
                         </TableHead>
                       ))}
-                  </TableRow>
+                  </TableRow> 
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    // Loading skeleton
                     Array(5)
                       .fill(0)
                       .map((_, index) => (

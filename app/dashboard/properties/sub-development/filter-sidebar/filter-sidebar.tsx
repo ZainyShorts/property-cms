@@ -28,7 +28,7 @@ interface SubDevFilterSidebarProps {
 export interface SubDevFilterValues {
   subDevelopment?: string
   plotNumber?: number
-  plotPermission?: string
+  plotPermission?: string[]
   plotStatus?: string
   facilitiesCategories?: string[]
   amentiesCategories?: string[]
@@ -113,8 +113,23 @@ const amenitiesCategoriesOptions = [
   "Community Recycling Points",
 ]
 
+const plotPermissionOptions = [
+  "Apartment",
+  "Shops",
+  "Offices",
+  "Hotel",
+  "Townhouse",
+  "Villas",
+  "Mansions",
+  "Showroom",
+  "Warehouse",
+  "Labour Camp",
+  "Hospital",
+  "School",
+  "Bungalow",
+]
+
 const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
-const plotPermissionOptions = ["Residential", "Commercial", "Mixed Use", "Industrial"]
 
 export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarProps) {
   const dispatch = useDispatch()
@@ -135,8 +150,12 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
     }
   }
 
-  const handlePlotPermissionChange = (value: string) => {
-    dispatch(setPlotPermission(value))
+  const handlePlotPermissionChange = (value: string, checked: boolean) => {
+    const currentValues = filters.plotPermission || []
+    const updated = checked 
+      ? [...currentValues, value]
+      : currentValues.filter(item => item !== value)
+    dispatch(setPlotPermission(updated))
   }
 
   const handlePlotStatusChange = (value: string) => {
@@ -197,20 +216,24 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
           </div>
 
           {/* Plot Permission */}
-          <div className="space-y-2">
-            <Label>Plot Permission</Label>
-            <Select value={filters.plotPermission || ""} onValueChange={handlePlotPermissionChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select plot permission" />
-              </SelectTrigger>
-              <SelectContent>
-                {plotPermissionOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="space-y-3">
+            <Label className="text-base">Plot Permission</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {plotPermissionOptions.map((permission) => (
+                <div key={permission} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`permission-${permission}`}
+                    checked={filters.plotPermission?.includes(permission) || false}
+                    onCheckedChange={(checked) =>
+                      handlePlotPermissionChange(permission, checked as boolean)
+                    }
+                  />
+                  <Label htmlFor={`permission-${permission}`} className="text-sm font-normal">
+                    {permission}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Plot Status */}

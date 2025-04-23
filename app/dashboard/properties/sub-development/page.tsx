@@ -15,7 +15,8 @@ import {
   Info,
   Upload,
   Copy,
-  Check,
+  Check, 
+  ArrowLeft,
   Settings,
 } from "lucide-react"
 import { toast } from "react-toastify"
@@ -28,9 +29,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
-import { SimpleDatePicker } from "./date-picker/date-picker"
+import { SimpleDatePicker } from "./date-picker/date-picker" 
+import { locationInventory,overview,facilities } from "./data/data"
 import { SubDevAddRecordModal } from "./add-record/add-record"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Skeleton } from "@/components/ui/skeleton" 
+import { Switch } from "../master-development/switch"
 import { DeleteConfirmationModal } from "../master-development/delete-confirmation-modal"
 import DocumentModal, { type DocumentData } from "@/components/overview/Data-Table/DocumentModal"
 import { Badge } from "@/components/ui/badge"
@@ -102,7 +105,10 @@ const tableHeaders = [
   { key: "plotPermission", label: "PLOT PERMISSION" },
   { key: "plotSizeSqFt", label: "PLOT SIZE (SQ FT)" },
   { key: "plotBUASqFt", label: "PLOT BUA (SQ FT)" },
-  { key: "plotStatus", label: "PLOT STATUS" },
+  { key: "plotStatus", label: "PLOT STATUS" }, 
+  { key :"buaAreaSqFt" , label : "BUA AREA"}, 
+  { key :"amenitiesAreaSqFt" , label : "AMENITIES AREA"},  
+  { key :"facilitiesAreaSqFt" , label : "FACILITIES AREA"}, 
   { key: "totalSizeSqFt", label: "TOTAL SIZE (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
   { key: "amentiesCategories", label: "AMENITIES" },
@@ -119,7 +125,7 @@ export default function SubDevelopmentPage() {
   const searchParams = useSearchParams()
   const currentPage = Number(searchParams.get("page") || 1)
   const sortOrder = "desc"
-
+  const [showHeaderCategories, setShowHeaderCategories] = useState(false);
   const [records, setRecords] = useState<SubDevelopment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -185,8 +191,10 @@ export default function SubDevelopmentPage() {
           params.append("plotNumber", filters.plotNumber.toString())
         }
 
-        if (filters.plotPermission) {
-          params.append("plotPermission", filters.plotPermission)
+        if (filters.plotPermission?.length) {
+          filters.plotPermission.forEach((facility: string) => {
+            params.append("plotPermission", facility)
+          })
         }
 
         if (filters.plotStatus) {
@@ -572,7 +580,9 @@ export default function SubDevelopmentPage() {
       console.error("Error exporting data:", error)
       toast.error("Failed to export data. Please try again.")
     }
-  }
+  } 
+    const [checkState , setCheckState] = useState<any>("all"); 
+  
 
   const confirmDelete = async () => {
     if (!recordToDelete) return
@@ -602,12 +612,57 @@ export default function SubDevelopmentPage() {
     }
   }
 
-  const toggleColumnVisibility = (columnKey: string) => {
-    setVisibleColumns((prev) => ({
-      ...prev,
-      [columnKey]: !prev[columnKey],
-    }))
-  }
+ const toggleColumnVisibility = (columnKey: string , headers? : any , ) => {  
+     if (headers) {   
+       if (headers === "locationInventory")  { 
+         setCheckState("locationInventory")
+         setVisibleColumns(prev => {
+           const updated = Object.keys(prev).reduce((acc: any, key) => {
+             acc[key] = locationInventory.includes(key);
+             return acc;
+           }, {});
+           return updated;
+         
+     }) 
+     } else if (headers === "overview") { 
+       setCheckState("overview")
+       setVisibleColumns(prev => {
+         const updated = Object.keys(prev).reduce((acc: any, key) => {
+           acc[key] = overview.includes(key);
+           return acc;
+         }, {});
+         return updated;
+       });
+     } 
+     else if (headers === "facilities") { 
+       setCheckState("facilities")
+       setVisibleColumns(prev => {
+         const updated = Object.keys(prev).reduce((acc: any, key) => {
+           acc[key] = facilities.includes(key);
+           return acc;
+         }, {});
+         return updated;
+       });
+     }  
+     else if (headers === "all") {
+       setCheckState("all");
+       setVisibleColumns(prev => {
+         const updated = Object.keys(prev).reduce((acc, key) => {
+           acc[key] = true;
+           return acc;
+         }, {} as Record<string, boolean>);
+         return updated;
+       });
+     }
+     }
+       
+           
+    else { setVisibleColumns((prev) => ({
+       ...prev,
+       [columnKey]: !prev[columnKey],
+     })) 
+   }
+   }
 
   const renderCellContent = (record: SubDevelopment, key: string) => {
     switch (key) {
@@ -870,10 +925,97 @@ export default function SubDevelopmentPage() {
 
         {/* Table */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent className="p-0"> 
+            <div className="flex w-full justify-centre items-center mb-2 ml-2 mt-2 h-10">
+                    <Switch 
+                      enabled={showHeaderCategories}  
+                      onChange={() => setShowHeaderCategories(!showHeaderCategories)} 
+                      label="Show Headers" 
+                    />
+                  </div> 
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader>
+                <TableHeader> 
+                  {showHeaderCategories && 
+                                  <TableRow>
+                                  {(checkState === 'locationInventory' || checkState === 'all') && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility('a', 'locationInventory')}
+                        colSpan={10}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
+                      >
+                        Location Inventory
+                        {checkState === 'locationInventory' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleColumnVisibility('a', 'all');
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+                  
+                    {(checkState === 'overview' || checkState === 'all') && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility('a', 'overview')}
+                        colSpan={4}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
+                      >
+                        Overview
+                        {checkState === 'overview' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleColumnVisibility('a', 'all');
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+                  
+                    {(checkState === 'facilities' || checkState === 'all') && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility('a', 'facilities')}
+                        colSpan={2}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
+                      >
+                        Facilities & Amenities
+                        {checkState === 'facilities' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleColumnVisibility('a', 'all');
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+                  
+                  
+                    {(checkState === 'actions' || checkState === 'all') && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility('a','actions')}
+                        colSpan={5}
+                        className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                      >
+                        Other Actions
+                      </TableHead>
+                    )}
+                                  </TableRow>
+                                 }
                   <TableRow>
                     {tableHeaders
                       .filter((header) => visibleColumns[header.key])
@@ -890,8 +1032,11 @@ export default function SubDevelopmentPage() {
                             header.key === "plotHeight" && "w-[120px]",
                             header.key === "plotPermission" && "w-[150px]",
                             header.key === "plotSizeSqFt" && "w-[150px]",
-                            header.key === "plotBUASqFt" && "w-[150px]",
-                            header.key === "plotStatus" && "w-[120px]",
+                            header.key === "plotBUASqFt" && "w-[150px]", 
+                            header.key === "plotStatus" && "w-[120px]",  
+                            header.key === "buaAreaSqFt" && "w-[120px]",  
+                            header.key === "amenitiesAreaSqFt" && "w-[120px]",  
+                            header.key === "facilitiesAreaSqFt" && "w-[120px]",  
                             header.key === "totalSizeSqFt" && "w-[150px]",
                             header.key === "facilitiesCategories" && "w-[120px]",
                             header.key === "amentiesCategories" && "w-[120px]",

@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { X, ImageIcon, Upload } from 'lucide-react'
+import { X, ImageIcon, Upload } from "lucide-react"
 import { toast } from "react-toastify"
 import axios from "axios"
 import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -57,7 +57,7 @@ interface SubDevRecord {
   amentiesCategories: string[]
 }
 
-// Change the formSchema to use masterDevelopment instead of masterDevelopmentId
+// Change the formSchema to make plotPermission an array instead of a string
 const formSchema = z.object({
   masterDevelopment: z.string().min(1, "Master development is required"),
   roadLocation: z.string().optional(),
@@ -65,7 +65,7 @@ const formSchema = z.object({
   subDevelopment: z.string().min(1, "Sub development is required"),
   plotNumber: z.coerce.number().int().positive("Plot number must be a positive integer"),
   plotHeight: z.coerce.number().positive("Plot height must be positive"),
-  plotPermission: z.string().min(1, "Plot permission is required"),
+  plotPermission: z.array(z.string()).min(1, "Select at least one plot permission"),
   plotSizeSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Plot size is required"),
   plotBUASqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Plot BUA is required"),
   plotStatus: z.string().min(1, "Plot status is required"),
@@ -107,15 +107,15 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   // Extract masterDevelopment ID if it's an object
   const getMasterDevelopmentId = () => {
     if (!editRecord?.masterDevelopment) return ""
-    
-    if (typeof editRecord.masterDevelopment === 'object' && editRecord.masterDevelopment !== null) {
+
+    if (typeof editRecord.masterDevelopment === "object" && editRecord.masterDevelopment !== null) {
       return editRecord.masterDevelopment._id || ""
     }
-    
+
     return editRecord.masterDevelopment as string
   }
 
-  // Update the form default values to use masterDevelopment ID
+  // Update the default values for plotPermission to be an array
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -125,7 +125,11 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       subDevelopment: editRecord?.subDevelopment || "",
       plotNumber: editRecord?.plotNumber || 0,
       plotHeight: editRecord?.plotHeight || 0,
-      plotPermission: editRecord?.plotPermission || "",
+      plotPermission: Array.isArray(editRecord?.plotPermission)
+        ? editRecord?.plotPermission
+        : editRecord?.plotPermission
+          ? [editRecord.plotPermission]
+          : [],
       plotSizeSqFt: editRecord?.plotSizeSqFt || 0,
       plotBUASqFt: editRecord?.plotBUASqFt || 0,
       plotStatus: editRecord?.plotStatus || "",
@@ -157,7 +161,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     fetchMasterDevelopments()
   }, [])
 
-  // Update the reset function to use masterDevelopment ID
+  // Update the reset function to handle plotPermission as an array
   useEffect(() => {
     if (editRecord) {
       form.reset({
@@ -167,7 +171,11 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         subDevelopment: editRecord.subDevelopment || "",
         plotNumber: editRecord.plotNumber || 0,
         plotHeight: editRecord.plotHeight || 0,
-        plotPermission: editRecord.plotPermission || "",
+        plotPermission: Array.isArray(editRecord.plotPermission)
+          ? editRecord.plotPermission
+          : editRecord.plotPermission
+            ? [editRecord.plotPermission]
+            : [],
         plotSizeSqFt: editRecord.plotSizeSqFt || 0,
         plotBUASqFt: editRecord.plotBUASqFt || 0,
         plotStatus: editRecord.plotStatus || "",
@@ -203,7 +211,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         subDevelopment: "",
         plotNumber: 0,
         plotHeight: 0,
-        plotPermission: "",
+        plotPermission: [],
         plotSizeSqFt: 0,
         plotBUASqFt: 0,
         plotStatus: "",
@@ -265,13 +273,13 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     const changedFields: Record<string, any> = {}
 
     Object.entries(currentValues).forEach(([key, value]) => {
-      if (key === "pictures") return
+      if (key === "pictures") return // Skip pictures here, we'll handle them separately
 
       // Handle masterDevelopment specially
       if (key === "masterDevelopment") {
         const currentMasterDevId = value
         const originalMasterDevId = getMasterDevelopmentId()
-        
+
         if (currentMasterDevId !== originalMasterDevId) {
           changedFields[key] = value
         }
@@ -291,13 +299,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       }
     })
 
-    const currentPictures = pictures.filter((pic) => pic !== null).map((pic) => pic?.awsUrl || pic?.preview)
-
-    const originalPictures = editRecord?.pictures || []
-
-    if (JSON.stringify(currentPictures) !== JSON.stringify(originalPictures)) {
-      changedFields.pictures = currentPictures
-    }
+    // We'll handle pictures separately in the onSubmit function
+    // to ensure all new images are uploaded to AWS first
 
     return changedFields
   }
@@ -346,11 +349,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
   const deleteFromAWS = async (filename: string): Promise<void> => {
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
+      const res = await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
         headers: {
           "Content-Type": "application/json",
         },
       })
+      console.log("res", res)
     } catch (error) {
       console.error("Error deleting file:", error)
       throw new Error("Failed to delete file")
@@ -362,10 +366,11 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       const file = e.target.files[0]
       const newPictures = [...pictures]
 
-      // Create local preview
+      // Mark this as a new image that needs to be uploaded to AWS
       newPictures[index] = {
         file,
         preview: URL.createObjectURL(file),
+        isExisting: false, // Explicitly mark as not existing
       }
 
       setPictures(newPictures)
@@ -379,9 +384,10 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
     try {
       if (image.isExisting && image.awsUrl) {
-        const filename = image.awsUrl.split("/").pop()
-        if (filename) {
-          await deleteFromAWS(filename)
+        // Extract the key from the AWS URL (the filename is the last part of the URL path)
+        const key = image.awsUrl.split("/").pop()
+        if (key) {
+          await deleteFromAWS(key)
           toast.success("Image deleted from cloud storage")
         }
       }
@@ -409,14 +415,23 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
     try {
+      // Upload all images to AWS and get their URLs
       const uploadPromises = pictures.map(async (pic, index) => {
-        if (pic && !pic.isExisting && pic.file) {
-          try {
-            const result = await uploadImageToAWS(pic.file, index)
-            return { ...pic, ...result }
-          } catch (error) {
-            console.error(`Failed to upload image ${index}:`, error)
-            return null
+        if (pic) {
+          // If it's an existing image that hasn't changed, just return it
+          if (pic.isExisting && pic.awsUrl) {
+            return pic
+          }
+
+          // If it's a new image (either in add mode or edit mode), upload it to AWS
+          if (pic.file) {
+            try {
+              const { awsUrl, key } = await uploadImageToAWS(pic.file, index)
+              return { ...pic, awsUrl, awsKey: key, isExisting: false }
+            } catch (error) {
+              console.error(`Failed to upload image ${index}:`, error)
+              return null
+            }
           }
         }
         return pic
@@ -424,33 +439,40 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
       const uploadedPictures = await Promise.all(uploadPromises)
 
+      // Extract AWS URLs from the uploaded pictures
+      const pictureUrls = uploadedPictures
+        .filter((pic): pic is NonNullable<typeof pic> => pic !== null)
+        .map((pic) => pic.awsUrl)
+
+      // Prepare the data to submit, including AWS URLs for images
       const submitData = {
         ...data,
-        pictures: uploadedPictures
-          .filter((pic): pic is NonNullable<typeof pic> => pic !== null)
-          .map((pic) => pic.awsUrl),
+        pictures: pictureUrls,
       }
 
       if (isEditMode && editRecord) {
+        // In edit mode, always include the pictures array in changedFields
         const changedFields = handleCheckChangedFields()
+
+        // Force include pictures in changedFields to ensure they're updated
+        changedFields.pictures = pictureUrls
 
         if (Object.keys(changedFields).length === 0) {
           toast.info("No changes detected")
           setIsModalOpen(false)
           return
-        } else { 
+        } else {
           console.log("Updating record with changed fields:", changedFields)
           console.log("Record ID:", editRecord._id)
-        try { 
-          const response = await axios.patch(
-            `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/updateSingleRecord/${editRecord._id}`,
-            changedFields
-          )
-        
-          console.log("Update response:", response)
-          toast.success("Sub-development record has been updated successfully")
-        } 
-        catch (error: any) {
+          try {
+            const response = await axios.patch(
+              `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/updateSingleRecord/${editRecord._id}`,
+              changedFields,
+            )
+
+            console.log("Update response:", response)
+            toast.success("Sub-development record has been updated successfully")
+          } catch (error: any) {
             console.error("Error submitting form:", error)
             if (error.response?.data?.statusCode === 400) {
               toast.error(error.response.data.message || "Bad Request: Please check your input data")
@@ -464,19 +486,19 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             onRecordSaved()
           }
         }
-      } else { 
-        console.log("sending",submitData);
+      } else {
+        console.log("Sending", submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/addSingleRecord`,
-          submitData
+          submitData,
         )
         toast.success("Sub-development record has been added successfully")
-          console.log('res',response)
+        console.log("res", response)
         if (onRecordSaved) {
           onRecordSaved()
         }
       }
-      
+
       setIsModalOpen(false)
     } catch (error: any) {
       console.error("Error submitting form:", error)
@@ -572,23 +594,23 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   ]
 
   const plotPermissionOptions = [
-    'Apartment',
-    'Shops',
-    'Offices',
-    'Hotel',
-    'Townhouse',
-    'Villas',
-    'Mansions',
-    'Showroom',
-    'Warehouse',
-    'Labour Camp',
-    'Hospital',
-    'School',
-    'Bungalow'
-  ];
-  
+    "Apartment",
+    "Shops",
+    "Offices",
+    "Hotel",
+    "Townhouse",
+    "Villas",
+    "Mansions",
+    "Showroom",
+    "Warehouse",
+    "Labour Camp",
+    "Hospital",
+    "School",
+    "Bungalow",
+  ]
+
   const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
-  
+
   return (
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
@@ -692,27 +714,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             />
 
             {/* Plot Permission */}
-            <FormField
-                          control={form.control}
-                          name="plotPermission"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Plot Permission</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select plot permission" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {plotPermissionOptions.map((status) => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-              </FormItem>
-                          )} />
+           
 
             {/* Plot Size SqFt */}
             <FormField
@@ -746,28 +748,29 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
             {/* Plot Status */}
             <FormField
-                          control={form.control}
-                          name="plotStatus"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Plot Status</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select plot status" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {plotStatusOptions.map((status) => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-              </FormItem>
+              control={form.control}
+              name="plotStatus"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plot Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select plot status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {plotStatusOptions.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
               )}
-              />
-
+            />
 
             {/* BUA Area SqFt */}
             <FormField
@@ -831,9 +834,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                     />
                   </FormControl>
                   <FormMessage />
-                  <p className="text-xs text-muted-foreground">
-                    BUA Area + Facilities Area + Amenities Area
-                  </p>
+                  <p className="text-xs text-muted-foreground">BUA Area + Facilities Area + Amenities Area</p>
                 </FormItem>
               )}
             />
@@ -915,7 +916,35 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6"> 
+          <FormField
+              control={form.control}
+              name="plotPermission"
+              render={({ field }) => (
+                <FormItem className="p-4 border rounded-lg shadow-sm">
+                  <FormLabel className="text-lg font-medium">Plot Permission</FormLabel>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    {plotPermissionOptions.map((permission) => (
+                      <FormItem key={permission} className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                            checked={field.value?.includes(permission)}
+                            onCheckedChange={(checked) => {
+                              return checked
+                                ? field.onChange([...field.value, permission])
+                                : field.onChange(field.value?.filter((value) => value !== permission))
+                            }}
+                          />
+                        </FormControl>
+                        <FormLabel className="font-normal">{permission}</FormLabel>
+                      </FormItem>
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="facilitiesCategories"
