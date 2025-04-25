@@ -31,7 +31,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
-import { SimpleDatePicker } from "./date-picker/date-picker"
+import { SimpleDatePicker } from "./date-picker/date-picker" 
+import { ShareModal } from "../units/share-modal/shareModal"
 import { locationInventory, overview, facilities } from "./data/data"
 import { SubDevAddRecordModal } from "./add-record/add-record"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -126,15 +127,19 @@ export default function SubDevelopmentPage() {
   const dispatch = useDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const currentPage = Number(searchParams.get("page") || 1)
+  const [currentPage , setCurrentPage] = useState<any>(1);
   const sortOrder = "desc"
   const [showHeaderCategories, setShowHeaderCategories] = useState(false)
   const [records, setRecords] = useState<SubDevelopment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false) 
+   const [shareModalOpen, setShareModalOpen] = useState(false)
+    const [shareData, setShareData] = useState(null)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [startDate, setStartDate] = useState<Date | null>(null) 
+    const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
+
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [pagination, setPagination] = useState({
@@ -174,12 +179,29 @@ export default function SubDevelopmentPage() {
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
-
-  const fetchRecords = async (reset?: any) => {
+ 
+  useEffect(() => {
+      const newCache = { ...selectedRecordsCache }
+      
+      records.forEach(record => {
+        if (selectedRowsMap[record._id]) {
+          newCache[record._id] = record
+        } else {
+          delete newCache[record._id]
+        }
+      })
+      
+      setSelectedRecordsCache(newCache)
+    }, [selectedRowsMap, records])
+  const fetchRecords = async (reset?: any , page?:any) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      params.append("page", currentPage.toString())
+      if (page) { 
+        params.append("page", page.toString())
+      } else {
+      params.append("page", currentPage.toString()) 
+      }      
       params.append("sort", sortOrder)
       params.append("limit", limit.toString())
 
@@ -248,16 +270,17 @@ export default function SubDevelopmentPage() {
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
-
-    const params = new URLSearchParams(searchParams)
-    params.set("page", page.toString()) 
-    
+    setCurrentPage(page) 
+    fetchRecords('a',page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPageInputValue(e.target.value)
   }
-
+  const handleShareButton = (data: any) => {
+    setShareData(data)
+    setShareModalOpen(true)
+  }
   const handlePageInputSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const page = Number.parseInt(pageInputValue)
@@ -657,32 +680,36 @@ export default function SubDevelopmentPage() {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
       return []
     }
-
-    return records
-      .filter((record) => selectedRows.includes(record._id))
-      .map((record) => {
-        const selectedData: Record<string, any> = {}
-        selectedColumns.forEach((col) => {
-          // Handle special cases for complex data
-          if (col === "facilitiesCategories" || col === "amentiesCategories") {
-            selectedData[col] = record[col].join(", ")
-          } else if (col === "masterDevelopment") {
-            selectedData[col] = record.masterDevelopment.developmentName
-          } else if (col === "roadLocation") {
-            selectedData[col] = record.masterDevelopment.roadLocation
-          } else {
-            selectedData[col] = record[col]
-          }
-        })
-        return selectedData
-      })
+    
+    return selectedRows.map(id => {
+      const record = selectedRecordsCache[id] || 
+        records.find(r => r._id === id)
+      
+      if (!record) return null 
+      
+      const selectedData: Record<string, any> = {}
+      selectedColumns.forEach((col) => {
+        switch (col) {
+          case "masterDevelopment":
+            selectedData[col] = record.masterDevelopment.developmentName;
+            break;
+          case "roadLocation":
+            selectedData[col] = record.masterDevelopment.roadLocation;
+            break;
+          default:
+            selectedData[col] = record[col];
+            break;
+        }
+      });
+      
+      return selectedData
+    }).filter(Boolean) 
   }
+  
 
   const shareSelectedData = () => {
     const data = getSelectedData()
-    console.log("Sharing data:", data)
-    // Implement your sharing logic here
-    toast.success(`Sharing ${data.length} records`)
+    handleShareButton(data)    
   }
 
   const exportSelectedData = () => {
@@ -1412,7 +1439,15 @@ export default function SubDevelopmentPage() {
         onClose={() => setIsExportModalOpen(false)}
         onSubmitExport={handleSubmitExport}
       />
-
+       <ShareModal
+             isOpen={shareModalOpen}
+             onClose={() => setShareModalOpen(false)}
+             onShare={(options) => {
+               console.log("Share options:", options)
+               console.log("Share data:", shareData)
+               setShareModalOpen(false)
+             }}
+           />
       {/* Document Modal */}
       <DocumentModal
         isOpen={isDocumentModalOpen}

@@ -412,7 +412,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     }
   }
 
-  const onSubmit = async (data: FormValues) => {
+  const onSubmit = async (data: FormValues) => { 
+    console.log('submitting',data)
     setIsSubmitting(true)
     try {
       // Upload all images to AWS and get their URLs
@@ -423,7 +424,6 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             return pic
           }
 
-          // If it's a new image (either in add mode or edit mode), upload it to AWS
           if (pic.file) {
             try {
               const { awsUrl, key } = await uploadImageToAWS(pic.file, index)

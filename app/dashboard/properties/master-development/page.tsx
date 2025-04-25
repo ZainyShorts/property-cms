@@ -43,7 +43,8 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
-import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
+import { resetFilters } from "@/lib/store/slices/masterFilterSlice" 
+import { ShareModal } from "../units/share-modal/shareModal"
 import { ExportModal } from "../units/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -114,7 +115,9 @@ export default function MasterDevelopmentPage() {
   const [activeFilters, setActiveFilters] = useState<FilterValues>({})
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({}) 
   const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false) 
+     const [shareModalOpen, setShareModalOpen] = useState(false) 
+         const [shareData, setShareData] = useState(null)
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [selectedColumns, setSelectedColumns] = useState<any[]>([])
@@ -125,13 +128,14 @@ export default function MasterDevelopmentPage() {
   )
   const [limit, setLimit] = useState<number>(1)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
-
+  const handleShareButton = (data: any) => {
+    setShareData(data)
+    setShareModalOpen(true)
+  }
   useEffect(() => {
     fetchRecords()
   }, [currentPage, sortOrder, limit])
-  useEffect(()=>{ 
-    console.log('seleted',selectedRows)
-  },[selectedRows])
+
   useEffect(() => {
     setPageInputValue(currentPage.toString())
   }, [currentPage])
@@ -800,8 +804,9 @@ const getSelectedData = () => {
 
   const shareSelectedData = () => {
     const data = getSelectedData()
-    console.log("Sharing data:", data)
+    handleShareButton(data)    
   }
+
 
   const exportSelectedData = () => {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
@@ -1423,7 +1428,15 @@ const getSelectedData = () => {
         onClose={() => setIsExportModalOpen(false)}
         onSubmitExport={handleSubmitExport}
       />
-
+       <ShareModal
+                   isOpen={shareModalOpen}
+                   onClose={() => setShareModalOpen(false)}
+                   onShare={(options) => {
+                     console.log("Share options:", options)
+                     console.log("Share data:", shareData)
+                     setShareModalOpen(false)
+                   }}
+                 />
       {/* Document Modal */}
       <DocumentModal
         isOpen={isDocumentModalOpen}
