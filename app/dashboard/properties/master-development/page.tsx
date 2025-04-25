@@ -1246,7 +1246,7 @@ const getSelectedData = () => {
                   )}
 
                   <TableRow>
-                    {isSelectionMode && (
+                    {/* {isSelectionMode && (
                       <TableHead className="w-[50px] text-center border-b">
                         <Checkbox
                           checked={selectedRows.length === records.length && records.length > 0}
@@ -1259,7 +1259,7 @@ const getSelectedData = () => {
                           }}
                         />
                       </TableHead>
-                    )}
+                    )} */}
 
                     {tableHeaders
                       .filter((header) => visibleColumns[header.key])
