@@ -15,9 +15,11 @@ import {
   Info,
   Upload,
   Copy,
-  Check, 
+  Check,
   ArrowLeft,
   Settings,
+  MousePointerIcon as MousePointerSquare,
+  Share2,
 } from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -29,11 +31,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
-import { SimpleDatePicker } from "./date-picker/date-picker" 
-import { locationInventory,overview,facilities } from "./data/data"
+import { SimpleDatePicker } from "./date-picker/date-picker"
+import { locationInventory, overview, facilities } from "./data/data"
 import { SubDevAddRecordModal } from "./add-record/add-record"
-import { Skeleton } from "@/components/ui/skeleton" 
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "../master-development/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { DeleteConfirmationModal } from "../master-development/delete-confirmation-modal"
 import DocumentModal, { type DocumentData } from "@/components/overview/Data-Table/DocumentModal"
 import { Badge } from "@/components/ui/badge"
@@ -105,10 +108,10 @@ const tableHeaders = [
   { key: "plotPermission", label: "PLOT PERMISSION" },
   { key: "plotSizeSqFt", label: "PLOT SIZE (SQ FT)" },
   { key: "plotBUASqFt", label: "PLOT BUA (SQ FT)" },
-  { key: "plotStatus", label: "PLOT STATUS" }, 
-  { key :"buaAreaSqFt" , label : "BUA AREA"}, 
-  { key :"amenitiesAreaSqFt" , label : "AMENITIES AREA"},  
-  { key :"facilitiesAreaSqFt" , label : "FACILITIES AREA"}, 
+  { key: "plotStatus", label: "PLOT STATUS" },
+  { key: "buaAreaSqFt", label: "BUA AREA" },
+  { key: "amenitiesAreaSqFt", label: "AMENITIES AREA" },
+  { key: "facilitiesAreaSqFt", label: "FACILITIES AREA" },
   { key: "totalSizeSqFt", label: "TOTAL SIZE (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
   { key: "amentiesCategories", label: "AMENITIES" },
@@ -125,7 +128,7 @@ export default function SubDevelopmentPage() {
   const searchParams = useSearchParams()
   const currentPage = Number(searchParams.get("page") || 1)
   const sortOrder = "desc"
-  const [showHeaderCategories, setShowHeaderCategories] = useState(false);
+  const [showHeaderCategories, setShowHeaderCategories] = useState(false)
   const [records, setRecords] = useState<SubDevelopment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -152,16 +155,25 @@ export default function SubDevelopmentPage() {
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
   )
-
-  
+  // New states for selection functionality
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([])
+  const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
+  const [selectedRows, setSelectedRows] = useState<string[]>([])
+  const [limit, setLimit] = useState<number>(10)
 
   useEffect(() => {
     fetchRecords()
-  }, [currentPage, sortOrder])
+  }, [currentPage, sortOrder, limit])
 
   useEffect(() => {
     setPageInputValue(currentPage.toString())
   }, [currentPage])
+
+  // Update selectedRows when selectedRowsMap changes
+  useEffect(() => {
+    setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
+  }, [selectedRowsMap])
 
   const fetchRecords = async (reset?: any) => {
     setLoading(true)
@@ -169,6 +181,8 @@ export default function SubDevelopmentPage() {
       const params = new URLSearchParams()
       params.append("page", currentPage.toString())
       params.append("sort", sortOrder)
+      params.append("limit", limit.toString())
+
       if (!reset) {
         if (searchTerm) {
           params.append("search", searchTerm)
@@ -236,8 +250,8 @@ export default function SubDevelopmentPage() {
     if (page < 1 || page > pagination.totalPages) return
 
     const params = new URLSearchParams(searchParams)
-    params.set("page", page.toString())
-    router.push(`/sub-development?${params.toString()}`)
+    params.set("page", page.toString()) 
+    
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -268,6 +282,10 @@ export default function SubDevelopmentPage() {
       totalPages: response.data.totalPages,
       pageNumber: response.data.pageNumber,
     })
+  }
+
+  const handleLimitChange = (value: string) => {
+    setLimit(Number(value))
   }
 
   const handleResetFilters = () => {
@@ -326,6 +344,7 @@ export default function SubDevelopmentPage() {
       const requestData: Record<string, any> = {
         page: currentPage,
         sort: sortOrder,
+        limit: limit,
         ...cleanedFilters,
       }
 
@@ -350,6 +369,7 @@ export default function SubDevelopmentPage() {
       // Add basic params
       params.append("page", requestData.page.toString())
       params.append("sort", requestData.sort)
+      params.append("limit", requestData.limit.toString())
 
       // Add string filters
       if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
@@ -462,6 +482,12 @@ export default function SubDevelopmentPage() {
 
   const handleSubmitExport = async (withFilters: boolean, count: number) => {
     setIsExportModalOpen(false)
+
+    // If in selection mode and we have selected rows and columns, export only selected data
+    if (isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0) {
+      exportSelectedData()
+      return
+    }
 
     try {
       const toastId = toast.loading("Preparing export...")
@@ -580,9 +606,122 @@ export default function SubDevelopmentPage() {
       console.error("Error exporting data:", error)
       toast.error("Failed to export data. Please try again.")
     }
-  } 
-    const [checkState , setCheckState] = useState<any>("all"); 
-  
+  }
+  const [checkState, setCheckState] = useState<any>("all")
+
+  // Selection functionality
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(true)
+  }
+
+  const toggleRow = (id: string) => {
+    setSelectedRowsMap((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }))
+  }
+
+  const toggleColumns = (columnKey: string) => {
+    setSelectedColumns((prev) =>
+      prev.includes(columnKey) ? prev.filter((key) => key !== columnKey) : [...prev, columnKey],
+    )
+  }
+
+  const selectAllRows = () => {
+    const newSelectedRowsMap = { ...selectedRowsMap }
+    records.forEach((record) => {
+      newSelectedRowsMap[record._id] = true
+    })
+    setSelectedRowsMap(newSelectedRowsMap)
+  }
+
+  const selectAllColumns = () => {
+    setSelectedColumns(tableHeaders.filter((header) => visibleColumns[header.key]).map((header) => header.key))
+  }
+
+  const clearSelection = () => {
+    setSelectedRowsMap({})
+    setSelectedColumns([])
+  }
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false)
+    clearSelection()
+  }
+
+  const isRowSelected = (id: string): boolean => {
+    return !!selectedRowsMap[id]
+  }
+
+  const getSelectedData = () => {
+    if (selectedRows.length === 0 || selectedColumns.length === 0) {
+      return []
+    }
+
+    return records
+      .filter((record) => selectedRows.includes(record._id))
+      .map((record) => {
+        const selectedData: Record<string, any> = {}
+        selectedColumns.forEach((col) => {
+          // Handle special cases for complex data
+          if (col === "facilitiesCategories" || col === "amentiesCategories") {
+            selectedData[col] = record[col].join(", ")
+          } else if (col === "masterDevelopment") {
+            selectedData[col] = record.masterDevelopment.developmentName
+          } else if (col === "roadLocation") {
+            selectedData[col] = record.masterDevelopment.roadLocation
+          } else {
+            selectedData[col] = record[col]
+          }
+        })
+        return selectedData
+      })
+  }
+
+  const shareSelectedData = () => {
+    const data = getSelectedData()
+    console.log("Sharing data:", data)
+    // Implement your sharing logic here
+    toast.success(`Sharing ${data.length} records`)
+  }
+
+  const exportSelectedData = () => {
+    if (selectedRows.length === 0 || selectedColumns.length === 0) {
+      toast.error("Please select at least one row and one column to export")
+      return
+    }
+
+    const selectedData = getSelectedData()
+
+    // Create headers row based on selected columns
+    let csvContent = selectedColumns.join(",") + "\n"
+
+    // Add data rows
+    selectedData.forEach((item) => {
+      const row = selectedColumns.map((col) => {
+        const value = item[col]
+        // Handle different data types
+        if (value === null || value === undefined) return ""
+        if (Array.isArray(value)) return `"${value.join(", ")}"`
+        if (typeof value === "string" && value.includes(",")) return `"${value}"`
+        return value
+      })
+      csvContent += row.join(",") + "\n"
+    })
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `selected-data-export-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.success(`Exported ${selectedData.length} records successfully`)
+  }
 
   const confirmDelete = async () => {
     if (!recordToDelete) return
@@ -612,57 +751,55 @@ export default function SubDevelopmentPage() {
     }
   }
 
- const toggleColumnVisibility = (columnKey: string , headers? : any , ) => {  
-     if (headers) {   
-       if (headers === "locationInventory")  { 
-         setCheckState("locationInventory")
-         setVisibleColumns(prev => {
-           const updated = Object.keys(prev).reduce((acc: any, key) => {
-             acc[key] = locationInventory.includes(key);
-             return acc;
-           }, {});
-           return updated;
-         
-     }) 
-     } else if (headers === "overview") { 
-       setCheckState("overview")
-       setVisibleColumns(prev => {
-         const updated = Object.keys(prev).reduce((acc: any, key) => {
-           acc[key] = overview.includes(key);
-           return acc;
-         }, {});
-         return updated;
-       });
-     } 
-     else if (headers === "facilities") { 
-       setCheckState("facilities")
-       setVisibleColumns(prev => {
-         const updated = Object.keys(prev).reduce((acc: any, key) => {
-           acc[key] = facilities.includes(key);
-           return acc;
-         }, {});
-         return updated;
-       });
-     }  
-     else if (headers === "all") {
-       setCheckState("all");
-       setVisibleColumns(prev => {
-         const updated = Object.keys(prev).reduce((acc, key) => {
-           acc[key] = true;
-           return acc;
-         }, {} as Record<string, boolean>);
-         return updated;
-       });
-     }
-     }
-       
-           
-    else { setVisibleColumns((prev) => ({
-       ...prev,
-       [columnKey]: !prev[columnKey],
-     })) 
-   }
-   }
+  const toggleColumnVisibility = (columnKey: string, headers?: any) => {
+    if (headers) {
+      if (headers === "locationInventory") {
+        setCheckState("locationInventory")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = locationInventory.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "overview") {
+        setCheckState("overview")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = overview.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "facilities") {
+        setCheckState("facilities")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = facilities.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "all") {
+        setCheckState("all")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce(
+            (acc, key) => {
+              acc[key] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+          return updated
+        })
+      }
+    } else {
+      setVisibleColumns((prev) => ({
+        ...prev,
+        [columnKey]: !prev[columnKey],
+      }))
+    }
+  }
 
   const renderCellContent = (record: SubDevelopment, key: string) => {
     switch (key) {
@@ -827,13 +964,24 @@ export default function SubDevelopmentPage() {
             <h2 className="text-lg font-semibold">Sub Development</h2>
           </div>
           <div className="flex items-center space-x-2">
+            <Select defaultValue={limit.toString()} onValueChange={handleLimitChange}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Limit" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10 rows</SelectItem>
+                <SelectItem value="30">30 rows</SelectItem>
+                <SelectItem value="50">50 rows</SelectItem>
+                <SelectItem value="100">100 rows</SelectItem>
+              </SelectContent>
+            </Select>
             <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
             </Button>
             <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
-              Export
+              {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
             </Button>
             <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
               <DialogTrigger asChild>
@@ -925,98 +1073,174 @@ export default function SubDevelopmentPage() {
 
         {/* Table */}
         <Card>
-          <CardContent className="p-0"> 
-            <div className="flex w-full justify-centre items-center mb-2 ml-2 mt-2 h-10">
-                    <Switch 
-                      enabled={showHeaderCategories}  
-                      onChange={() => setShowHeaderCategories(!showHeaderCategories)} 
-                      label="Show Headers" 
-                    />
-                  </div> 
+          <CardContent className="p-0">
+            <div className="flex w-full items-center mb-2 ml-2 mt-2">
+              <div className="flex items-center mr-4 " > 
+                <div className="w-[190px]">
+                <Switch
+                  enabled={showHeaderCategories}
+                  onChange={() => setShowHeaderCategories(!showHeaderCategories)}
+                  label="Show Headers"
+                /> 
+                </div>
+                {!isSelectionMode ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleSelectionMode}
+                    className="gap-1.5 ml-4 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary"
+                  >
+                    <MousePointerSquare className="h-4 w-4" />
+                    Enable Selection
+                  </Button>
+                ) : (
+                  <div className="flex ml-4 items-center justify-evenly  w-full">
+                    <div className="flex items-center border justify-evenly rounded-md overflow-hidden">
+                    
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={selectAllRows}
+                        className="rounded-none border-x border-gray-200 dark:border-gray-700 h-9 px-4"
+                      >
+                        Select All Rows
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={selectAllColumns}
+                        className="rounded-none border-r border-gray-200 dark:border-gray-700 h-9 px-4"
+                      >
+                        Select All Columns
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={clearSelection} className="rounded-none h-9 px-4">
+                        Clear Selection
+                      </Button>
+                      <div className="border-l border-gray-200 dark:border-gray-700 px-4 py-2 bg-gray-50 dark:bg-gray-900 flex items-center">
+                        <span className="text-sm font-medium">
+                          {selectedRows.length} × {selectedColumns.length}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={exitSelectionMode}
+                        className="rounded-none border-l border-gray-200 dark:border-gray-700 h-9 px-4 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <span className="mr-1">×</span> Exit Selection
+                      </Button>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={shareSelectedData}
+                      className="gap-1.5 ml-2 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary"
+                      disabled={selectedRows.length === 0 || selectedColumns.length === 0}
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Share
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader> 
-                  {showHeaderCategories && 
-                                  <TableRow>
-                                  {(checkState === 'locationInventory' || checkState === 'all') && (
-                      <TableHead
-                        onClick={() => toggleColumnVisibility('a', 'locationInventory')}
-                        colSpan={10}
-                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
-                      >
-                        Location Inventory
-                        {checkState === 'locationInventory' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleColumnVisibility('a', 'all');
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
-                          >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back
-                          </button>
-                        )}
-                      </TableHead>
-                    )}
-                  
-                    {(checkState === 'overview' || checkState === 'all') && (
-                      <TableHead
-                        onClick={() => toggleColumnVisibility('a', 'overview')}
-                        colSpan={4}
-                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
-                      >
-                        Overview
-                        {checkState === 'overview' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleColumnVisibility('a', 'all');
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
-                          >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back
-                          </button>
-                        )}
-                      </TableHead>
-                    )}
-                  
-                    {(checkState === 'facilities' || checkState === 'all') && (
-                      <TableHead
-                        onClick={() => toggleColumnVisibility('a', 'facilities')}
-                        colSpan={2}
-                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
-                      >
-                        Facilities & Amenities
-                        {checkState === 'facilities' && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleColumnVisibility('a', 'all');
-                            }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
-                          >
-                            <ArrowLeft className="w-4 h-4" />
-                            Back
-                          </button>
-                        )}
-                      </TableHead>
-                    )}
-                  
-                  
-                    {(checkState === 'actions' || checkState === 'all') && (
-                      <TableHead
-                        onClick={() => toggleColumnVisibility('a','actions')}
-                        colSpan={5}
-                        className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
-                      >
-                        Other Actions
-                      </TableHead>
-                    )}
-                                  </TableRow>
-                                 }
+                <TableHeader>
+                  {showHeaderCategories && (
+                    <TableRow>
+                      {(checkState === "locationInventory" || checkState === "all") && (
+                        <TableHead
+                          onClick={() => toggleColumnVisibility("a", "locationInventory")}
+                          colSpan={isSelectionMode ? 11 : 10}
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
+                        >
+                          Location Inventory
+                          {checkState === "locationInventory" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
+                        </TableHead>
+                      )}
+
+                      {(checkState === "overview" || checkState === "all") && (
+                        <TableHead
+                          onClick={() => toggleColumnVisibility("a", "overview")}
+                          colSpan={isSelectionMode ? 5 : 4}
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
+                        >
+                          Overview
+                          {checkState === "overview" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
+                        </TableHead>
+                      )}
+
+                      {(checkState === "facilities" || checkState === "all") && (
+                        <TableHead
+                          onClick={() => toggleColumnVisibility("a", "facilities")}
+                          colSpan={isSelectionMode ? 3 : 2}
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
+                        >
+                          Facilities & Amenities
+                          {checkState === "facilities" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
+                        </TableHead>
+                      )}
+
+                      {(checkState === "actions" || checkState === "all") && (
+                        <TableHead
+                          onClick={() => toggleColumnVisibility("a", "actions")}
+                          colSpan={isSelectionMode ? 6 : 5}
+                          className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                        >
+                          Other Actions
+                        </TableHead>
+                      )}
+                    </TableRow>
+                  )}
                   <TableRow>
+                    {isSelectionMode && (
+                      <TableHead className="w-[50px] text-center border-b">
+                        <Checkbox
+                          checked={selectedRows.length === records.length && records.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              selectAllRows()
+                            } else {
+                              setSelectedRowsMap({})
+                            }
+                          }}
+                        />
+                      </TableHead>
+                    )}
                     {tableHeaders
                       .filter((header) => visibleColumns[header.key])
                       .map((header) => (
@@ -1032,11 +1256,11 @@ export default function SubDevelopmentPage() {
                             header.key === "plotHeight" && "w-[120px]",
                             header.key === "plotPermission" && "w-[150px]",
                             header.key === "plotSizeSqFt" && "w-[150px]",
-                            header.key === "plotBUASqFt" && "w-[150px]", 
-                            header.key === "plotStatus" && "w-[120px]",  
-                            header.key === "buaAreaSqFt" && "w-[120px]",  
-                            header.key === "amenitiesAreaSqFt" && "w-[120px]",  
-                            header.key === "facilitiesAreaSqFt" && "w-[120px]",  
+                            header.key === "plotBUASqFt" && "w-[150px]",
+                            header.key === "plotStatus" && "w-[120px]",
+                            header.key === "buaAreaSqFt" && "w-[120px]",
+                            header.key === "amenitiesAreaSqFt" && "w-[120px]",
+                            header.key === "facilitiesAreaSqFt" && "w-[120px]",
                             header.key === "totalSizeSqFt" && "w-[150px]",
                             header.key === "facilitiesCategories" && "w-[120px]",
                             header.key === "amentiesCategories" && "w-[120px]",
@@ -1045,7 +1269,16 @@ export default function SubDevelopmentPage() {
                             header.key === "delete" && "w-[100px]",
                           )}
                         >
-                          {header.label}
+                          {isSelectionMode && (
+                            <div className="flex flex-col items-center">
+                              <Checkbox
+                                checked={selectedColumns.includes(header.key)}
+                                onCheckedChange={() => toggleColumns(header.key)}
+                                className="mb-2"
+                              />
+                            </div>
+                          )}
+                          <div className={isSelectionMode ? "uppercase text-xs font-bold" : ""}>{header.label}</div>
                         </TableHead>
                       ))}
                   </TableRow>
@@ -1057,6 +1290,11 @@ export default function SubDevelopmentPage() {
                       .fill(0)
                       .map((_, index) => (
                         <TableRow key={index}>
+                          {isSelectionMode && (
+                            <TableCell className="text-center">
+                              <Skeleton className="h-4 w-full" />
+                            </TableCell>
+                          )}
                           {tableHeaders
                             .filter((header) => visibleColumns[header.key])
                             .map((header) => (
@@ -1067,8 +1305,16 @@ export default function SubDevelopmentPage() {
                         </TableRow>
                       ))
                   ) : records.length > 0 ? (
-                    records.map((record) => (
-                      <TableRow key={record._id}>
+                    records.map((record, index) => (
+                      <TableRow key={record._id} className={index % 2 === 0 ? "bg-gray-50 dark:bg-gray-800/50" : ""}>
+                        {isSelectionMode && (
+                          <TableCell className="text-center">
+                            <Checkbox
+                              checked={isRowSelected(record._id)}
+                              onCheckedChange={() => toggleRow(record._id)}
+                            />
+                          </TableCell>
+                        )}
                         {tableHeaders
                           .filter((header) => visibleColumns[header.key])
                           .map((header) => (
@@ -1081,7 +1327,11 @@ export default function SubDevelopmentPage() {
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={tableHeaders.filter((header) => visibleColumns[header.key]).length}
+                        colSpan={
+                          isSelectionMode
+                            ? tableHeaders.filter((header) => visibleColumns[header.key]).length + 1
+                            : tableHeaders.filter((header) => visibleColumns[header.key]).length
+                        }
                         className="text-center py-10"
                       >
                         Your records will be shown here
