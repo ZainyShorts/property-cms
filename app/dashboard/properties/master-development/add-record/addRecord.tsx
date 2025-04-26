@@ -18,17 +18,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import type { MasterDevelopment } from "../page"
 import { Progress } from "@/components/ui/progress"
+import { countries , getCitiesByCountry } from "../data/data"
 
 const formSchema = z.object({
   roadLocation: z.string().min(1, "Road location is required"),
   developmentName: z.string().min(1, "Development name is required"),
-  locationQuality: z.string().min(1, "Location quality is required"),
-  buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "BUA area is required"),
-  facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Facilities area is required"),
-  amentiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Amenities area is required"),
-  totalAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Total area is required"),
-  facilitiesCategories: z.array(z.string()).min(1, "Select at least one facility category"),
-  amentiesCategories: z.array(z.string()).min(1, "Select at least one amenity category"),
+  country: z.string().min(1, "Country is required"),
+  city: z.string().min(1, "City is required"),
+  locationQuality: z.string().min(0, "Location quality is required"),
+  buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "BUA area is required"),
+  facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Facilities area is required"),
+  amentiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Amenities area is required"),
+  totalAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Total area is required"),
+  facilitiesCategories: z.array(z.string()).min(0, "Select at least one facility category"),
+  amentiesCategories: z.array(z.string()).min(0, "Select at least one amenity category"),
   pictures: z.array(z.any()).optional(),
 })
 
@@ -53,6 +56,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
+  const [availableCities, setAvailableCities] = useState<Array<{ id: string; name: string }>>([])
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const isEditMode = !!editRecord
 
@@ -61,6 +65,8 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     defaultValues: {
       roadLocation: editRecord?.roadLocation || "",
       developmentName: editRecord?.developmentName || "",
+      country: editRecord?.country || "",
+      city: editRecord?.city || "",
       locationQuality: editRecord?.locationQuality || "",
       buaAreaSqFt: editRecord?.buaAreaSqFt || 0,
       facilitiesAreaSqFt: editRecord?.facilitiesAreaSqFt || 0,
@@ -72,11 +78,38 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     },
   })
 
+  // Watch for country changes
+  const selectedCountry = useWatch({
+    control: form.control,
+    name: "country",
+  })
+
+  // Update available cities when country changes
+  useEffect(() => {
+    if (selectedCountry) {
+      const cities = getCitiesByCountry(selectedCountry)
+      setAvailableCities(cities)
+      
+      // Reset city field when country changes, unless in edit mode with matching city
+      const currentCity = form.getValues("city")
+      const cityExists = cities.some(city => city.id === currentCity)
+      
+      if (!cityExists) {
+        form.setValue("city", "")
+      }
+    } else {
+      setAvailableCities([])
+      form.setValue("city", "")
+    }
+  }, [selectedCountry, form])
+
   useEffect(() => {
     if (editRecord) {
       form.reset({
         roadLocation: editRecord.roadLocation || "",
         developmentName: editRecord.developmentName || "",
+        country: editRecord.country || "",
+        city: editRecord.city || "",
         locationQuality: editRecord.locationQuality || "",
         buaAreaSqFt: editRecord.buaAreaSqFt || 0,
         facilitiesAreaSqFt: editRecord.facilitiesAreaSqFt || 0,
@@ -86,6 +119,11 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         amentiesCategories: editRecord.amentiesCategories || [],
         pictures: [],
       })
+      
+      // If country exists in edit mode, load the cities
+      if (editRecord.country) {
+        setAvailableCities(getCitiesByCountry(editRecord.country))
+      }
 
       // Initialize pictures from existing record
       if (editRecord.pictures && editRecord.pictures.length > 0) {
@@ -106,6 +144,8 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       form.reset({
         roadLocation: "",
         developmentName: "",
+        country: "",
+        city: "",
         locationQuality: "",
         buaAreaSqFt: 0,
         facilitiesAreaSqFt: 0,
@@ -328,11 +368,13 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
           )
           toast.success("Master development record has been updated successfully")
         }
-      } else {
+      } else { 
+        console.log(submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
           submitData,
-        )
+        ) 
+        console.log(response);
         toast.success("Master development record has been added successfully")
       }
 
@@ -467,6 +509,60 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                   <FormControl>
                     <Input placeholder="Type here " {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="country"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a country" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-[200px]">
+                      {countries.map((country) => (
+                        <SelectItem key={country.id} value={country.name}>
+                          {country.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value} 
+                    disabled={!selectedCountry || availableCities.length === 0}
+                  >
+                    <FormControl>
+                      <SelectTrigger className={!selectedCountry ? "cursor-not-allowed" : ""}>
+                        <SelectValue placeholder={selectedCountry ? "Select a city" : "Select a country first"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="max-h-[200px]">
+                      {availableCities.map((city) => (
+                        <SelectItem key={city.id} value={city.id}>
+                          {city.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

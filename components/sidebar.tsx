@@ -23,7 +23,7 @@ const sidebarItems = [
   {
     title: "Properties",
     icon: Building2,
-    items: ["Master Development" , "Sub Development" ,"Units", "Properties gallery", "Properties dashboard" ],
+    items: ["Master Development" , "Sub Development" ,"Inventory", "Projects", "Properties gallery", "Properties dashboard" ],
   },
   { title: "Agents", icon: Users, items: ["Overview", "Agents Gallery", "Agents Dashboard"] },
   { title: "Clients", icon: UserCircle, items: ["Overview"] },

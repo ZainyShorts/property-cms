@@ -32,8 +32,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { SimpleDatePicker } from "./date-picker/date-picker" 
-import { ShareModal } from "../units/share-modal/shareModal"
-import { locationInventory, overview, facilities } from "./data/data"
+import { ShareModal } from "../inventory/share-modal/shareModal"
+import { locationInventory, overview, facilities } from "./data/data" 
+import { ImportRecordsModal } from "./import-records/importSubDev"
 import { SubDevAddRecordModal } from "./add-record/add-record"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "../master-development/switch"
@@ -45,7 +46,7 @@ import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { SubDevFilterSidebar } from "./filter-sidebar/filter-sidebar"
 import { resetSubDevFilter } from "@/lib/store/slices/subDevFilterSlice"
-import { ExportModal } from "../units/Export-Modal/ExportModal"
+import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // Define the MasterDevelopment type
@@ -1438,7 +1439,12 @@ export default function SubDevelopmentPage() {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         onSubmitExport={handleSubmitExport}
-      />
+      /> 
+        <ImportRecordsModal
+              isOpen={isImportModalOpen}
+              onClose={() => setIsImportModalOpen(false)}
+              fetchRecords={fetchRecords}
+            />
        <ShareModal
              isOpen={shareModalOpen}
              onClose={() => setShareModalOpen(false)}

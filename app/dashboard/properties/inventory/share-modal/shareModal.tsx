@@ -13,7 +13,7 @@ interface ShareModalProps {
 }
 
 export interface ShareOptions {
-  format: "pdf" | "word" | "jpg"
+  format: "pdf" | "word" | "jpg" | "excell"
   method: "whatsapp" | "gmail"
 }
 
@@ -59,6 +59,12 @@ export function ShareModal({ isOpen, onClose, onShare }: ShareModalProps) {
       label: "JPG Image",
       description: "Share as a JPG image",
       icon: <ImageIcon className="h-6 w-6 text-green-500" />,
+    }, 
+    {
+      id: "xlxs",
+      label: "Excell File",
+      description: "Share as a Excell document",
+      icon: <FileText className="h-6 w-6 text-green-500" />,
     },
   ]
 

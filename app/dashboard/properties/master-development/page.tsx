@@ -44,8 +44,8 @@ import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
 import { resetFilters } from "@/lib/store/slices/masterFilterSlice" 
-import { ShareModal } from "../units/share-modal/shareModal"
-import { ExportModal } from "../units/Export-Modal/ExportModal"
+import { ShareModal } from "../inventory/share-modal/shareModal"
+import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 export interface MasterDevelopment {
@@ -126,7 +126,7 @@ export default function MasterDevelopmentPage() {
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
   )
-  const [limit, setLimit] = useState<number>(1)
+  const [limit, setLimit] = useState<number>(10)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
   const handleShareButton = (data: any) => {
     setShareData(data)

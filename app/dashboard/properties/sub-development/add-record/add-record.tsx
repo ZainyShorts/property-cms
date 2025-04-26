@@ -95,7 +95,8 @@ interface ImageData {
 }
 
 export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
-  const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
+  const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null)) 
+  const [error , setError] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
@@ -927,16 +928,22 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                     {plotPermissionOptions.map((permission) => (
                       <FormItem key={permission} className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
-                          <Checkbox
-                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                            checked={field.value?.includes(permission)}
-                            onCheckedChange={(checked) => {
-                              return checked
-                                ? field.onChange([...field.value, permission])
-                                : field.onChange(field.value?.filter((value) => value !== permission))
-                            }}
-                          />
-                        </FormControl>
+                        <Checkbox
+  className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+  checked={field.value?.includes(permission)}
+  onCheckedChange={(checked) => {
+    if (checked) {
+      if (field.value?.length >= 5) {
+        setError( 'You can only select up to 5 permissions.')
+        return; 
+      }
+      field.onChange([...field.value, permission]);
+    } else {
+      field.onChange(field.value?.filter((value) => value !== permission));
+    }
+  }}
+/>                    
+     </FormControl>
                         <FormLabel className="font-normal">{permission}</FormLabel>
                       </FormItem>
                     ))}
@@ -944,7 +951,9 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> 
+            {error && <p className="text-red-500">{error}</p>}
+
             <FormField
               control={form.control}
               name="facilitiesCategories"
