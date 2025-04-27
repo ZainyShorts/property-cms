@@ -49,7 +49,9 @@ import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 export interface MasterDevelopment {
-  _id: string
+  _id: string 
+  country : string 
+  city : string
   roadLocation: string
   developmentName: string
   locationQuality: string
@@ -71,12 +73,15 @@ interface ApiResponse {
   pageNumber: number
 }
 const tableHeaders = [
-  { key: "_id", label: "ID" },
+  { key: "_id", label: "ID" }, 
+  {key : "country" , label : "COUNTRY"}, 
+  {key : "city" , label : "CITY"},
   { key: "roadLocation", label: "ROAD LOCATION" },
   { key: "developmentName", label: "DEVELOPMENT NAME" },
   { key: "locationQuality", label: "LOCATION QUALITY" },
   { key: "buaAreaSqFt", label: "BUA AREA (SQ FT)" },
-  { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" },
+  { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" }, 
+  
   { key: "amentiesAreaSqFt", label: "AMENITIES AREA (SQ FT)" },
   { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
@@ -326,7 +331,9 @@ export default function MasterDevelopmentPage() {
         developmentName: filters.developmentName,
         roadLocation: filters.roadLocation,
         locationQuality: filters.locationQuality,
-        buaAreaSqFtRange: filters.buaAreaSqFtRange,
+        buaAreaSqFtRange: filters.buaAreaSqFtRange, 
+        country : filters.country, 
+        city : filters.city,
         totalAreaSqFtRange: filters.totalAreaSqFtRange,
         facilitiesCategories: filters.facilitiesCategories,
         amentiesCategories: filters.amentiesCategories,
@@ -371,7 +378,6 @@ export default function MasterDevelopmentPage() {
 
       // Add basic params
       params.append("page", requestData.page.toString())
-      params.append("sortOrder", requestData.sort)
       params.append("limit", requestData.limit.toString())
 
       // Add string filters
@@ -1304,7 +1310,7 @@ const getSelectedData = () => {
                           {isSelectionMode && (
                             <TableCell className="text-center">
                               <Skeleton className="h-4 w-full" />
-                            </TableCell>
+                            </TableCell> 
                           )}
                           {tableHeaders
                             .filter((header) => visibleColumns[header.key])

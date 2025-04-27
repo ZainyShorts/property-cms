@@ -1,36 +1,41 @@
-import { useState } from "react"
-import { X } from 'lucide-react'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox" 
-import { useDispatch, useSelector } from "react-redux"
-import { setDevelopmentName , 
+import { useState, useEffect } from "react";
+import { X } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  setCity, 
+  setCountry,
+  setDevelopmentName,
   setRoadLocation,
   setLocationQuality,
   setBuaAreaSqFtRange,
   setTotalAreaSqFtRange,
   setFacilitiesCategories,
   setAmentiesCategories,
- } from "@/lib/store/slices/masterFilterSlice"
-import { RootState } from "@/store"
-import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+} from "@/lib/store/slices/masterFilterSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store";
+import { Button } from "@/components/ui/button";
+import { countries } from "../data/data";
+import { getCitiesByCountry } from "../data/data";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FilterSidebarProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export interface FilterValues {
-  developmentName?: string
-  roadLocation?: string
-  locationQuality?: string
-  buaAreaSqFtRange?: { min?: number; max?: number }
-  totalAreaSqFtRange?: { min?: number; max?: number }
-  facilitiesCategories?: string[]
-  amentiesCategories?: string[]
+  developmentName?: string;
+  roadLocation?: string;
+  locationQuality?: string;
+  buaAreaSqFtRange?: { min?: number; max?: number };
+  totalAreaSqFtRange?: { min?: number; max?: number };
+  facilitiesCategories?: string[];
+  amentiesCategories?: string[];
 }
 
 const facilitiesCategoriesOptions = [
@@ -41,7 +46,7 @@ const facilitiesCategoriesOptions = [
   "Clinics",
   "Malls",
   "Public Transport"
-]
+];
 
 const amenitiesCategoriesOptions = [
   "Gym",
@@ -110,46 +115,68 @@ const amenitiesCategoriesOptions = [
   "Pest control & Fumigation Support",
   "Green Building Certification",
   "Community Recycling Points"
-]
+];
 
-const locationQualityOptions = ["A", "B", "C"]
+const locationQualityOptions = ["A", "B", "C"];
 
-export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) { 
-  const dispatch = useDispatch()
-  const filters = useSelector((state: RootState) => state.masterFilter)
+export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
+  const dispatch = useDispatch();
+  const filters = useSelector((state: RootState) => state.masterFilter);
+  const [availableCities, setAvailableCities] = useState<{id: string, name: string}[]>([]);
+
+  // Handle country change
+  const handleCountryChange = (country: string) => {
+    dispatch(setCountry(country));
+    dispatch(setCity("")); // Reset city when country changes
+  };
+
+  // Handle city change
+  const handleCityChange = (city: string) => {
+    dispatch(setCity(city));
+  };
+
+  // Update available cities when country changes
+  useEffect(() => {
+    if (filters.country) {
+      const cities = getCitiesByCountry(filters.country);
+      setAvailableCities(cities);
+    } else {
+      setAvailableCities([]);
+    }
+  }, [filters.country]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
+    const { name, value } = e.target;
     switch (name) {
       case "developmentName":
-        dispatch(setDevelopmentName(value))
-        break
+        dispatch(setDevelopmentName(value));
+        break;
       case "roadLocation":
-        dispatch(setRoadLocation(value))
-        break
+        dispatch(setRoadLocation(value));
+        break;
     }
-  }
+  };
 
   const handleLocationQualityChange = (value: string) => {
-    dispatch(setLocationQuality(value))
-  }
+    dispatch(setLocationQuality(value));
+  };
 
   const handleCheckboxChange = (
     category: "facilitiesCategories" | "amentiesCategories",
     value: string,
     checked: boolean
   ) => {
-    const currentValues = filters[category] || []
+    const currentValues = filters[category] || [];
     const updated = checked
       ? [...currentValues, value]
-      : currentValues.filter((item) => item !== value)
+      : currentValues.filter((item) => item !== value);
 
     if (category === "facilitiesCategories") {
-      dispatch(setFacilitiesCategories(updated))
+      dispatch(setFacilitiesCategories(updated));
     } else {
-      dispatch(setAmentiesCategories(updated))
+      dispatch(setAmentiesCategories(updated));
     }
-  }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -160,6 +187,47 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
         </SheetHeader>
 
         <div className="space-y-6">
+          {/* Country Dropdown */}
+          <div className="space-y-2">
+            <Label>Country</Label>
+            <Select
+              value={filters.country || ""}
+              onValueChange={handleCountryChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((country) => (
+                  <SelectItem key={country.id} value={country.name}>
+                    {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* City Dropdown */}
+          <div className="space-y-2">
+            <Label>City</Label>
+            <Select
+              value={filters.city || ""}
+              onValueChange={handleCityChange}
+              disabled={!filters.country}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={filters.country ? "Select city" : "Select country first"} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableCities.map((city) => (
+                  <SelectItem key={city.id} value={city.id}>
+                    {city.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Road Location */}
           <div className="space-y-2">
             <Label htmlFor="roadLocation">Road Location</Label>
@@ -250,5 +318,5 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

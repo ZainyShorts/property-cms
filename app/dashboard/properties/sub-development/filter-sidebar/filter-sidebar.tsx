@@ -15,7 +15,7 @@ import {
   setAmentiesCategories,
   resetSubDevFilter,
 } from "@/lib/store/slices/subDevFilterSlice"
-import type { RootState } from "@/store"
+import type { RootState } from "@/store" 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"

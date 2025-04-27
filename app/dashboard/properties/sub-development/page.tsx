@@ -73,14 +73,14 @@ interface SubDevelopment {
   subDevelopment: string
   plotNumber: number
   plotHeight: number
-  plotPermission: string
+  plotPermission: string[]
   plotSizeSqFt: number
   plotBUASqFt: number
   plotStatus: string
   buaAreaSqFt: number
   facilitiesAreaSqFt: number
   amenitiesAreaSqFt: number
-  totalSizeSqFt: number
+  totalAreaSqFt: number
   pictures: string[]
   facilitiesCategories: string[]
   amentiesCategories: string[]
@@ -114,7 +114,7 @@ const tableHeaders = [
   { key: "buaAreaSqFt", label: "BUA AREA" },
   { key: "amenitiesAreaSqFt", label: "AMENITIES AREA" },
   { key: "facilitiesAreaSqFt", label: "FACILITIES AREA" },
-  { key: "totalSizeSqFt", label: "TOTAL SIZE (SQ FT)" },
+  { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
   { key: "amentiesCategories", label: "AMENITIES" },
   { key: "attachDocument", label: "DOCUMENT" },
@@ -229,8 +229,8 @@ export default function SubDevelopmentPage() {
         }
 
         if (filters.plotPermission?.length) {
-          filters.plotPermission.forEach((facility: string) => {
-            params.append("plotPermission", facility)
+          filters.plotPermission.forEach((permission: string) => {
+            params.append("plotPermission", permission)
           })
         }
 
@@ -249,7 +249,7 @@ export default function SubDevelopmentPage() {
             params.append("amentiesCategories", amenity)
           })
         }
-      }
+      } 
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
       )
@@ -398,8 +398,13 @@ export default function SubDevelopmentPage() {
       // Add string filters
       if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
       if (requestData.plotNumber) params.append("plotNumber", requestData.plotNumber.toString())
-      if (requestData.plotPermission) params.append("plotPermission", requestData.plotPermission)
-      if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
+        if (filters.plotPermission?.length) {
+          filters.plotPermission.forEach((permission: string) => {
+            params.append("plotPermission", permission)
+          })
+
+        }     
+         if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
 
       // Add array filters
       if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
@@ -417,8 +422,8 @@ export default function SubDevelopmentPage() {
       // Add date filters
       if (requestData.startDate) params.append("startDate", requestData.startDate)
       if (requestData.endDate) params.append("endDate", requestData.endDate)
-
-      // Directly call the API with the filter parameters
+      console.log('filters', filters)
+      // Directly call the API with the filter parameters 
       axios
         .get<ApiResponse>(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
@@ -588,11 +593,11 @@ export default function SubDevelopmentPage() {
           record.subDevelopment,
           record.plotNumber,
           record.plotHeight,
-          record.plotPermission,
+          record.plotPermission.length,
           record.plotSizeSqFt,
           record.plotBUASqFt,
           record.plotStatus,
-          record.totalSizeSqFt,
+          record.totalAreaSqFt,
           record.facilitiesCategories.length,
           record.amentiesCategories.length,
         ]
@@ -856,16 +861,51 @@ export default function SubDevelopmentPage() {
         return record.masterDevelopment.developmentName
       case "roadLocation":
         return record.masterDevelopment.roadLocation
+        case "plotPermission": 
+          return (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center justify-center gap-2 cursor-pointer">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                    {record.plotPermission.length}
+                  </Badge>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80 p-0">
+                <div className="p-4">
+                  <h4 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                    Plot Permissions ({record.plotPermission.length})
+                  </h4>
+                  {record.plotPermission.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {record.plotPermission.map((permission, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                        >
+                          {permission}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No Permissions</p>
+                  )}
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          )
       case "plotNumber":
       case "plotHeight":
-      case "plotPermission":
       case "plotSizeSqFt":
       case "plotBUASqFt":
       case "plotStatus":
       case "buaAreaSqFt":
       case "facilitiesAreaSqFt":
       case "amenitiesAreaSqFt":
-      case "totalSizeSqFt":
+      case "totalAreaSqFt":
       case "subDevelopment":
         return record[key]
       case "facilitiesCategories":
@@ -1282,14 +1322,14 @@ export default function SubDevelopmentPage() {
                             header.key === "subDevelopment" && "w-[180px]",
                             header.key === "plotNumber" && "w-[120px]",
                             header.key === "plotHeight" && "w-[120px]",
-                            header.key === "plotPermission" && "w-[150px]",
+                            header.key === "plotPermissions" && "w-[150px]",
                             header.key === "plotSizeSqFt" && "w-[150px]",
                             header.key === "plotBUASqFt" && "w-[150px]",
                             header.key === "plotStatus" && "w-[120px]",
                             header.key === "buaAreaSqFt" && "w-[120px]",
                             header.key === "amenitiesAreaSqFt" && "w-[120px]",
                             header.key === "facilitiesAreaSqFt" && "w-[120px]",
-                            header.key === "totalSizeSqFt" && "w-[150px]",
+                            header.key === "totalAreaSqFt" && "w-[150px]",
                             header.key === "facilitiesCategories" && "w-[120px]",
                             header.key === "amentiesCategories" && "w-[120px]",
                             header.key === "attachDocument" && "w-[120px]",

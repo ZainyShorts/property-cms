@@ -51,7 +51,7 @@ interface SubDevRecord {
   buaAreaSqFt: number
   facilitiesAreaSqFt: number
   amenitiesAreaSqFt: number
-  totalSizeSqFt: number
+  totalAreaSqFt: number
   pictures: string[]
   facilitiesCategories: string[]
   amentiesCategories: string[]
@@ -66,15 +66,15 @@ const formSchema = z.object({
   plotNumber: z.coerce.number().int().positive("Plot number must be a positive integer"),
   plotHeight: z.coerce.number().positive("Plot height must be positive"),
   plotPermission: z.array(z.string()).min(1, "Select at least one plot permission"),
-  plotSizeSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Plot size is required"),
-  plotBUASqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Plot BUA is required"),
+  plotSizeSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Plot size is required"),
+  plotBUASqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Plot BUA is required"),
   plotStatus: z.string().min(1, "Plot status is required"),
-  buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "BUA area is required"),
-  facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Facilities area is required"),
-  amenitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Amenities area is required"),
-  totalSizeSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(1, "Total size is required"),
-  facilitiesCategories: z.array(z.string()).min(1, "Select at least one facility category"),
-  amentiesCategories: z.array(z.string()).min(1, "Select at least one amenity category"),
+  buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "BUA area is required"),
+  facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Facilities area is required"),
+  amenitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Amenities area is required"),
+  totalAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Total size is required"),
+  facilitiesCategories: z.array(z.string()).min(0, "Select at least one facility category"),
+  amentiesCategories: z.array(z.string()).min(0, "Select at least one amenity category"),
   pictures: z.array(z.any()).optional(),
 })
 
@@ -137,7 +137,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       buaAreaSqFt: editRecord?.buaAreaSqFt || 0,
       facilitiesAreaSqFt: editRecord?.facilitiesAreaSqFt || 0,
       amenitiesAreaSqFt: editRecord?.amenitiesAreaSqFt || 0,
-      totalSizeSqFt: editRecord?.totalSizeSqFt || 0,
+      totalAreaSqFt: editRecord?.totalAreaSqFt || 0,
       facilitiesCategories: editRecord?.facilitiesCategories || [],
       amentiesCategories: editRecord?.amentiesCategories || [],
       pictures: [],
@@ -183,7 +183,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         buaAreaSqFt: editRecord.buaAreaSqFt || 0,
         facilitiesAreaSqFt: editRecord.facilitiesAreaSqFt || 0,
         amenitiesAreaSqFt: editRecord.amenitiesAreaSqFt || 0,
-        totalSizeSqFt: editRecord.totalSizeSqFt || 0,
+        totalAreaSqFt: editRecord.totalAreaSqFt || 0,
         facilitiesCategories: editRecord.facilitiesCategories || [],
         amentiesCategories: editRecord.amentiesCategories || [],
         pictures: [],
@@ -219,7 +219,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         buaAreaSqFt: 0,
         facilitiesAreaSqFt: 0,
         amenitiesAreaSqFt: 0,
-        totalSizeSqFt: 0,
+        totalAreaSqFt: 0,
         facilitiesCategories: [],
         amentiesCategories: [],
         pictures: [],
@@ -266,7 +266,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   // Auto-calculate total land area (buaAreaSqFt + facilitiesAreaSqFt + amenitiesAreaSqFt)
   useEffect(() => {
     const totalLandArea = Number(buaAreaSqFt || 0) + Number(facilitiesAreaSqFt || 0) + Number(amenitiesAreaSqFt || 0)
-    form.setValue("totalSizeSqFt", totalLandArea)
+    form.setValue("totalAreaSqFt", totalLandArea)
   }, [buaAreaSqFt, facilitiesAreaSqFt, amenitiesAreaSqFt, form])
 
   const handleCheckChangedFields = () => {
@@ -821,7 +821,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             {/* Total Size SqFt (Auto-calculated) */}
             <FormField
               control={form.control}
-              name="totalSizeSqFt"
+              name="totalAreaSqFt"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Total Land Area (sq ft)</FormLabel>

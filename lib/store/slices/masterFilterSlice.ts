@@ -10,7 +10,9 @@ interface MasterFilterState {
   roadLocation?: string;
   locationQuality?: string;
   buaAreaSqFtRange?: Range;
-  totalAreaSqFtRange?: Range;
+  totalAreaSqFtRange?: Range; 
+  country? : string; 
+  city : string;
   facilitiesCategories?: string[];
   amentiesCategories?: string[];
   startDate?: string;
@@ -20,7 +22,9 @@ interface MasterFilterState {
 const initialState: MasterFilterState = {
   developmentName: '',
   roadLocation: '',
-  locationQuality: '',
+  locationQuality: '', 
+  country : '', 
+  city :'',
   buaAreaSqFtRange: {},
   totalAreaSqFtRange: {},
   facilitiesCategories: [],
@@ -42,6 +46,12 @@ const masterFilterSlice = createSlice({
     },
     setBuaAreaSqFtRange: (state, action: PayloadAction<Range>) => {
       state.buaAreaSqFtRange = action.payload;
+    }, 
+    setCountry(state, action: PayloadAction<string>) {
+      state.country = action.payload;
+    }, 
+    setCity(state, action: PayloadAction<string>) {
+      state.city = action.payload;
     },
     setTotalAreaSqFtRange: (state, action: PayloadAction<Range>) => {
       state.totalAreaSqFtRange = action.payload;
@@ -60,7 +70,9 @@ export const {
   setDevelopmentName,
   setRoadLocation,
   setLocationQuality,
-  setBuaAreaSqFtRange,
+  setBuaAreaSqFtRange, 
+   setCountry, 
+    setCity,
   setTotalAreaSqFtRange,
   setFacilitiesCategories,
   setAmentiesCategories,
