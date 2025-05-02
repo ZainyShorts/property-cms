@@ -1,88 +1,65 @@
-"use client"
+'use client'
+import React, { useState, useEffect } from 'react';
 
-import { gql, useQuery } from "@apollo/client"
-import { useState, useEffect } from "react"
-import { ApolloProvider } from "@/lib/ApolloPovider"
-
-const GET_PROPERTIES = gql`
-  query getProperties( $sortBy: String, $sortOrder: String,  $limit: String) {
-    getProperties( sortBy: $sortBy, sortOrder: $sortOrder, limit: $limit) {
-      _id
-      roadLocation
-      developmentName
-      subDevelopmentName
-      projectName
-      propertyType
-      projectLocation
-      unitNumber
-      bedrooms
-      unitLocation
-      vacancyStatus
-      listed
-      primaryPrice
-      resalePrice
-      Rent
-      createdAt
-      unitView
-    }
-  }
-`
-
-function PropertyList() {
-  const { loading, error, data, refetch } = useQuery(GET_PROPERTIES, {
-    variables: {
-      sortBy: "createdAt",
-      sortOrder: "asc", 
-      limit: 10,
-    },
-  })
+const CsvViewer = () => {
+  const [csvData, setCsvData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Refetch when the page changes
-    refetch()
-  }, [ data,refetch , loading ])
+    const fetchCsvData = async () => {
+      try {
+        const response = await fetch('https://pludo-public-bucket.s3.eu-north-1.amazonaws.com/UHGFILTER.csv');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const rawText = await response.text();
+        console.log('Raw CSV content:', rawText); // Debugging
+        
+        // Process the CSV content
+        const processedData = rawText
+          .split(/\r?\n/) // Split by both Unix and Windows line endings
+          .map(row => row.trim())
+          .filter(row => row.length > 0); // Remove empty rows
+          
+        console.log('Processed data:', processedData); // Debugging
+        setCsvData(processedData);
+        
+      } catch (err) {
+        console.error('Error fetching CSV:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  
+    fetchCsvData();
+  }, []);
 
-  if (loading) return <p>Loading...</p>
-  if (error) {
-    console.error("GraphQL Error:", error)
-    return <p>Error: {error.message}</p>
-  }
+  if (loading) return <div>Loading CSV data...</div>;
+  if (error) return <div>Error loading data: {error}</div>;
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Property List</h1>
-      {data && data.getProperties ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {data.getProperties.map((property: any) => (
-              <div key={property._id} className="border p-4 rounded-lg shadow">
-                <h2 className="text-xl font-semibold">{property.projectName}</h2>
-                <p>Location: {property.roadLocation}</p>
-                <p>Type: {property.propertyType}</p>
-                <p>Bedrooms: {property.bedrooms}</p>
-                <p>Price: ${property.primaryPrice}</p>
-                <p>Status: {property.vacancyStatus}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-between">
-      
-          </div>
-        </>
+    <div className="csv-container">
+      <h2>CSV Content</h2>
+      {csvData.length === 0 ? (
+        <p>No data found in CSV file</p>
       ) : (
-        <p>No properties found</p>
+        <div>
+          <p>Total rows: {csvData.length}</p>
+          <ul>
+            {csvData.map((row, index) => (
+              <li key={index}>
+                Row {index + 1}: <strong>{row}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default function PropertiesPage() {
-  return (
-    <ApolloProvider>
-      <PropertyList />
-    </ApolloProvider>
-  )
-}
-
+export default CsvViewer;

@@ -48,7 +48,8 @@ interface UploadedDocument {
 
 const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
   try {
-    const formData = new FormData()
+    const formData = new FormData() 
+    console.log('file',file)
     formData.append("file", file)
     const response = await axios.get(
       `${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/signed-url?fileName=${file.name}&contentType=${file.type}`,
