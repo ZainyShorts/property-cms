@@ -15,10 +15,13 @@ import {
   Info,
   Upload,
   Copy,
-  Check,
+  Check, 
+ Building2, Ruler, 
+ Layout,
   ArrowLeft,
   MousePointerIcon as MousePointerSquare,
-  Settings,
+  Settings, 
+  MapPin,
   Share2,
 } from "lucide-react"
 import { toast } from "react-toastify"
@@ -75,7 +78,8 @@ interface ApiResponse {
 const tableHeaders = [
   { key: "_id", label: "ID" },
   { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
-  { key: "subDevelopment", label: "SUB DEVELOPMENT" },
+  { key: "subDevelopment", label: "SUB DEVELOPMENT" }, 
+  { key : "roadLocation" , label: "ROAD LOCATION"},
   { key: "propertyType", label: "PROPERTY TYPE" },
   { key: "projectName", label: "PROJECT NAME" },
   { key: "projectQuality", label: "PROJECT QUALITY" },
@@ -85,10 +89,11 @@ const tableHeaders = [
   { key: "salesStatus", label: "SALES STATUS" },
   { key: "downPayment", label: "DOWNPAYMENT" },
   { key: "facilityCategories", label: "FACILITIES" },
-  { key: "amenitiesCategories", label: "AMENITIES" },
+  { key: "amenitiesCategories", label: "AMENITIES" }, 
   { key: "percentOfConstruction", label: "PERCENT OF CONSTRUCTION" },
   { key: "installmentDate", label: "INSTALLMENT DATA" },
-  { key: "uponCompletion", label: "UPON COMPLETION" },
+  { key: "uponCompletion", label: "UPON COMPLETION" }, 
+  { key: "plot" , label : "PLOT DETAILS"},
   { key: "postHandOver", label: "POST HANDOVER" },
   { key: "shops", label: "SHOPS" },
   { key: "offices", label: "OFFICES" },
@@ -121,7 +126,8 @@ export default function MasterDevelopmentPage() {
   const sortOrder = "desc"
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [records, setRecords] = useState<MasterDevelopment[]>([])
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isModalOpen, setIsModalOpen] = useState(false) 
+  const [editMainRecord , setEditMainRecord] = useState<any>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -367,7 +373,7 @@ export default function MasterDevelopmentPage() {
       const requestData: Record<string, any> = {
         page: currentPage,
         sortOrder: sortOrder,
-        // limit: limit,
+        limit: limit,
         ...cleanedFilters,
       }
 
@@ -375,21 +381,21 @@ export default function MasterDevelopmentPage() {
 
       const params = new URLSearchParams()
 
-      params.append("page", requestData.page.toString())
-      params.append("limit", requestData.limit.toString())
+      params.append("page", requestData.page)
+      params.append("limit", requestData.limit)
 
       if (requestData.masterDevelopment) params.append("masterDevelopment", requestData.masterDevelopment)
       if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
       if (requestData.propertyType) params.append("propertyType", requestData.propertyType)
-      if (requestData.projectName) params.append("projectName", requestData.projectName.toString())
-      if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus.toString())
+      if (requestData.projectName) params.append("projectName", requestData.projectName)
+      if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus)
       if (requestData.percentOfConstruction)
-        params.append("percentOfConstruction", requestData.percentOfConstruction.toString())
-      if (requestData.launchDate) params.append("launchDate", requestData.launchDate.toString())
-      if (requestData.completionDate) params.append("completionDate", requestData.completionDate.toString())
-      if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality.toString())
+        params.append("percentOfConstruction", requestData.percentOfConstruction)
+      if (requestData.launchDate) params.append("launchDate", requestData.launchDate)
+      if (requestData.completionDate) params.append("completionDate", requestData.completionDate)
+      if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
       if (requestData.constructionStatus !== undefined)
-        params.append("constructionStatus", requestData.constructionStatus.toString())
+        params.append("constructionStatus", requestData.constructionStatus)
 
       if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
         requestData.facilitiesCategories.forEach((facility: string) => {
@@ -407,7 +413,7 @@ export default function MasterDevelopmentPage() {
 
       axios
         .get<ApiResponse>(
-          `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&${params.toString()}`,
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&${params}`,
         )
         .then((response) => {
           setRecords(response.data.data)
@@ -430,6 +436,12 @@ export default function MasterDevelopmentPage() {
       toast.error("Failed to apply filters. Please try again.")
       setLoading(false)
     }
+  } 
+   
+  const handleEditMulti = (data? : any) => { 
+   console.log('multiData',data);  
+   setEditMainRecord(data);
+   setIsModalOpen(true) 
   }
 
   // Handle copy ID
@@ -464,7 +476,7 @@ export default function MasterDevelopmentPage() {
 
   const handleEditRecord = (record: MasterDevelopment) => {
     setEditRecord(record)
-    setIsModalOpen(true)
+    setIsMultiStepModalOpen(true);
   }
 
   const handleDeleteClick = (recordId: string) => {
@@ -521,7 +533,6 @@ export default function MasterDevelopmentPage() {
     }
   }
 
-  // Close modal and reset edit record
   const handleModalClose = (open: boolean) => {
     setIsModalOpen(open)
     if (!open) {
@@ -608,15 +619,19 @@ export default function MasterDevelopmentPage() {
         return record.masterDevelopment.developmentName
       case "subDevelopment":
         return record.subDevelopment?.subDevelopment ?? "N/A"
-      case "propertyType":
-      case "projectName":
+        case "roadLocation" : 
+        return record.masterDevelopment.roadLocation;
+        case "percentOfConstruction": 
+        return record[key].toLocaleString() + '%';
+        case "constructionStatus":  
+        case "downPayment":
+          return record[key].toLocaleString() + '%';
+          case "projectName":
+        case "propertyType": 
       case "projectQuality":
-      case "constructionStatus":
       case "launchDate":
       case "completionDate":
       case "salesStatus":
-      case "downPayment":
-      case "percentOfConstruction":
       case "installmentDate":
       case "postHandOver":
       case "shops":
@@ -631,7 +646,213 @@ export default function MasterDevelopmentPage() {
       case "total":
       case "sold":
       case "available":
-        return record[key].toLocaleString()
+        return record[key].toLocaleString() 
+        case "plot":
+          // First check if plot object exists in record
+          if (record.plot) {
+            return (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-center justify-center gap-2 cursor-pointer">
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
+                    >
+                      Plot Details
+                    </Badge>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-[400px] p-0 shadow-lg">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-indigo-500 to-blue-500 p-4 rounded-t-lg">
+                    <div className="flex items-center gap-2 text-white">
+                      <MapPin className="h-5 w-5" />
+                      <h3 className="font-semibold">Plot #{record.plot.plotNumber}</h3>
+                    </div>
+                    <div className="mt-2">
+                      <Badge className="bg-white/20 text-white border-none">{record.plot.plotStatus}</Badge>
+                    </div>
+                  </div>
+    
+                  <div className="p-4 space-y-6">
+                    {/* Plot Metrics */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Height</p>
+                            <p className="font-medium">{record.plot.plotHeight}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Ruler className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Plot Size</p>
+                            <p className="font-medium">{record.plot.plotSizeSqFt} sq.ft</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <Layout className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">BUA</p>
+                            <p className="font-medium">{record.plot.plotBUASqFt} sq.ft</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Built Area</p>
+                            <p className="font-medium">{record.plot.buaAreaSqFt} sq.ft</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+    
+                    {/* Plot Permissions */}
+                    <div>
+                      <h4 className="font-medium text-sm mb-3 text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
+                        Permitted Usage
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {record.plot.plotPermission.map((permission, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-indigo-50/50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-800"
+                          >
+                            {permission}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            )
+          }
+    
+          // If plot object doesn't exist, check if subDevelopment exists and has plot details
+          if (
+            record.subDevelopment &&
+            (record.subDevelopment.plotBUASqFt ||
+              record.subDevelopment.plotNumber ||
+              record.subDevelopment.plotSizeSqFt ||
+              record.subDevelopment.plotStatus ||
+              record.subDevelopment.plotPermission)
+          ) {
+            // Use subDevelopment plot details
+            return (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-center justify-center gap-2 cursor-pointer">
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
+                    >
+                      Plot Details
+                    </Badge>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-[400px] p-0 shadow-lg">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-indigo-500 to-blue-500 p-4 rounded-t-lg">
+                    <div className="flex items-center gap-2 text-white">
+                      <MapPin className="h-5 w-5" />
+                      <h3 className="font-semibold">Plot #{record.subDevelopment.plotNumber}</h3>
+                    </div>
+                    <div className="mt-2">
+                      <Badge className="bg-white/20 text-white border-none">{record.subDevelopment.plotStatus}</Badge>
+                    </div>
+                  </div>
+    
+                  <div className="p-4 space-y-6">
+                    {/* Plot Metrics */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Height</p>
+                            <p className="font-medium">{record.subDevelopment.plotHeight}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Ruler className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Plot Size</p>
+                            <p className="font-medium">{record.subDevelopment.plotSizeSqFt} sq.ft</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <Layout className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">BUA</p>
+                            <p className="font-medium">{record.subDevelopment.plotBUASqFt} sq.ft</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Built Area</p>
+                            <p className="font-medium">{record.subDevelopment.buaAreaSqFt} sq.ft</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+    
+                    {/* Plot Permissions */}
+                    {record.subDevelopment.plotPermission && (
+                      <div>
+                        <h4 className="font-medium text-sm mb-3 text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
+                          Permitted Usage
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {record.subDevelopment.plotPermission.map((permission, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="bg-indigo-50/50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-800"
+                            >
+                              {permission}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            )
+          }
+    
+          // If neither record.plot nor record.subDevelopment has plot details, show N/A
+          return (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center justify-center gap-2 cursor-pointer">
+                  <Badge variant="outline" className="bg-gray-50 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                    N/A
+                  </Badge>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-64 p-4">
+                <p className="text-sm text-center text-muted-foreground">No plot details available</p>
+              </HoverCardContent>
+            </HoverCard>
+          )
+      
+
+
       case "facilityCategories":
         return (
           <HoverCard>
@@ -667,7 +888,7 @@ export default function MasterDevelopmentPage() {
               </div>
             </HoverCardContent>
           </HoverCard>
-        )
+        )  
       case "amenitiesCategories":
         return (
           <HoverCard>
@@ -1044,15 +1265,18 @@ export default function MasterDevelopmentPage() {
               </Button>
 
               <MultiStepModal
-                open={isMultiStepModalOpen}
-                onOpenChange={setIsMultiStepModalOpen}
-                onComplete={handleMultiStepFormComplete}
+                open={isMultiStepModalOpen} 
+                onEdit = {editRecord}
+                onOpenChange={setIsMultiStepModalOpen} 
+                onComplete={handleMultiStepFormComplete} 
+                onCompleteEdit = {handleEditMulti}
               />
 
               <AddRecordModal
                 setIsModalOpen={handleModalClose}
-                editRecord={editRecord}
-                onRecordSaved={fetchRecords}
+                editRecord={editMainRecord}
+                onRecordSaved={fetchRecords} 
+                // onEdit = {editMainRecord}
                 open={isModalOpen} 
                 multiStepFormData = {multiStepFormData}
               />

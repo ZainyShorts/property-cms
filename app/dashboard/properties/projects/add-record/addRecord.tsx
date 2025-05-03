@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type { MasterDevelopment } from "../page"
 import { Progress } from "@/components/ui/progress"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
@@ -65,26 +64,27 @@ interface FormValues {
   pictures: any[]
 
   plotNumber?: string
-  plotHeight?: string 
-  plotSizeSqFt? : string 
+  plotHeight?: string
+  plotSizeSqFt?: string
   plotStatus?: string
-  plotBUASqFt?: string 
+  plotBUASqFt?: string
   plotPermission?: string[]
   buaAreaSqFt?: string
 }
 
-interface AddRecordModalProps {
+interface RecordModalProps {
   setIsModalOpen: (open: boolean) => void
-  editRecord?: MasterDevelopment | null
+  editRecord?: any | null
   open: boolean
   onRecordSaved?: () => void
+  onRecordUpdated?: () => void
   onOpenChange?: (open: boolean) => void
   multiStepFormData?: {
     masterDevelopmentId: string
     masterDevelopmentName: string
     subDevelopmentName: string
     subDevelopmentId?: string
-    plotDetails: any
+    plot: any
   } | null
 }
 
@@ -101,14 +101,16 @@ export function AddRecordModal({
   setIsModalOpen,
   editRecord = null,
   onRecordSaved,
+  onRecordUpdated,
   onOpenChange,
   multiStepFormData = null,
-}: AddRecordModalProps) {
+}: RecordModalProps) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
+  const [isEditMode, setIsEditMode] = useState<boolean>(false)
 
   // React Hook Form setup
   const {
@@ -161,27 +163,27 @@ export function AddRecordModal({
         setValue("subDevelopment", multiStepFormData.subDevelopmentId)
       }
 
-      if (multiStepFormData.plotDetails) {
-        if (multiStepFormData.plotDetails.plotNumber) {
-          setValue("plotNumber", multiStepFormData.plotDetails.plotNumber)
-        } 
-        if (multiStepFormData.plotDetails.plotStatus) {
-          setValue("plotStatus", multiStepFormData.plotDetails.plotStatus)
+      if (multiStepFormData.plot) {
+        if (multiStepFormData.plot.plotNumber) {
+          setValue("plotNumber", multiStepFormData.plot.plotNumber)
         }
-        if (multiStepFormData.plotDetails.plotHeight) {
-          setValue("plotHeight", multiStepFormData.plotDetails.plotHeight)
-        }  
-        if (multiStepFormData.plotDetails.plotPermission) {
-          setValue("plotPermission", multiStepFormData.plotDetails.plotPermission)
-        } 
-        if (multiStepFormData.plotDetails.plotSizeSqFt) {
-          setValue("plotSizeSqFt", multiStepFormData.plotDetails.plotSizeSqFt)
+        if (multiStepFormData.plot.plotStatus) {
+          setValue("plotStatus", multiStepFormData.plot.plotStatus)
         }
-        if (multiStepFormData.plotDetails.plotBUASqFt) {
-          setValue("plotBUASqFt", multiStepFormData.plotDetails.plotBUASqFt)
+        if (multiStepFormData.plot.plotHeight) {
+          setValue("plotHeight", multiStepFormData.plot.plotHeight)
         }
-        if (multiStepFormData.plotDetails.buaAreaSqFt) {
-          setValue("buaAreaSqFt", multiStepFormData.plotDetails.buaAreaSqFt)
+        if (multiStepFormData.plot.plotPermission) {
+          setValue("plotPermission", multiStepFormData.plot.plotPermission)
+        }
+        if (multiStepFormData.plot.plotSizeSqFt) {
+          setValue("plotSizeSqFt", multiStepFormData.plot.plotSizeSqFt)
+        }
+        if (multiStepFormData.plot.plotBUASqFt) {
+          setValue("plotBUASqFt", multiStepFormData.plot.plotBUASqFt)
+        }
+        if (multiStepFormData.plot.buaAreaSqFt) {
+          setValue("buaAreaSqFt", multiStepFormData.plot.buaAreaSqFt)
         }
       }
     }
@@ -200,7 +202,8 @@ export function AddRecordModal({
   const watchEightBr = watch("eightBr")
   const watchSold = watch("sold")
 
-  useState(() => {
+  // Fixed: Changed useState to useEffect for calculating totals
+  useEffect(() => {
     const totalUnits =
       Number(watchShops) +
       Number(watchOffices) +
@@ -216,7 +219,21 @@ export function AddRecordModal({
 
     setValue("total", totalUnits)
     setValue("available", totalUnits - Number(watchSold))
-  })
+  }, [
+    watchShops,
+    watchOffices,
+    watchStudios,
+    watchOneBr,
+    watchTwoBr,
+    watchThreeBr,
+    watchFourBr,
+    watchFiveBr,
+    watchSixBr,
+    watchSevenBr,
+    watchEightBr,
+    watchSold,
+    setValue,
+  ])
 
   const uploadImageToAWS = async (file: File, index: number): Promise<{ awsUrl: string; key: string }> => {
     try {
@@ -301,8 +318,100 @@ export function AddRecordModal({
     }
   }
 
+  // Detect edit mode and load data
+  useEffect(() => {
+    if (open) {
+      const isEditing = !!editRecord && Object.keys(editRecord).length > 0
+      setIsEditMode(isEditing)
+    }
+  }, [open, editRecord])
+
+  // Use a ref to track if we've already populated the form for this editRecord
+  const hasPopulatedRef = useRef(false)
+
+  useEffect(() => {
+    if (editRecord && Object.keys(editRecord).length > 0 && !hasPopulatedRef.current) {
+      // Set the ref to true to prevent repeated population
+      hasPopulatedRef.current = true
+
+      // Populate form fields with edit data
+      setValue(
+        "masterDevelopment",
+        typeof editRecord.masterDevelopment === "object" && editRecord.masterDevelopment?._id
+          ? editRecord.masterDevelopment._id
+          : editRecord.masterDevelopment || "",
+      )
+      setValue("propertyType", editRecord.propertyType || "Apartment")
+      setValue("projectName", editRecord.projectName || "")
+      setValue("projectQuality", editRecord.projectQuality || "B")
+
+      setValue("constructionStatus", editRecord.constructionStatus || 20)
+      setValue("percentOfConstruction", editRecord.percentOfConstruction || 50)
+
+      // Handle dates
+      if (editRecord.launchDate) {
+        setValue("launchDate", new Date(editRecord.launchDate))
+      }
+      if (editRecord.completionDate) {
+        setValue("completionDate", new Date(editRecord.completionDate))
+      }
+      if (editRecord.installmentDate) {
+        setValue("installmentDate", new Date(editRecord.installmentDate))
+      }
+      if (editRecord.uponCompletion) {
+        setValue("uponCompletion", new Date(editRecord.uponCompletion))
+      }
+      if (editRecord.postHandOver) {
+        setValue("postHandOver", new Date(editRecord.postHandOver))
+      }
+
+      setValue("salesStatus", editRecord.salesStatus || SalesStatus.PRIMARY)
+      setValue("downPayment", editRecord.downPayment || 10)
+
+      // Unit counts
+      setValue("shops", editRecord.shops || "0")
+      setValue("offices", editRecord.offices || "0")
+      setValue("studios", editRecord.studios || "0")
+      setValue("oneBr", editRecord.oneBr || "0")
+      setValue("twoBr", editRecord.twoBr || "0")
+      setValue("threeBr", editRecord.threeBr || "0")
+      setValue("fourBr", editRecord.fourBr || "0")
+      setValue("fiveBr", editRecord.fiveBr || "0")
+      setValue("sixBr", editRecord.sixBr || "0")
+      setValue("sevenBr", editRecord.sevenBr || "0")
+      setValue("eightBr", editRecord.eightBr || "0")
+      setValue("sold", editRecord.sold?.toString() || "0")
+
+      // Categories
+      setValue("facilityCategories", editRecord.facilityCategories || [])
+      setValue("amenitiesCategories", editRecord.amenitiesCategories || [])
+
+      // Handle existing images if any
+      if (editRecord.pictures && editRecord.pictures.length > 0) {
+        const newPictures = Array(6).fill(null)
+        editRecord.pictures.forEach((url: string, index: number) => {
+          if (index < 6) {
+            newPictures[index] = {
+              preview: url,
+              awsUrl: url,
+              isExisting: true,
+            }
+          }
+        })
+        setPictures(newPictures)
+      }
+    }
+  }, [editRecord, setValue])
+
+  // Reset the hasPopulatedRef when the modal closes
+  useEffect(() => {
+    if (!open) {
+      hasPopulatedRef.current = false
+    }
+  }, [open])
+
   const onSubmit = async (data: any) => {
-    console.log("Form submission started")
+    console.log(`Form submission started for ${isEditMode ? "edit" : "create"}`)
     setIsSubmitting(true)
 
     try {
@@ -338,8 +447,8 @@ export function AddRecordModal({
         masterDevelopment: data.masterDevelopment,
         propertyType: data.propertyType,
         projectName: data.projectName,
-        projectQuality: data.projectQuality, 
-        
+        projectQuality: data.projectQuality,
+
         constructionStatus: data.constructionStatus,
         launchDate: formatDateForAPI(data.launchDate),
         completionDate: formatDateForAPI(data.completionDate),
@@ -368,38 +477,50 @@ export function AddRecordModal({
         pictures: pictureUrls,
       }
 
-      // Check if subDevelopment exists and is not empty
-      if (data.subDevelopment && data.subDevelopment.trim() !== "") {
+      // Handle subDevelopment (optional)
+      if (data.subDevelopment) {
         submitData.subDevelopment = data.subDevelopment
-        console.log("Including subDevelopment in API request:", data.subDevelopment)
+      } else if (isEditMode && editRecord?.subDevelopment) {
+        submitData.subDevelopment = editRecord.subDevelopment
+      } else if (multiStepFormData?.subDevelopmentId) {
+        submitData.subDevelopment = multiStepFormData.subDevelopmentId
+      }  
+      console.log('edit',editRecord)
+
+      if (isEditMode && editRecord?.plot) {
+        submitData.plot = editRecord.plot
+        console.log("Using plot from editRecord:", editRecord.plot)
+      } else if (multiStepFormData?.plot) {
+        submitData.plot = multiStepFormData.plot
+        console.log("Using plot from multiStepFormData:", multiStepFormData.plot)
       }
-      else if (data.plotNumber || data.plotHeight || data.plotBUASqFt || data.buaAreaSqFt) {
-        if (data.plotNumber) submitData.plotNumber = data.plotNumber
-        if (data.plotHeight) submitData.plotHeight = data.plotHeight
-        if (data.plotBUASqFt) submitData.plotBUASqFt = data.plotBUASqFt
-        if (data.buaAreaSqFt) submitData.buaAreaSqFt = data.buaAreaSqFt 
-        if (data.plotPermission) submitData.plotPermission = data.plotPermission 
-        if (data.plotSizeSqFt) submitData.plotSizeSqFt = data.plotSizeSqFt 
-        if (data.plotStatus) submitData.plotStatus = data.plotStatus
 
+      console.log(`Submitting data to API for ${isEditMode ? "update" : "create"}:`, submitData)
 
+      let response
 
-        console.log("Including plot details in API request")
+      if (isEditMode) {
+        // Update existing record
+        response = await axios.patch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${editRecord._id}`, submitData)
+        toast.success("Project record has been updated successfully")
+
+        if (onRecordUpdated) {
+          onRecordUpdated()
+        }
+      } else {
+        // Create new record
+        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData)
+        toast.success("Project record has been added successfully")
+
+        if (onRecordSaved) {
+          onRecordSaved()
+        }
       }
 
-      console.log("Submitting data to API with masterDevelopment:", data.masterDevelopment)
-      console.log("Final data being submitted to API:", submitData)
-
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData)
       console.log("API response:", response)
-      toast.success("Project record has been added successfully")
-
-      if (onRecordSaved) {
-        onRecordSaved()
-      }
       setIsModalOpen(false)
     } catch (error: any) {
-      console.error("Error submitting form:", error)
+      console.error(`Error ${isEditMode ? "updating" : "submitting"} form:`, error)
       if (error.response?.data?.statusCode === 400) {
         toast.error(error.response.data.message || "Bad Request: Please check your input data")
       } else if (error.response?.data?.statusCode === 504) {
@@ -407,7 +528,7 @@ export function AddRecordModal({
       } else if (error.response?.data?.statusCode === 409) {
         toast.error(error.response.data.message)
       } else {
-        toast.error("Failed to add record. Please try again.")
+        toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
       }
     } finally {
       setIsSubmitting(false)
@@ -518,7 +639,7 @@ export function AddRecordModal({
     <Dialog open={open} onOpenChange={onOpenChange || setIsModalOpen}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Add Project</DialogTitle>
+          <DialogTitle className="text-xl font-bold">{isEditMode ? "Edit Project" : "Add Project"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -1231,7 +1352,13 @@ export function AddRecordModal({
               disabled={isSubmitting}
               className="bg-black text-white hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
             >
-              {isSubmitting ? "Submitting..." : "Add Project"}
+              {isSubmitting
+                ? isEditMode
+                  ? "Updating..."
+                  : "Submitting..."
+                : isEditMode
+                  ? "Update Project"
+                  : "Add Project"}
             </Button>
           </DialogFooter>
         </form>

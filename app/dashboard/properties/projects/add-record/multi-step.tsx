@@ -35,6 +35,8 @@ enum PlotPermission {
   Bungalow = "Bungalow",
 }
 
+const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
+
 interface MasterDevelopment {
   _id: string
   developmentName: string
@@ -60,16 +62,18 @@ export interface MultiStepFormData {
   masterDevelopmentName: string
   subDevelopmentName: string
   subDevelopmentId?: string
-  plotDetails?: PlotDetails
+  plot?: PlotDetails
 }
 
 interface MultiStepModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onComplete: (data: MultiStepFormData) => void
+  onEdit?: any
+  onCompleteEdit?: (data: any) => void
 }
 
-export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModalProps) {
+export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompleteEdit }: MultiStepModalProps) {
   const [step, setStep] = useState<number>(1)
   const [masterDevelopments, setMasterDevelopments] = useState<MasterDevelopment[]>([])
   const [subDevelopments, setSubDevelopments] = useState<SubDevelopment[]>([])
@@ -88,12 +92,53 @@ export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModa
   })
   const [loading, setLoading] = useState<boolean>(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isEditMode, setIsEditMode] = useState<boolean>(false)
 
+  // Reset form and set edit mode when modal opens/closes
   useEffect(() => {
     if (open) {
+      resetForm()
+      setIsEditMode(!!onEdit && Object.keys(onEdit).length > 0)
       fetchMasterDevelopments()
     }
-  }, [open])
+  }, [open, onEdit])
+
+  // Load edit data whenever modal opens in edit mode
+  useEffect(() => {
+    if (open && onEdit && Object.keys(onEdit).length > 0) {
+      loadEditData()
+    }
+  }, [open, onEdit])
+
+  const loadEditData = () => {
+    console.log("Loading edit data:", onEdit)
+
+    // Set master development data
+    if (onEdit.masterDevelopment) {
+      setSelectedMasterDevelopmentId(onEdit.masterDevelopment._id || "")
+      setMasterDevelopmentName(onEdit.masterDevelopment.developmentName || "")
+      fetchSubDevelopments(onEdit.masterDevelopment._id)
+    }
+
+    // Set sub development data if available
+    if (onEdit.subDevelopment) {
+      setSubDevelopmentName(onEdit.subDevelopment.subDevelopment || "")
+      setSelectedSubDevelopmentId(onEdit.subDevelopment._id || "")
+    }
+
+    // Set plot data if available
+    if (onEdit.plot) {
+      setPlotDetails({
+        plotNumber: onEdit.plot.plotNumber || "",
+        plotHeight: onEdit.plot.plotHeight || "",
+        plotPermission: onEdit.plot.plotPermission || [],
+        plotSizeSqFt: onEdit.plot.plotSizeSqFt || "",
+        plotBUASqFt: onEdit.plot.plotBUASqFt || "",
+        plotStatus: onEdit.plot.plotStatus || "",
+        buaAreaSqFt: onEdit.plot.buaAreaSqFt || "",
+      })
+    }
+  }
 
   const fetchMasterDevelopments = async () => {
     setLoading(true)
@@ -139,7 +184,6 @@ export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModa
 
   const handleClose = () => {
     onOpenChange(false)
-    resetForm()
   }
 
   const handleMasterDevelopmentChange = (id: string) => {
@@ -156,27 +200,59 @@ export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModa
     setSelectedSubDevelopmentId(id)
   }
 
-  const completeForm = (stepNo? : any) => {
-    // Create base form data without plotDetails
-    const formData: Partial<MultiStepFormData> = {
-      masterDevelopmentId: selectedMasterDevelopmentId,
-      masterDevelopmentName,
-      subDevelopmentName,
-      subDevelopmentId: selectedSubDevelopmentId,
+  const completeForm = (stepNo?: any) => {
+    // If in edit mode, use onCompleteEdit with different format
+    if (isEditMode && onCompleteEdit) {
+      const editedData = { ...onEdit }
+
+      // Always update master development - only pass ID as string
+      editedData.masterDevelopment = selectedMasterDevelopmentId
+
+      // Handle step 2 - SubDevelopment
+      if (step === 2 && subDevelopmentName.trim()) {
+        // If user selected a SubDevelopment, add it (only ID) and remove any existing PlotDetails
+        editedData.subDevelopment = selectedSubDevelopmentId
+        if (editedData.plot) {
+          delete editedData.plot
+        }
+      }
+      else if (step === 3 && stepNo !== 3) {
+        editedData.plot = plotDetails
+        if (editedData.subDevelopment) {
+          delete editedData.subDevelopment
+        }
+      }
+      // Handle skipping step 3
+      else if (step === 3 && stepNo === 3) {
+        if (editedData.plot) {
+          delete editedData.plot
+        }
+      }
+
+      onCompleteEdit(editedData)
+    } else {
+      // For new entries, create base form data with master development
+      const formData: Partial<MultiStepFormData> = {
+        masterDevelopmentId: selectedMasterDevelopmentId,
+        masterDevelopmentName,
+      }
+
+      // Handle the same logic for new entries
+      if (step === 2 && subDevelopmentName.trim()) {
+        // If user selected a SubDevelopment, add it
+        formData.subDevelopmentName = subDevelopmentName
+        formData.subDevelopmentId = selectedSubDevelopmentId
+        // Don't include plotDetails
+      } else if (step === 3 && stepNo !== 3) {
+        // If user added PlotDetails, add them
+        formData.plot = plotDetails
+        // Don't include subDevelopment
+      }
+
+      onComplete(formData as MultiStepFormData)
     }
 
-    
-    if (stepNo == 3) { 
-        null
-     } else  { 
-        formData.plotDetails = plotDetails
-    }
-
-
-    // Cast to MultiStepFormData since we've made it Partial
-    onComplete(formData as MultiStepFormData)
     onOpenChange(false)
-    resetForm()
   }
 
   const validatePlotDetails = () => {
@@ -221,8 +297,10 @@ export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModa
       setStep(2)
     } else if (step === 2) {
       if (subDevelopmentName.trim()) {
+        // If SubDevelopment is selected, complete the form
         completeForm()
       } else {
+        // If SubDevelopment is skipped, go to PlotDetails
         setStep(3)
       }
     } else if (step === 3) {
@@ -292,6 +370,7 @@ export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModa
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
+              {isEditMode ? "Edit " : ""}
               {step === 1 ? "Master Development" : step === 2 ? "Sub Development" : "Plot Details"}
             </DialogTitle>
             <DialogDescription>
@@ -435,15 +514,24 @@ export function MultiStepModal({ open, onOpenChange, onComplete }: MultiStepModa
 
                   <div className="space-y-2">
                     <Label htmlFor="plotStatus">Plot Status *</Label>
-                    <Input
-                      id="plotStatus"
+                    <Select
                       value={plotDetails.plotStatus}
-                      onChange={(e) => {
-                        setPlotDetails({ ...plotDetails, plotStatus: e.target.value })
+                      onValueChange={(value) => {
+                        setPlotDetails({ ...plotDetails, plotStatus: value })
                         if (errors.plotStatus) setErrors((prev) => ({ ...prev, plotStatus: "" }))
                       }}
-                      placeholder="Plot Status"
-                    />
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select plot status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plotStatusOptions.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     {errors.plotStatus && <p className="text-sm text-red-500">{errors.plotStatus}</p>}
                   </div>
 
