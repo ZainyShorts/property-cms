@@ -399,7 +399,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
         toast.error("Failed to delete image. Please try again.")
       }
     } else {
-      // If no key exists (e.g., for newly added images that failed to upload)
       setSelectedImages((prev) => prev.filter((_, i) => i !== index))
     }
   }

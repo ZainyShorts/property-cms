@@ -47,7 +47,7 @@ import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sideba
 import { resetFilters } from "@/lib/store/slices/projectSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
-import { locationDetails, overview, facilities } from "./data/data"
+import { projectDetails, projectStatus, paymentPlan , projectInventory } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MultiStepModal, type MultiStepFormData } from "./add-record/multi-step"
 import { AddRecordModal } from "./add-record/addRecord"
@@ -82,18 +82,17 @@ const tableHeaders = [
   { key : "roadLocation" , label: "ROAD LOCATION"},
   { key: "propertyType", label: "PROPERTY TYPE" },
   { key: "projectName", label: "PROJECT NAME" },
-  { key: "projectQuality", label: "PROJECT QUALITY" },
+  { key: "projectQuality", label: "PROJECT QUALITY" }, 
+  { key: "facilityCategories", label: "FACILITIES" },
+  { key: "amenitiesCategories", label: "AMENITIES" }, 
   { key: "constructionStatus", label: "CONSTRUCTION STATUS" },
   { key: "launchDate", label: "LAUNCH DATE" },
   { key: "completionDate", label: "COMPLETION DATE" },
   { key: "salesStatus", label: "SALES STATUS" },
   { key: "downPayment", label: "DOWNPAYMENT" },
-  { key: "facilityCategories", label: "FACILITIES" },
-  { key: "amenitiesCategories", label: "AMENITIES" }, 
   { key: "percentOfConstruction", label: "PERCENT OF CONSTRUCTION" },
   { key: "installmentDate", label: "INSTALLMENT DATA" },
   { key: "uponCompletion", label: "UPON COMPLETION" }, 
-  { key: "plot" , label : "PLOT DETAILS"},
   { key: "postHandOver", label: "POST HANDOVER" },
   { key: "shops", label: "SHOPS" },
   { key: "offices", label: "OFFICES" },
@@ -109,6 +108,7 @@ const tableHeaders = [
   { key: "total", label: "TOTAL" },
   { key: "sold", label: "SOLD" },
   { key: "available", label: "AVAILABLE" },
+  { key: "plot" , label : "PLOT DETAILS"},
   { key: "attachDocument", label: "DOCUMENT" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
@@ -365,7 +365,10 @@ export default function MasterDevelopmentPage() {
         projectName: filters.projectName,
         projectQuality: filters.projectQuality,
         launchDate: filters.launchDate,
-        completionDate: filters.completionDate,
+        completionDate: filters.completionDate, 
+        uponCompletion: filters.uponCompletion,
+        installmentDate:filters.installmentDate,
+        postHandOver: filters.postHandOver,
         salesStatus: filters.saleStatus,
         percentOfConstruction: filters.percentOfConstruction,
         constructionStatus: filters.constructionStatus,
@@ -408,7 +411,11 @@ export default function MasterDevelopmentPage() {
         params.append("percentOfConstruction", requestData.percentOfConstruction)
       if (requestData.launchDate) params.append("launchDate", requestData.launchDate)
       if (requestData.completionDate) params.append("completionDate", requestData.completionDate)
-      if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
+      if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality) 
+        if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
+          if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
+            if (requestData.uponCompletion) params.append("uponCompletion", requestData.uponCompletion)
+
       if (requestData.constructionStatus !== undefined)
         params.append("constructionStatus", requestData.constructionStatus)
 
@@ -557,34 +564,45 @@ export default function MasterDevelopmentPage() {
 
   const toggleColumnVisibility = (columnKey: string, headers?: any) => {
     if (headers) {
-      if (headers === "locationDetails") {
-        setCheckState("locationDetails")
+      if (headers === "projectDetails") {
+        setCheckState("projectDetails")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = locationDetails.includes(key)
+            acc[key] = projectDetails.includes(key)
             return acc
           }, {})
           return updated
         })
-      } else if (headers === "overview") {
-        setCheckState("overview")
+      } else if (headers === "projectStatus") {
+        setCheckState("projectStatus")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = overview.includes(key)
+            acc[key] = projectStatus.includes(key)
             return acc
           }, {})
           return updated
         })
-      } else if (headers === "facilities") {
-        setCheckState("facilities")
+      } else if (headers === "paymentPlan") {
+        setCheckState("paymentPlan")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = facilities.includes(key)
+            acc[key] = paymentPlan.includes(key)
             return acc
           }, {})
           return updated
         })
-      } else if (headers === "all") {
+      } 
+      else if (headers === "projectInventory") {
+        setCheckState("projectInventory")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = projectInventory.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      }  
+      else if (headers === "all") {
         setCheckState("all")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce(
@@ -1428,14 +1446,14 @@ export default function MasterDevelopmentPage() {
                 <TableHeader>
                   {showHeaderCategories && (
                     <TableRow>
-                      {(checkState === "locationDetails" || checkState === "all") && (
+                      {(checkState === "projectDetails" || checkState === "all") && (
                         <TableHead
-                          onClick={() => toggleColumnVisibility("a", "locationDetails")}
-                          colSpan={isSelectionMode ? 5 : 4}
+                          onClick={() => toggleColumnVisibility("a", "projectDetails")}
+                          colSpan={isSelectionMode ? 9 : 9}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
                         >
-                          Location Details
-                          {checkState === "locationDetails" && (
+                          Project Details
+                          {checkState === "projectDetails" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1450,14 +1468,14 @@ export default function MasterDevelopmentPage() {
                         </TableHead>
                       )}
 
-                      {(checkState === "overview" || checkState === "all") && (
+                      {(checkState === "projectStatus" || checkState === "all") && (
                         <TableHead
-                          onClick={() => toggleColumnVisibility("a", "overview")}
+                          onClick={() => toggleColumnVisibility("a", "projectStatus")}
                           colSpan={isSelectionMode ? 5 : 4}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
                         >
-                          Overview
-                          {checkState === "overview" && (
+                          Project Status
+                          {checkState === "projectStatus" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -1472,14 +1490,35 @@ export default function MasterDevelopmentPage() {
                         </TableHead>
                       )}
 
-                      {(checkState === "facilities" || checkState === "all") && (
+                      {(checkState === "paymentPlan" || checkState === "all") && (
                         <TableHead
-                          onClick={() => toggleColumnVisibility("a", "facilities")}
-                          colSpan={isSelectionMode ? 3 : 2}
-                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
+                          onClick={() => toggleColumnVisibility("a", "paymentPlan")}
+                          colSpan={isSelectionMode ? 5 : 5}
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-orange-500 to-orange-400 border-r border-border relative"
                         >
-                          Facilities & Amenities
-                          {checkState === "facilities" && (
+                          Project Payment Plan
+                          {checkState === "paymentPlan" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
+                        </TableHead>
+                      )} 
+                      {(checkState === "projectInventory" || checkState === "all") && (
+                        <TableHead
+                          onClick={() => toggleColumnVisibility("a", "projectInventory")}
+                          colSpan={isSelectionMode ? 14 : 14}
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-blue-500 to-blue-400 border-r border-border relative"
+                        >
+                          Project Inventory
+                          {checkState === "projectInventory" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()

@@ -9,10 +9,13 @@ interface projectFilterState {
   constructionStatus?: any;
   facilitiesCategories?: string[];
   amentiesCategories?: string[];
-  launchDate? : string; 
+  launchDate? : string;  
   startDate?: string;   
   saleStatus : string; 
-  percentOfConstruction : any;
+  percentOfConstruction : any; 
+  uponCompletion?: string;
+  installmentDate?: string;
+  postHandOver?: string;
   completionDate?:string;
   endDate?: string;
 }
@@ -29,8 +32,11 @@ const initialState: projectFilterState = {
   launchDate : '', 
   saleStatus : '', 
   percentOfConstruction: null,
-  completionDate : '',
-  startDate: '',       
+  completionDate : '', 
+  uponCompletion: "",
+  installmentDate: "",
+  postHandOver: "",
+  startDate: '',
   endDate: '',    
 };
 
@@ -73,6 +79,15 @@ const projectFilterSlice = createSlice({
     },  
     setLaunchDate : (state, action: PayloadAction<string>) => {
       state.launchDate = action.payload;
+    }, 
+    setUponCompletion : (state, action: PayloadAction<string>) => {
+      state.uponCompletion = action.payload;
+    }, 
+    setInstallmentDate : (state, action: PayloadAction<string>) => {
+      state.installmentDate = action.payload;
+    }, 
+    setPostHandOver : (state, action: PayloadAction<string>) => {
+      state.postHandOver = action.payload;
     },
     setStartDate: (state, action: PayloadAction<string>) => {
       state.startDate = action.payload;
@@ -97,7 +112,10 @@ export const {
   setEndDate, 
   setpercentOfConstruction,
   resetFilters,  
-  setCompletionDate, 
+  setCompletionDate,  
+  setInstallmentDate, 
+  setPostHandOver, 
+  setUponCompletion,
   setSaleStatus,
   setLaunchDate
 } = projectFilterSlice.actions;

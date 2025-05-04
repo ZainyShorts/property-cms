@@ -1,14 +1,16 @@
-import { useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { 
+"use client"
+
+import type React from "react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
+import {
   setmasterDevelopment,
   setsubDevelopment,
   setPropertyType,
@@ -20,38 +22,41 @@ import {
   setLaunchDate,
   setCompletionDate,
   setSaleStatus,
-  setpercentOfConstruction
-} from "@/lib/store/slices/projectSlice";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+  setpercentOfConstruction,
+  setInstallmentDate,
+  setPostHandOver,
+  setUponCompletion,
+} from "@/lib/store/slices/projectSlice"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState } from "@/store"
+import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface FilterSidebarProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 enum PropertyType {
-  Apartment = 'Apartment',
-  Shops = 'Shops',
-  Offices = 'Offices',
-  Hotel = 'Hotel',
-  Townhouse = 'Townhouse',
-  Villas = 'Villas',
-  Mansions = 'Mansions',
-  Showroom = 'Showroom',
-  Warehouse = 'Warehouse',
-  LabourCamp = 'Labour Camp',
-  Hospital = 'Hospital',
-  School = 'School',
-  Bungalow = 'Bungalow',
+  Apartment = "Apartment",
+  Shops = "Shops",
+  Offices = "Offices",
+  Hotel = "Hotel",
+  Townhouse = "Townhouse",
+  Villas = "Villas",
+  Mansions = "Mansions",
+  Showroom = "Showroom",
+  Warehouse = "Warehouse",
+  LabourCamp = "Labour Camp",
+  Hospital = "Hospital",
+  School = "School",
+  Bungalow = "Bungalow",
 }
 
 enum SaleStatus {
-  PRIMARY = 'Primary',
-  OFF_PLANN_RESALE = 'Off Plan Resale',
-  RESALE = 'Resale',
+  PRIMARY = "Primary",
+  OFF_PLANN_RESALE = "Off Plan Resale",
+  RESALE = "Resale",
 }
 
 const facilitiesCategoriesOptions = [
@@ -61,8 +66,8 @@ const facilitiesCategoriesOptions = [
   "Hospitals",
   "Clinics",
   "Malls",
-  "Public Transport"
-];
+  "Public Transport",
+]
 
 const amenitiesCategoriesOptions = [
   "Gym",
@@ -130,78 +135,88 @@ const amenitiesCategoriesOptions = [
   "Handyman on-call services",
   "Pest control & Fumigation Support",
   "Green Building Certification",
-  "Community Recycling Points"
-];
+  "Community Recycling Points",
+]
 
-const projectQualityOptions = ["A", "B", "C"];
+const projectQualityOptions = ["A", "B", "C"]
 
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
-  const dispatch = useDispatch();
-  const filters = useSelector((state: RootState) => state.projectFilter);
+  const dispatch = useDispatch()
+  const filters = useSelector((state: RootState) => state.projectFilter)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value } = e.target
     switch (name) {
       case "masterDevelopment":
-        dispatch(setmasterDevelopment(value));
-        break;
+        dispatch(setmasterDevelopment(value))
+        break
       case "subDevelopment":
-        dispatch(setsubDevelopment(value));
-        break;
+        dispatch(setsubDevelopment(value))
+        break
       case "projectName":
-        dispatch(setProjectName(value));
-        break;
+        dispatch(setProjectName(value))
+        break
       case "constructionStatus":
-        const numValue = parseInt(value);
+        const numValue = Number.parseInt(value)
         if (!isNaN(numValue) && numValue >= 0) {
-          dispatch(setConstructionStatus(numValue));
+          dispatch(setConstructionStatus(numValue))
         }
-        break;
+        break
       case "percentOfConstruction":
-        const percent = parseInt(value);
+        const percent = Number.parseInt(value)
         if (!isNaN(percent) && percent >= 0 && percent <= 100) {
-          dispatch(setpercentOfConstruction(percent));
+          dispatch(setpercentOfConstruction(percent))
         }
-        break;
+        break
     }
-  };
+  }
 
   const handlePropertyTypeChange = (value: PropertyType) => {
-    dispatch(setPropertyType(value));
-  };
+    dispatch(setPropertyType(value))
+  }
 
   const handleSaleStatusChange = (value: SaleStatus) => {
-    dispatch(setSaleStatus(value));
-  };
+    dispatch(setSaleStatus(value))
+  }
 
   const handleProjectQualityChange = (value: string) => {
-    dispatch(setProjectQuality(value));
-  };
+    dispatch(setProjectQuality(value))
+  }
 
   const handleLaunchDateChange = (date: Date | undefined) => {
-    dispatch(setLaunchDate(date ? format(date, 'yyyy-MM-dd') : ''));
-  };
+    dispatch(setLaunchDate(date ? format(date, "yyyy-MM-dd") : ""))
+  }
 
   const handleCompletionDateChange = (date: Date | undefined) => {
-    dispatch(setCompletionDate(date ? format(date, 'yyyy-MM-dd') : ''));
-  };
+    dispatch(setCompletionDate(date ? format(date, "yyyy-MM-dd") : ""))
+  }
+
+  const handleInstallmentDateChange = (date: Date | undefined) => {
+    dispatch(setInstallmentDate(date ? format(date, "yyyy-MM-dd") : ""))
+  }
+
+  const handlePostHandOverChange = (date: Date | undefined) => {
+    dispatch(setPostHandOver(date ? format(date, "yyyy-MM-dd") : ""))
+  }
+
+  const handleUponCompletionChange = (date: Date | undefined) => {
+    dispatch(setUponCompletion(date ? format(date, "yyyy-MM-dd") : ""))
+  }
 
   const handleCheckboxChange = (
     category: "facilitiesCategories" | "amentiesCategories",
     value: string,
-    checked: boolean
+    checked: boolean,
   ) => {
-    const currentValues = filters[category] || [];
-    const updated = checked
-      ? [...currentValues, value]
-      : currentValues.filter((item) => item !== value);
+    const currentValues = filters[category] || []
+    const updated = checked ? [...currentValues, value] : currentValues.filter((item) => item !== value)
 
     if (category === "facilitiesCategories") {
-      dispatch(setFacilitiesCategories(updated));
+      dispatch(setFacilitiesCategories(updated))
     } else {
-      dispatch(setAmentiesCategories(updated));
+      dispatch(setAmentiesCategories(updated))
     }
-  };
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -239,10 +254,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           {/* Property Type */}
           <div className="space-y-2">
             <Label>Property Type</Label>
-            <Select
-              value={filters.propertyType || ""}
-              onValueChange={handlePropertyTypeChange}
-            >
+            <Select value={filters.propertyType || ""} onValueChange={handlePropertyTypeChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select property type" />
               </SelectTrigger>
@@ -259,10 +271,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           {/* Sale Status */}
           <div className="space-y-2">
             <Label>Sale Status</Label>
-            <Select
-              value={filters.saleStatus || ""}
-              onValueChange={handleSaleStatusChange}
-            >
+            <Select value={filters.saleStatus || ""} onValueChange={handleSaleStatusChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select sale status" />
               </SelectTrigger>
@@ -291,10 +300,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           {/* Project Quality */}
           <div className="space-y-2">
             <Label>Project Quality</Label>
-            <Select
-              value={filters.projectQuality || ""}
-              onValueChange={handleProjectQualityChange}
-            >
+            <Select value={filters.projectQuality || ""} onValueChange={handleProjectQualityChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select project quality" />
               </SelectTrigger>
@@ -342,12 +348,9 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
             <Label>Launch Date</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filters.launchDate ? format(new Date(filters.launchDate), 'PPP') : <span>Pick a date</span>}
+                  {filters.launchDate ? format(new Date(filters.launchDate), "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -366,12 +369,9 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
             <Label>Completion Date</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start text-left font-normal"
-                >
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filters.completionDate ? format(new Date(filters.completionDate), 'PPP') : <span>Pick a date</span>}
+                  {filters.completionDate ? format(new Date(filters.completionDate), "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
@@ -379,6 +379,73 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                   mode="single"
                   selected={filters.completionDate ? new Date(filters.completionDate) : undefined}
                   onSelect={handleCompletionDateChange}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Installment Date */}
+          <div className="space-y-2">
+            <Label>Installment Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.installmentDate ? (
+                    format(new Date(filters.installmentDate), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.installmentDate ? new Date(filters.installmentDate) : undefined}
+                  onSelect={handleInstallmentDateChange}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Post Hand Over */}
+          <div className="space-y-2">
+            <Label>Post Hand Over</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.postHandOver ? format(new Date(filters.postHandOver), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.postHandOver ? new Date(filters.postHandOver) : undefined}
+                  onSelect={handlePostHandOverChange}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Upon Completion */}
+          <div className="space-y-2">
+            <Label>Upon Completion</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filters.uponCompletion ? format(new Date(filters.uponCompletion), "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={filters.uponCompletion ? new Date(filters.uponCompletion) : undefined}
+                  onSelect={handleUponCompletionChange}
                   initialFocus
                 />
               </PopoverContent>
@@ -431,5 +498,5 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

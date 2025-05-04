@@ -17,7 +17,7 @@ interface FilterState {
   vacancyStatus: string 
   unitView: string[]
 }
-
+ 
 const initialState: FilterState = {
   roadLocation: "",
   developmentName: "",
