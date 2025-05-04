@@ -268,7 +268,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(SaleStatus).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
+                  <SelectItem key={value} value={label}>
                     {label}
                   </SelectItem>
                 ))}

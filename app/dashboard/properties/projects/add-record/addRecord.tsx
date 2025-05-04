@@ -24,6 +24,24 @@ enum SalesStatus {
   RESALE = "Resale",
 }
 
+enum PlotPermission {
+  Apartment = "Apartment",
+  Shops = "Shops",
+  Offices = "Offices",
+  Hotel = "Hotel",
+  Townhouse = "Townhouse",
+  Villas = "Villas",
+  Mansions = "Mansions",
+  Showroom = "Showroom",
+  Warehouse = "Warehouse",
+  LabourCamp = "Labour Camp",
+  Hospital = "Hospital",
+  School = "School",
+  Bungalow = "Bungalow",
+}
+
+const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
+
 interface FormValues {
   // Project Details
   masterDevelopment: string
@@ -33,12 +51,12 @@ interface FormValues {
   projectQuality: string
 
   // Construction & Sales
-  constructionStatus: number
+  constructionStatus: number | string
   launchDate: Date | undefined
   completionDate: Date | undefined
   salesStatus: string
-  downPayment: number
-  percentOfConstruction: number
+  downPayment: number | string
+  percentOfConstruction: number | string
   installmentDate: Date | undefined
   uponCompletion: Date | undefined
   postHandOver: Date | undefined
@@ -111,6 +129,8 @@ export function AddRecordModal({
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
+  const [isPlotModalOpen, setIsPlotModalOpen] = useState(false)
+  const [plotDetails, setPlotDetails] = useState<any>(null)
 
   // React Hook Form setup
   const {
@@ -118,6 +138,7 @@ export function AddRecordModal({
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
@@ -204,21 +225,23 @@ export function AddRecordModal({
 
   // Fixed: Changed useState to useEffect for calculating totals
   useEffect(() => {
+    const parseValue = (value: string) => (value === "" ? 0 : Number(value))
+
     const totalUnits =
-      Number(watchShops) +
-      Number(watchOffices) +
-      Number(watchStudios) +
-      Number(watchOneBr) +
-      Number(watchTwoBr) +
-      Number(watchThreeBr) +
-      Number(watchFourBr) +
-      Number(watchFiveBr) +
-      Number(watchSixBr) +
-      Number(watchSevenBr) +
-      Number(watchEightBr)
+      parseValue(watchShops) +
+      parseValue(watchOffices) +
+      parseValue(watchStudios) +
+      parseValue(watchOneBr) +
+      parseValue(watchTwoBr) +
+      parseValue(watchThreeBr) +
+      parseValue(watchFourBr) +
+      parseValue(watchFiveBr) +
+      parseValue(watchSixBr) +
+      parseValue(watchSevenBr) +
+      parseValue(watchEightBr)
 
     setValue("total", totalUnits)
-    setValue("available", totalUnits - Number(watchSold))
+    setValue("available", totalUnits - parseValue(watchSold))
   }, [
     watchShops,
     watchOffices,
@@ -326,15 +349,12 @@ export function AddRecordModal({
     }
   }, [open, editRecord])
 
-  // Use a ref to track if we've already populated the form for this editRecord
   const hasPopulatedRef = useRef(false)
 
   useEffect(() => {
     if (editRecord && Object.keys(editRecord).length > 0 && !hasPopulatedRef.current) {
-      // Set the ref to true to prevent repeated population
       hasPopulatedRef.current = true
 
-      // Populate form fields with edit data
       setValue(
         "masterDevelopment",
         typeof editRecord.masterDevelopment === "object" && editRecord.masterDevelopment?._id
@@ -410,6 +430,76 @@ export function AddRecordModal({
     }
   }, [open])
 
+  useEffect(() => {
+    if (editRecord?.plot) {
+      setPlotDetails(editRecord.plot)
+    }
+  }, [editRecord])
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!open) {
+      // Reset form fields
+      reset({
+        masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
+        subDevelopment: multiStepFormData?.subDevelopmentId || "",
+        propertyType: "Apartment",
+        projectName: "",
+        projectQuality: "B",
+        constructionStatus: 20,
+        launchDate: undefined,
+        completionDate: undefined,
+        salesStatus: SalesStatus.PRIMARY,
+        downPayment: 10,
+        percentOfConstruction: 50,
+        installmentDate: undefined,
+        uponCompletion: undefined,
+        postHandOver: undefined,
+        shops: "10",
+        offices: "5",
+        studios: "20",
+        oneBr: "30",
+        twoBr: "25",
+        threeBr: "15",
+        fourBr: "10",
+        fiveBr: "5",
+        sixBr: "2",
+        sevenBr: "1",
+        eightBr: "0",
+        total: 123,
+        sold: "30",
+        available: 93,
+        facilityCategories: [],
+        amenitiesCategories: [],
+        pictures: [],
+      })
+
+      // Reset pictures state
+      setPictures(Array(6).fill(null))
+
+      // Reset upload progress
+      setUploadProgress(Array(6).fill(0))
+
+      // Reset active image index
+      setActiveImageIndex(null)
+
+      // Reset plot details if any
+      setPlotDetails(null)
+
+      // Reset edit mode
+      setIsEditMode(false)
+    }
+  }, [open, reset, multiStepFormData])
+
+  const handlePlotDetailsSubmit = (updatedPlotDetails: any) => {
+    // Update the editRecord.plot with the new values
+    if (editRecord) {
+      editRecord.plot = { ...updatedPlotDetails }
+    }
+    setPlotDetails(updatedPlotDetails)
+    setIsPlotModalOpen(false)
+  }
+
   const onSubmit = async (data: any) => {
     console.log(`Form submission started for ${isEditMode ? "edit" : "create"}`)
     setIsSubmitting(true)
@@ -477,6 +567,29 @@ export function AddRecordModal({
         pictures: pictureUrls,
       }
 
+      // Convert empty strings to 0 for numeric fields
+      const convertEmptyToZero = (value: any) => {
+        if (value === "") return 0
+        return value
+      }
+
+      // Update submitData for numeric fields
+      submitData.shops = convertEmptyToZero(data.shops)
+      submitData.offices = convertEmptyToZero(data.offices)
+      submitData.studios = convertEmptyToZero(data.studios)
+      submitData.oneBr = convertEmptyToZero(data.oneBr)
+      submitData.twoBr = convertEmptyToZero(data.twoBr)
+      submitData.threeBr = convertEmptyToZero(data.threeBr)
+      submitData.fourBr = convertEmptyToZero(data.fourBr)
+      submitData.fiveBr = convertEmptyToZero(data.fiveBr)
+      submitData.sixBr = convertEmptyToZero(data.sixBr)
+      submitData.sevenBr = convertEmptyToZero(data.sevenBr)
+      submitData.eightBr = convertEmptyToZero(data.eightBr)
+      submitData.sold = convertEmptyToZero(data.sold)
+      submitData.constructionStatus = convertEmptyToZero(data.constructionStatus)
+      submitData.downPayment = convertEmptyToZero(data.downPayment)
+      submitData.percentOfConstruction = convertEmptyToZero(data.percentOfConstruction)
+
       // Handle subDevelopment (optional)
       if (data.subDevelopment) {
         submitData.subDevelopment = data.subDevelopment
@@ -484,12 +597,12 @@ export function AddRecordModal({
         submitData.subDevelopment = editRecord.subDevelopment
       } else if (multiStepFormData?.subDevelopmentId) {
         submitData.subDevelopment = multiStepFormData.subDevelopmentId
-      }  
-      console.log('edit',editRecord)
+      }
+      console.log("edit", editRecord)
 
       if (isEditMode && editRecord?.plot) {
-        submitData.plot = editRecord.plot
-        console.log("Using plot from editRecord:", editRecord.plot)
+        submitData.plot = plotDetails || editRecord.plot
+        console.log("Using plot from editRecord:", submitData.plot)
       } else if (multiStepFormData?.plot) {
         submitData.plot = multiStepFormData.plot
         console.log("Using plot from multiStepFormData:", multiStepFormData.plot)
@@ -518,6 +631,54 @@ export function AddRecordModal({
       }
 
       console.log("API response:", response)
+
+      // Reset form after successful submission
+      reset({
+        masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
+        subDevelopment: multiStepFormData?.subDevelopmentId || "",
+        propertyType: "Apartment",
+        projectName: "",
+        projectQuality: "B",
+        constructionStatus: 20,
+        launchDate: undefined,
+        completionDate: undefined,
+        salesStatus: SalesStatus.PRIMARY,
+        downPayment: 10,
+        percentOfConstruction: 50,
+        installmentDate: undefined,
+        uponCompletion: undefined,
+        postHandOver: undefined,
+        shops: "10",
+        offices: "5",
+        studios: "20",
+        oneBr: "30",
+        twoBr: "25",
+        threeBr: "15",
+        fourBr: "10",
+        fiveBr: "5",
+        sixBr: "2",
+        sevenBr: "1",
+        eightBr: "0",
+        total: 123,
+        sold: "30",
+        available: 93,
+        facilityCategories: [],
+        amenitiesCategories: [],
+        pictures: [],
+      })
+
+      // Reset pictures state
+      setPictures(Array(6).fill(null))
+
+      // Reset upload progress
+      setUploadProgress(Array(6).fill(0))
+
+      // Reset active image index
+      setActiveImageIndex(null)
+
+      // Reset plot details if any
+      setPlotDetails(null)
+
       setIsModalOpen(false)
     } catch (error: any) {
       console.error(`Error ${isEditMode ? "updating" : "submitting"} form:`, error)
@@ -637,12 +798,39 @@ export function AddRecordModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange || setIsModalOpen}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl h-auto  max-h-[90vh] overflow-y-auto pb-4 ">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">{isEditMode ? "Edit Project" : "Add Project"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {isEditMode && editRecord?.plot && (
+          <div className="mb-4">
+            <Button
+              onClick={() => setIsPlotModalOpen(true)}
+              className="w-full bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-medium py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+            >
+              Edit Plot Details
+            </Button>
+          </div>
+        )}
+
+        {isPlotModalOpen && (
+          <Dialog open={isPlotModalOpen} onOpenChange={setIsPlotModalOpen}>
+            <DialogContent className="sm:max-w-[500px] max-h-[70vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">Edit Plot Details</DialogTitle>
+              </DialogHeader>
+
+              <PlotDetailsForm
+                initialData={plotDetails}
+                onSubmit={handlePlotDetailsSubmit}
+                onCancel={() => setIsPlotModalOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 ">
           {/* Project Details Section */}
           <div className="p-4 border rounded-lg shadow-sm">
             <h2 className="text-lg font-semibold mb-4">Project Details</h2>
@@ -740,13 +928,15 @@ export function AddRecordModal({
                   }}
                   render={({ field }) => (
                     <Input
-                      type="number"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="numeric"
                       id="constructionStatus"
                       placeholder="e.g. 50"
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : Number(value))
+                      }}
                     />
                   )}
                 />
@@ -769,13 +959,15 @@ export function AddRecordModal({
                   }}
                   render={({ field }) => (
                     <Input
-                      type="number"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="numeric"
                       id="percentOfConstruction"
                       placeholder="e.g. 50"
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : Number(value))
+                      }}
                     />
                   )}
                 />
@@ -892,13 +1084,15 @@ export function AddRecordModal({
                   }}
                   render={({ field }) => (
                     <Input
-                      type="number"
-                      min="0"
-                      max="100"
+                      type="text"
+                      inputMode="numeric"
                       id="downPayment"
                       placeholder="e.g. 10"
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : Number(value))
+                      }}
                     />
                   )}
                 />
@@ -1020,7 +1214,19 @@ export function AddRecordModal({
                 <Controller
                   name="shops"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="shops" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="shops"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1031,7 +1237,19 @@ export function AddRecordModal({
                 <Controller
                   name="offices"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="offices" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="offices"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1042,7 +1260,19 @@ export function AddRecordModal({
                 <Controller
                   name="studios"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="studios" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="studios"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1053,7 +1283,19 @@ export function AddRecordModal({
                 <Controller
                   name="oneBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="oneBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="oneBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1064,7 +1306,19 @@ export function AddRecordModal({
                 <Controller
                   name="twoBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="twoBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="twoBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1075,7 +1329,19 @@ export function AddRecordModal({
                 <Controller
                   name="threeBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="threeBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="threeBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1086,7 +1352,19 @@ export function AddRecordModal({
                 <Controller
                   name="fourBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="fourBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="fourBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1097,7 +1375,19 @@ export function AddRecordModal({
                 <Controller
                   name="fiveBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="fiveBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="fiveBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1108,7 +1398,19 @@ export function AddRecordModal({
                 <Controller
                   name="sixBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="sixBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="sixBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1119,7 +1421,19 @@ export function AddRecordModal({
                 <Controller
                   name="sevenBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="sevenBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="sevenBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1130,7 +1444,19 @@ export function AddRecordModal({
                 <Controller
                   name="eightBr"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="eightBr" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="eightBr"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
             </div>
@@ -1164,7 +1490,19 @@ export function AddRecordModal({
                 <Controller
                   name="sold"
                   control={control}
-                  render={({ field }) => <Input type="number" min="0" id="sold" placeholder="0" {...field} />}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="sold"
+                      placeholder="0"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : value)
+                      }}
+                    />
+                  )}
                 />
               </div>
 
@@ -1272,7 +1610,7 @@ export function AddRecordModal({
           <div className="grid grid-cols-1 gap-6">
             <div className="p-4 border rounded-lg shadow-sm">
               <label className="text-lg font-medium">Facilities Categories *</label>
-              <div className="grid grid-cols-2 gap-3 mt-3 max-h-[200px] overflow-y-auto pr-2">
+              <div className="grid grid-cols-2 gap-3 mt-3 max-h-[150px] overflow-y-auto pr-2">
                 <Controller
                   name="facilityCategories"
                   control={control}
@@ -1308,7 +1646,7 @@ export function AddRecordModal({
 
             <div className="p-4 border rounded-lg shadow-sm">
               <label className="text-lg font-medium">Amenities Categories *</label>
-              <div className="grid grid-cols-2 gap-3 mt-3 max-h-[200px] overflow-y-auto pr-2">
+              <div className="grid grid-cols-2 gap-3 mt-3 max-h-[150px] overflow-y-auto pr-2">
                 <Controller
                   name="amenitiesCategories"
                   control={control}
@@ -1343,7 +1681,7 @@ export function AddRecordModal({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-6 pt-0">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
               Cancel
             </Button>
@@ -1364,5 +1702,172 @@ export function AddRecordModal({
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+interface PlotDetailsFormProps {
+  initialData: any
+  onSubmit: (data: any) => void
+  onCancel: () => void
+}
+
+function PlotDetailsForm({ initialData, onSubmit, onCancel }: PlotDetailsFormProps) {
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      plotNumber: initialData?.plotNumber || "",
+      plotHeight: initialData?.plotHeight || "",
+      plotSizeSqFt: initialData?.plotSizeSqFt || "",
+      plotStatus: initialData?.plotStatus || "Vacant",
+      plotBUASqFt: initialData?.plotBUASqFt || "",
+      plotPermission: initialData?.plotPermission || [],
+      buaAreaSqFt: initialData?.buaAreaSqFt || "",
+    },
+  })
+
+  const onFormSubmit = (data: any) => {
+    onSubmit(data)
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label htmlFor="plotNumber" className="text-sm font-medium">
+            Plot Number *
+          </label>
+          <Controller
+            name="plotNumber"
+            control={control}
+            rules={{ required: "Plot number is required" }}
+            render={({ field }) => <Input id="plotNumber" placeholder="Plot Number" {...field} />}
+          />
+          {errors.plotNumber && <p className="text-sm text-destructive">{errors.plotNumber.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="plotHeight" className="text-sm font-medium">
+            Plot Height *
+          </label>
+          <Controller
+            name="plotHeight"
+            control={control}
+            rules={{ required: "Plot height is required" }}
+            render={({ field }) => <Input id="plotHeight" placeholder="Plot Height" {...field} />}
+          />
+          {errors.plotHeight && <p className="text-sm text-destructive">{errors.plotHeight.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="plotSizeSqFt" className="text-sm font-medium">
+            Plot Size (Sq Ft) *
+          </label>
+          <Controller
+            name="plotSizeSqFt"
+            control={control}
+            rules={{ required: "Plot size is required" }}
+            render={({ field }) => <Input id="plotSizeSqFt" placeholder="Plot Size" {...field} />}
+          />
+          {errors.plotSizeSqFt && <p className="text-sm text-destructive">{errors.plotSizeSqFt.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="plotBUASqFt" className="text-sm font-medium">
+            Plot BUA (Sq Ft) *
+          </label>
+          <Controller
+            name="plotBUASqFt"
+            control={control}
+            rules={{ required: "Plot BUA is required" }}
+            render={({ field }) => <Input id="plotBUASqFt" placeholder="Plot BUA" {...field} />}
+          />
+          {errors.plotBUASqFt && <p className="text-sm text-destructive">{errors.plotBUASqFt.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="buaAreaSqFt" className="text-sm font-medium">
+            BUA Area (Sq Ft) *
+          </label>
+          <Controller
+            name="buaAreaSqFt"
+            control={control}
+            rules={{ required: "BUA area is required" }}
+            render={({ field }) => <Input id="buaAreaSqFt" placeholder="BUA Area" {...field} />}
+          />
+          {errors.buaAreaSqFt && <p className="text-sm text-destructive">{errors.buaAreaSqFt.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="plotStatus" className="text-sm font-medium">
+            Plot Status *
+          </label>
+          <Controller
+            name="plotStatus"
+            control={control}
+            rules={{ required: "Plot status is required" }}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger id="plotStatus">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plotStatusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.plotStatus && <p className="text-sm text-destructive">{errors.plotStatus.message}</p>}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Plot Permission *</label>
+        <div className="grid grid-cols-3 gap-2 max-h-[120px] overflow-y-auto pr-2">
+          <Controller
+            name="plotPermission"
+            control={control}
+            rules={{ required: "At least one permission is required" }}
+            render={({ field }) => (
+              <>
+                {Object.values(PlotPermission).map((permission) => (
+                  <div key={permission} className="flex flex-row items-start space-x-3 space-y-0">
+                    <Checkbox
+                      id={`permission-${permission}`}
+                      className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                      checked={field.value?.includes(permission)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          field.onChange([...(field.value || []), permission])
+                        } else {
+                          field.onChange((field.value || []).filter((value: string) => value !== permission))
+                        }
+                      }}
+                    />
+                    <label htmlFor={`permission-${permission}`} className="font-normal">
+                      {permission}
+                    </label>
+                  </div>
+                ))}
+              </>
+            )}
+          />
+        </div>
+        {errors.plotPermission && <p className="text-sm text-destructive">{errors.plotPermission.message}</p>}
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit">OK</Button>
+      </DialogFooter>
+    </form>
   )
 }

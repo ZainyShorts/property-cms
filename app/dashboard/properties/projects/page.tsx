@@ -44,7 +44,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
-import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
+import { resetFilters } from "@/lib/store/slices/projectSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities } from "./data/data"
@@ -123,7 +123,7 @@ export default function MasterDevelopmentPage() {
   const [currentPage, setCurrentPage] = useState<any>(1) 
   const [multiStepFormData, setMultiStepFormData] = useState<MultiStepFormData | null>(null)
   const [isMultiStepModalOpen, setIsMultiStepModalOpen] = useState(false)
-  const sortOrder = "desc"
+  const [sortOrder,setSortOrder] = useState("desc")
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [records, setRecords] = useState<MasterDevelopment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false) 
@@ -189,7 +189,7 @@ export default function MasterDevelopmentPage() {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
 
-  const fetchRecords = async (reset?: any, page?: any) => {
+  const fetchRecords = async (reset?: any, page?: any , value? : any) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -197,8 +197,13 @@ export default function MasterDevelopmentPage() {
       //   params.append("page", page.toString())
       // } else {
       // params.append("page", currentPage.toString())
-      // }
-      // params.append("sortOrder", sortOrder)
+      // } 
+      if (value) { 
+        params.append("sortOrder", value)
+
+      } else {
+      params.append("sortOrder", sortOrder) 
+      }
       // params.append("limit", limit.toString())
 
       // if (!reset) {
@@ -206,13 +211,13 @@ export default function MasterDevelopmentPage() {
       //     params.append("search", searchTerm)
       //   }
 
-      //   if (startDate) {
-      //     params.append("startDate", startDate.toISOString())
-      //   }
+        // if (startDate) {
+        //   params.append("startDate", startDate.toISOString())
+        // }
 
-      //   if (endDate) {
-      //     params.append("endDate", endDate.toISOString())
-      //   }
+        // if (endDate) {
+        //   params.append("endDate", endDate.toISOString())
+        // }
 
       //   if (activeFilters.roadLocation) {
       //     params.append("roadLocation", activeFilters.roadLocation)
@@ -294,18 +299,19 @@ export default function MasterDevelopmentPage() {
   }
 
   const handleSortChange = async (value: string) => {
-    setLoading(true)
-    const response = await axios.get<ApiResponse>(
-      `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?sortOrder=${value})}`,
-    )
-    setLoading(false)
+    // setLoading(true) 
+    // const response = await axios.get<ApiResponse>(
+    //   `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&sortBy=${value})}`,
+    // )
+    // setLoading(false)
 
-    setRecords(response.data.data)
-    setPagination({
-      totalCount: response.data.totalCount,
-      totalPages: response.data.totalPages,
-      pageNumber: response.data.pageNumber,
-    })
+    // setRecords(response.data.data)
+    // setPagination({
+    //   totalCount: response.data.totalCount,
+    //   totalPages: response.data.totalPages,
+    //   pageNumber: response.data.pageNumber,
+    // }) 
+    fetchRecords('a','a',value)
   }
 
   const handleLimitChange = (value: string) => {
@@ -315,7 +321,8 @@ export default function MasterDevelopmentPage() {
   const handleResetFilters = () => {
     dispatch(resetFilters())
     setStartDate(null)
-    setEndDate(null)
+    setEndDate(null) 
+    setSortOrder("desc")
     fetchRecords("reset")
   }
 
@@ -380,7 +387,15 @@ export default function MasterDevelopmentPage() {
       console.log("API request data:", requestData)
 
       const params = new URLSearchParams()
+      if (startDate) {
+        params.append("startDate", startDate.toISOString())
+      }
 
+      if (endDate) {
+        const adjustedEndDate = new Date(endDate);
+        adjustedEndDate.setHours(23, 59, 59, 999); 
+        params.append("endDate", adjustedEndDate.toISOString());
+      }
       params.append("page", requestData.page)
       params.append("limit", requestData.limit)
 
@@ -439,7 +454,6 @@ export default function MasterDevelopmentPage() {
   } 
    
   const handleEditMulti = (data? : any) => { 
-   console.log('multiData',data);  
    setEditMainRecord(data);
    setIsModalOpen(true) 
   }
@@ -452,7 +466,6 @@ export default function MasterDevelopmentPage() {
         setCopiedIds({ ...copiedIds, [id]: true })
         toast.success("ID copied to clipboard")
 
-        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedIds((prev) => {
             const newState = { ...prev }
@@ -475,8 +488,8 @@ export default function MasterDevelopmentPage() {
   }
 
   const handleEditRecord = (record: MasterDevelopment) => {
-    setEditRecord(record)
-    setIsMultiStepModalOpen(true);
+    setEditMainRecord(record) 
+    setIsModalOpen(true);
   }
 
   const handleDeleteClick = (recordId: string) => {
@@ -1085,7 +1098,6 @@ export default function MasterDevelopmentPage() {
   const handleSubmitExport = async (withFilters: boolean, count: number) => {
     setIsExportModalOpen(false)
 
-    // If in selection mode and we have selected rows and columns, export only selected data
     if (isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0) {
       exportSelectedData()
       return
@@ -1100,11 +1112,11 @@ export default function MasterDevelopmentPage() {
 
       if (withFilters) {
         const allFilters: Record<string, any> = {
-          developmentName: filters.developmentName,
-          roadLocation: filters.roadLocation,
-          locationQuality: filters.locationQuality,
-          buaAreaSqFtRange: filters.buaAreaSqFtRange,
-          totalAreaSqFtRange: filters.totalAreaSqFtRange,
+          projectName: filters.projectName,
+          propertyType: filters.propertyType,
+          projectQuality: filters.projectQuality,
+          constructionStatus: filters.constructionStatus,
+          salesStatus: filters.salesStatus,
           facilityCategories: filters.facilityCategories,
           amenitiesCategories: filters.amenitiesCategories,
         }
@@ -1127,27 +1139,11 @@ export default function MasterDevelopmentPage() {
           requestData.endDate = formattedEndDate.toISOString()
         }
 
-        if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
-        if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
-        if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
-
-        if (requestData.buaAreaSqFtRange) {
-          if (requestData.buaAreaSqFtRange.min) {
-            params.append("buaAreaSqFtMin", requestData.buaAreaSqFtRange.min.toString())
-          }
-          if (requestData.buaAreaSqFtRange.max) {
-            params.append("buaAreaSqFtMax", requestData.buaAreaSqFtRange.max.toString())
-          }
-        }
-
-        if (requestData.totalAreaSqFtRange) {
-          if (requestData.totalAreaSqFtRange.min) {
-            params.append("totalAreaSqFtMin", requestData.totalAreaSqFtRange.min.toString())
-          }
-          if (requestData.totalAreaSqFtRange.max) {
-            params.append("totalAreaSqFtMax", requestData.totalAreaSqFtRange.max.toString())
-          }
-        }
+        if (requestData.projectName) params.append("projectName", requestData.projectName)
+        if (requestData.propertyType) params.append("propertyType", requestData.propertyType)
+        if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
+        if (requestData.constructionStatus) params.append("constructionStatus", requestData.constructionStatus.toString())
+        if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus)
 
         // Add array filters
         if (requestData.facilityCategories && requestData.facilityCategories.length > 0) {
@@ -1162,31 +1158,34 @@ export default function MasterDevelopmentPage() {
           })
         }
 
-        // Add date filters
         if (requestData.startDate) params.append("startDate", requestData.startDate)
         if (requestData.endDate) params.append("endDate", requestData.endDate)
       }
 
-      const response = await axios.get<ApiResponse>(
-        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`,
+      const response = await axios.get<any>(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&${params.toString()}`,
       )
 
       const exportData = response.data.data
 
-      let csvContent =
-        "Road Location,Development Name,Location Quality,BUA Area (Sq Ft),Facilities Area (Sq Ft),Amenities Area (Sq Ft),Total Area (Sq Ft),Facilities Count,Amenities Count\n"
+      let csvContent = "Master Development,Sub Development,Project Name,Property Type,Project Quality,Construction Status,Facilities Count,Amenities Count,Launch Date,Completion Date,Sales Status,Total Units,Sold Units,Available Units\n"
 
       exportData.forEach((record) => {
-        const row = [
-          record.roadLocation,
-          record.developmentName,
-          record.locationQuality,
-          record.buaAreaSqFt,
-          record.facilitiesAreaSqFt,
-          record.amentiesAreaSqFt,
-          record.totalAreaSqFt,
+        const row = [ 
+          record.masterDevelopment?.developmentName, 
+          record.subDevelopment?.subDevelopment,
+          record.projectName,
+          record.propertyType,
+          record.projectQuality,
+          record.constructionStatus,
           record.facilityCategories.length,
           record.amenitiesCategories.length,
+          record.launchDate,
+          record.completionDate,
+          record.salesStatus,
+          record.total,
+          record.sold,
+          record.available,
         ]
 
         const escapedRow = row.map((field) => {
@@ -1205,7 +1204,7 @@ export default function MasterDevelopmentPage() {
       const url = URL.createObjectURL(blob)
 
       link.setAttribute("href", url)
-      link.setAttribute("download", `master-development-export-${new Date().toISOString().split("T")[0]}.csv`)
+      link.setAttribute("download", `projects-export-${new Date().toISOString().split("T")[0]}.csv`)
       link.style.visibility = "hidden"
 
       document.body.appendChild(link)
