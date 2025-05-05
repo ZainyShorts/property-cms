@@ -1,64 +1,204 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
-  Plus,
   Trash2,
   Copy,
   Check,
-  FilePenLine,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ExternalLink,
-  FileText,
   MousePointerIcon as MousePointerSquare,
   X,
   ClipboardCheck,
+  Info,
+  ArrowLeft,
+  Upload,
+  Edit,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { projectDetails, unitDetails, availability, unitTenancyDetails, paymentDetails } from "./data"
 import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
-import DocumentModal from "./DocumentModal"
+import { Switch } from "@/app/dashboard/properties/master-development/switch"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { cn } from "@/lib/utils"
 
 interface DataTableProps {
-  headers: string[]
   data?: any[]
   page?: any
   setPage: any
   Count: any
-  onAddButton?: () => void
-  onDelete?: (id: string) => void 
-  onShare? :(data : any) => void
-  onEdit?: (row: string) => void
+  onDelete?: (id: string) => void
+  onShare?: (data: any) => void
+  onEdit?: (row: any) => void
+  onAttachDocument?: (id: string) => void
+  loading?: boolean
 }
 
-export function DataTable({ headers, data = [], page, setPage, Count, onAddButton, onDelete, onShare , onEdit }: DataTableProps) {
-  const [copiedId, setCopiedId] = useState<string | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+export function DataTable({
+  data = [],
+  page,
+  setPage,
+  Count,
+  onDelete,
+  onShare,
+  selectedRows,
+  setSelectedColumns,
+  setSelectedRows,
+  toggleColumns,
+  toggleRow,
+  selectedColumns,
+  setIsSelectionMode,
+  selectedRowsMap,
+  isRowSelected, 
+  setSelectedRowsMap,
+  isSelectionMode,
+  onEdit,
+  onAttachDocument,
+  loading = false,
+}: any) {
+  const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
+  const [checkState, setCheckState] = useState<any>("all")
+
+  const [isAttachingDocument, setIsAttachingDocument] = useState(false)
   const itemsPerPage = 10
 
-  // Selection state
-  const [isSelectionMode, setIsSelectionMode] = useState(false)
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
-  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set())
+  // Table headers configuration
+  const tableHeaders = [
+    // Project Details
+    { key: "_id", label: "ID" },
+    { key: "roadLocation", label: "LOCATION NAME" },
+    { key: "subDevelopmentName", label: "SUB DEVELOPMENT" },
+    { key: "projectName", label: "PROJECT NAME" },
+    { key: "propertyType", label: "PROPERTY TYPE" },
 
-  // Get data keys excluding special fields
-  const dataKeys = data.length > 0 ? Object.keys(data[0]).filter((key) => key !== "propertyImages") : []
+    // Unit Details
+    { key: "unitNumber", label: "UNIT NUMBER" },
+    { key: "propertyHeight", label: "PROPERTY HEIGHT" },
+    { key: "unitLandSize", label: "UNIT LAND SIZE (SQ. FT)" },
+    { key: "unitBua", label: "UNIT BUA (SQ. FT)" },
+    { key: "unitLocation", label: "UNIT LOCATION" },
+    { key: "unitView", label: "UNIT VIEW" },
 
-  const handleCopy = (id: string) => {
+    { key: "Purpose", label: "PURPOSE" },
+    { key: "createdAt", label: "LISTING DATE" },
+    { key: "noOfCheques", label: "NO OF CHEQUE" },
+    { key: "Rent", label: "RENT" },
+    { key: "resalePrice", label: "RESALE PRICE" },
+
+    // Unit Tenancy Details
+    { key: "vacancyStatus", label: "VACCANCY STATUS" },
+
+    // Payment Details
+    { key: "primaryPrice", label: "PRIMARY PRICE" },
+    { key: "premiumAndLoss", label: "PREMIUM / LOSS" },
+
+    // Marketing Material
+    { key: "attachDocument", label: "DOCUMENTS" },
+
+    // Actions
+    { key: "edit", label: "EDIT" },
+    { key: "delete", label: "DELETE" },
+  ]
+
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
+    tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
+  )
+
+  const handleCopyId = (id: string) => {
     navigator.clipboard.writeText(id)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
+    setCopiedIds({ ...copiedIds, [id]: true })
+    setTimeout(() => {
+      setCopiedIds((prev) => ({ ...prev, [id]: false }))
+    }, 2000)
   }
 
-  const formatId = (id: string) => {
-    return id.slice(0, 4) + "..."
+  const handleAttachDocument = (id: string) => {
+    setIsAttachingDocument(true)
+    onAttachDocument?.(id)
+    setTimeout(() => setIsAttachingDocument(false), 1000)
   }
+
+  const handleEditRecord = (record: any) => {
+    onEdit?.(record)
+  }
+
+  const handleDeleteClick = (id: string) => {
+    onDelete?.(id)
+  }
+  const [showHeaderCategories, setShowHeaderCategories] = useState(false)
+
+  const toggleColumnVisibility = (columnKey: string, headers?: any) => {
+    if (headers) {
+      if (headers === "projectDetails") {
+        setCheckState("projectDetails")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = projectDetails.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "unitDetails") {
+        setCheckState("unitDetails")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = unitDetails.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "availability") {
+        setCheckState("availability")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = availability.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "unitTenancyDetails") {
+        setCheckState("unitTenancyDetails")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = unitTenancyDetails.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "paymentDetails") {
+        setCheckState("paymentDetails")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = paymentDetails.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } else if (headers === "all") {
+        setCheckState("all")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce(
+            (acc, key) => {
+              acc[key] = true
+              return acc
+            },
+            {} as Record<string, boolean>,
+          )
+          return updated
+        })
+      }
+    } else {
+      setVisibleColumns((prev) => ({
+        ...prev,
+        [columnKey]: !prev[columnKey],
+      }))
+    }
+  }
+  useEffect(() => {
+    setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
+  }, [selectedRowsMap, setSelectedRows])
 
   const totalPages = Math.ceil(Count / itemsPerPage) - 1
 
@@ -66,104 +206,174 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
     setPage(pageNumber)
   }
 
-  const openDocumentModal = (rowId: string) => {
-    setSelectedRowId(rowId)
-    setIsModalOpen(true)
-  }
-
   // Toggle row selection
-  const toggleRowSelection = (rowIndex: number) => {
-    if (!isSelectionMode) return
 
-    const newSelectedRows = new Set(selectedRows)
-    if (newSelectedRows.has(rowIndex)) {
-      newSelectedRows.delete(rowIndex)
-    } else {
-      newSelectedRows.add(rowIndex)
-    }
-    setSelectedRows(newSelectedRows)
-  }
-
-  // Toggle column selection
-  const toggleColumnSelection = (columnKey: string) => {
-    if (!isSelectionMode) return
-
-    const newSelectedColumns = new Set(selectedColumns)
-    if (newSelectedColumns.has(columnKey)) {
-      newSelectedColumns.delete(columnKey)
-    } else {
-      newSelectedColumns.add(columnKey)
-    }
-    setSelectedColumns(newSelectedColumns)
-  }
-
-  // Toggle selection mode
   const toggleSelectionMode = () => {
     if (isSelectionMode) {
       setIsSelectionMode(false)
-      setSelectedRows(new Set())
-      setSelectedColumns(new Set())
+      setSelectedRows([])
+      setSelectedColumns([])
+      setSelectedRowsMap({}) // Add this line
     } else {
       setIsSelectionMode(true)
     }
   }
 
-  // Get selected data (intersection of rows and columns)
   const getSelectedData = () => {
-    const selectedData: any[] = []
+    if (selectedRows.length === 0 || selectedColumns.length === 0) return []
 
-    // If no rows or columns are selected, return empty array
-    if (selectedRows.size === 0 || selectedColumns.size === 0) {
-      return selectedData
-    }
-
-    // For each selected row
-    Array.from(selectedRows).forEach((rowIndex) => {
-      const rowData: any = {}
-      const row = data[rowIndex]
-
-      // Only include selected columns
-      Array.from(selectedColumns).forEach((columnKey) => {
-        if (row.hasOwnProperty(columnKey)) {
-          rowData[columnKey] = row[columnKey]
-        }
+    return data
+      .filter((row) => selectedRows.includes(row._id))
+      .map((row) => {
+        const filteredRow: Record<string, any> = {}
+        selectedColumns.forEach((key) => {
+          filteredRow[key] = row[key]
+        })
+        return filteredRow
       })
-
-      if (Object.keys(rowData).length > 0) {
-        selectedData.push(rowData)
-      }
-    })
-
-    return selectedData
   }
 
   const logSelectedData = () => {
     const selectedData = getSelectedData()
-    onShare?.(selectedData); 
-  
-  }
-
-  const isCellSelected = (rowIndex: number, columnKey: string) => {
-    return selectedRows.has(rowIndex) && selectedColumns.has(columnKey)
+    onShare?.(selectedData)
   }
 
   const selectAllRows = () => {
-    const allRows = new Set<number>()
-    data.forEach((_, index) => allRows.add(index))
-    setSelectedRows(allRows)
+    const newSelectedRows = data.map((row) => row._id)
+    setSelectedRows(newSelectedRows)
+
+    // Update the map to include all rows on current page
+    const newMap = { ...selectedRowsMap }
+    data.forEach((row) => {
+      newMap[row._id] = true
+    })
+    setSelectedRowsMap(newMap)
   }
 
-  // Select all columns
   const selectAllColumns = () => {
-    const allColumns = new Set<string>()
-    dataKeys.forEach((key) => allColumns.add(key))
-    setSelectedColumns(allColumns)
+    setSelectedColumns(tableHeaders.map((header) => header.key))
   }
 
-  // Clear all selections
   const clearAllSelections = () => {
-    setSelectedRows(new Set())
-    setSelectedColumns(new Set())
+    setSelectedRows([])
+    setSelectedColumns([])
+    // Add this line to clear the map as well
+    setSelectedRowsMap({})
+  }
+
+  const renderCellContent = (record: any, key: string) => {
+    switch (key) {
+      case "_id":
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <span>{record._id.substring(0, 8) + "..."}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCopyId(record._id)
+              }}
+            >
+              {copiedIds[record._id] ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          </div>
+        )
+      case "unitBua":
+      case "unitLandSize":
+      case "primaryPrice":
+      case "resalePrice":
+      case "Rent":
+        return record[key] ? record[key].toLocaleString() : "-"
+      case "unitView":
+        if (Array.isArray(record[key])) {
+          return (
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div className="flex items-center justify-center gap-2 cursor-pointer">
+                  <Badge
+                    variant="outline"
+                    className="bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-200"
+                  >
+                    {record[key].length}
+                  </Badge>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-80 p-0">
+                <div className="p-4">
+                  <h4 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
+                    Unit Views ({record[key].length})
+                  </h4>
+                  {record[key].length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {record[key].map((view: string, idx: number) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-200"
+                        >
+                          {view}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No views</p>
+                  )}
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          )
+        }
+        return record[key] || "-"
+      case "attachDocument":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+            onClick={() => handleAttachDocument(record._id)}
+            disabled={isAttachingDocument}
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            Attach
+          </Button>
+        )
+      case "edit":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            onClick={() => handleEditRecord(record)}
+          >
+            <Edit className="h-4 w-4 mr-1" />
+            Edit
+          </Button>
+        )
+      case "delete":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            onClick={() => handleDeleteClick(record._id)}
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </Button>
+        )
+      case "createdAt":
+        return record[key] ? new Date(record[key]).toLocaleDateString() : "-"
+      default:
+        return record[key] || "-"
+    }
   }
 
   return (
@@ -171,9 +381,9 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
       <div className="rounded-lg border shadow-sm">
         {/* Selection toolbar */}
         {isSelectionMode && (
-          <div className="p-3 border-b border-border bg-muted/30">
+          <div className="p-3 border-b border-border">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap  items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="px-2 py-1 text-xs font-medium bg-background">
                   Selection Mode
                 </Badge>
@@ -206,9 +416,9 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
               </div>
 
               <div className="flex flex-wrap justify-center items-center gap-2">
-                {(selectedRows.size > 0 || selectedColumns.size > 0) && (
-                  <Badge className="bg-primary/10 text-primary hover:bg-primary/20 border-primary/20">
-                    {selectedRows.size} rows × {selectedColumns.size} columns
+                {(selectedRows.length > 0 || selectedColumns.length > 0) && (
+                  <Badge className="border-border">
+                    {selectedRows.length} rows × {selectedColumns.length} columns
                   </Badge>
                 )}
 
@@ -222,7 +432,7 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
                   Exit Selection
                 </Button>
 
-                {selectedRows.size > 0 && selectedColumns.size > 0 && (
+                {selectedRows.length > 0 && selectedColumns.length > 0 && (
                   <Button variant="default" size="sm" onClick={logSelectedData} className="h-8 gap-1.5">
                     <ClipboardCheck className="h-3.5 w-3.5" />
                     Export Selection
@@ -233,19 +443,14 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
           </div>
         )}
 
-        {/* Main toolbar */}
-        <div className="p-3 border-b border-border flex flex-wrap items-center justify-between gap-2 bg-muted/30">
+        {/* Main toolbar - with Add Record button removed */}
+        <div className="p-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
             {!isSelectionMode ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSelectionMode}
-                      className="gap-1.5 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary"
-                    >
+                    <Button variant="outline" size="sm" onClick={toggleSelectionMode} className="gap-1.5">
                       <MousePointerSquare className="h-4 w-4" />
                       Enable Selection
                     </Button>
@@ -256,389 +461,363 @@ export function DataTable({ headers, data = [], page, setPage, Count, onAddButto
                 </Tooltip>
               </TooltipProvider>
             ) : null}
-
-            {!isSelectionMode && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      className="gap-1.5 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
-                      onClick={onAddButton}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add record
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Add a new record to the table</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
+            <Switch
+              enabled={showHeaderCategories}
+              onChange={() => setShowHeaderCategories(!showHeaderCategories)}
+              label="Show Headers"
+            />
           </div>
-
-          {!isSelectionMode && (
-            <div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(page - 1)}
-                disabled={page === 1}
-                className="hover:bg-muted h-8 w-8 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              {totalPages <= 3 ? (
-                // If 3 or fewer pages on mobile, 5 or fewer on desktop, show all page numbers
-                Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
-                  <Button
-                    key={pageNumber}
-                    variant={page === pageNumber ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => goToPage(pageNumber)}
-                    className={`min-w-7 sm:min-w-8 ${page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                  >
-                    {pageNumber}
-                  </Button>
-                ))
-              ) : (
-                // If more than 3 pages on mobile, 5 on desktop, show simplified pagination
-                <>
-                  {/* Always show page 1 */}
-                  <Button
-                    variant={page === 1 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => goToPage(1)}
-                    className={`min-w-7 sm:min-w-8 ${page === 1 ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                  >
-                    1
-                  </Button>
-
-                  {/* Show ellipsis if current page > 3 */}
-                  {page > 3 && <span className="px-2 text-muted-foreground">...</span>}
-
-                  {/* Show current page and surrounding pages */}
-                  {page > 2 && page < totalPages - 1 && (
-                    <>
-                      {page > 3 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => goToPage(page - 1)}
-                          className="min-w-7 sm:min-w-8 hover:bg-muted hidden sm:inline-flex"
-                        >
-                          {page - 1}
-                        </Button>
-                      )}
-
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="min-w-7 sm:min-w-8 bg-primary text-primary-foreground"
-                      >
-                        {page}
-                      </Button>
-
-                      {page < totalPages - 2 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => goToPage(page + 1)}
-                          className="min-w-7 sm:min-w-8 hover:bg-muted hidden sm:inline-flex"
-                        >
-                          {page + 1}
-                        </Button>
-                      )}
-                    </>
-                  )}
-
-                  {/* Show ellipsis if current page < totalPages - 2 */}
-                  {page < totalPages - 2 && <span className="px-2 text-muted-foreground">...</span>}
-
-                  {/* Always show last page */}
-                  <Button
-                    variant={page === totalPages ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => goToPage(totalPages)}
-                    className={`min-w-7 sm:min-w-8 ${page === totalPages ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                  >
-                    {totalPages}
-                  </Button>
-                </>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => goToPage(page + 1)}
-                disabled={page === totalPages || totalPages === 0}
-                className="hover:bg-muted h-8 w-8 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-
-              <span className="text-sm text-muted-foreground ml-0 sm:ml-2 mt-1 sm:mt-0 w-full sm:w-auto text-center sm:text-left">
-                Page {page} of {totalPages || 1}
-              </span>
-            </div>
-          )}
         </div>
 
         <div className="overflow-x-auto thin-scrollbar sm:mx-0">
           <div className="min-w-full inline-block align-middle">
             <Table>
               <TableHeader>
+                {showHeaderCategories && (
+                  <TableRow>
+                    {(checkState === "projectDetails" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "projectDetails")}
+                        colSpan={isSelectionMode ? 5 : 5}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
+                      >
+                        Project Details
+                        {checkState === "projectDetails" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleColumnVisibility("a", "all")
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+
+                    {(checkState === "unitDetails" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "unitDetails")}
+                        colSpan={isSelectionMode ? 6 : 6}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
+                      >
+                        Unit Details
+                        {checkState === "unitDetails" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleColumnVisibility("a", "all")
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+
+                    {(checkState === "availability" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "availability")}
+                        colSpan={isSelectionMode ? 5 : 5}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-orange-500 to-orange-400 border-r border-border relative"
+                      >
+                        Availability
+                        {checkState === "availability" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleColumnVisibility("a", "all")
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+                    {(checkState === "unitTenancyDetails" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "unitTenancyDetails")}
+                        colSpan={isSelectionMode ? 1 : 1}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-blue-500 to-blue-400 border-r border-border relative"
+                      >
+                        Unit Tenency Details
+                        {checkState === "unitTenancyDetails" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleColumnVisibility("a", "all")
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+                    {(checkState === "paymentDetails" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "paymentDetails")}
+                        colSpan={isSelectionMode ? 2 : 2}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-blue-500 to-blue-400 border-r border-border relative"
+                      >
+                        Payment Details
+                        {checkState === "paymentDetails" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleColumnVisibility("a", "all")
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
+                    {(checkState === "actions" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "actions")}
+                        colSpan={isSelectionMode ? 3 : 3}
+                        className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                      >
+                        Other Actions
+                      </TableHead>
+                    )}
+                  </TableRow>
+                )}
                 <TableRow className="border-b border-border hover:bg-transparent">
                   {isSelectionMode && (
-                    <TableHead className="w-12 px-4 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
+                    <TableHead className="w-12 px-4 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
                       <div className="flex items-center justify-center">
                         <span className="sr-only">Row selection</span>
                       </div>
                     </TableHead>
                   )}
 
-                  {dataKeys.map((key, index) => (
-                    <TableHead
-                      key={index}
-                      className={`px-6 py-3 text-left text-xs text-muted-foreground uppercase tracking-widest whitespace-nowrap font-bold ${
-                        isSelectionMode
-                          ? selectedColumns.has(key)
-                            ? "bg-primary/10 border-b-2 border-primary/30"
-                            : "bg-muted/30"
-                          : "bg-muted/30"
-                      }`}
-                      onClick={() => toggleColumnSelection(key)}
-                      style={{ cursor: isSelectionMode ? "pointer" : "default" }}
-                    >
-                      <div className="flex items-center gap-2">
+                  {tableHeaders
+                    .filter((header) => visibleColumns[header.key])
+                    .map((header) => (
+                      <TableHead
+                        key={header.key}
+                        className={cn(
+                          "whitespace-nowrap text-center border-b",
+                          header.key === "_id" && "w-[120px]",
+                          header.key === "roadLocation" && "w-[120px]",
+                          header.key === "subDevelopmentName" && "w-[150px]",
+                          header.key === "projectName" && "w-[150px]",
+                          header.key === "propertyType" && "w-[180px]",
+                          header.key === "unitNumber" && "w-[180px]",
+                          header.key === "propertyHeight" && "w-[150px]",
+                          header.key === "unitLandSize" && "w-[120px]",
+                          header.key === "unitBua" && "w-[120px]",
+                          header.key === "unitLocation" && "w-[120px]",
+                          header.key === "unitView" && "w-[100px]",
+                          header.key === "Purpose" && "w-[100px]",
+                          header.key === "createdAt" && "w-[100px]",
+                          header.key === "noOfCheques" && "w-[100px]",
+                          header.key === "Rent" && "w-[100px]",
+                          header.key === "resalePrice" && "w-[100px]",
+                          header.key === "vacancyStatus" && "w-[100px]",
+                          header.key === "primaryPrice" && "w-[100px]",
+                          header.key === "premiumAndLoss" && "w-[100px]",
+                          header.key === "attachDocument" && "w-[100px]",
+                          header.key === "edit" && "w-[100px]",
+                          header.key === "delete" && "w-[100px]",
+                        )}
+                      >
                         {isSelectionMode && (
-                          <div className="flex-shrink-0">
-                            {selectedColumns.has(key) ? (
-                              <div className="h-4 w-4 rounded border border-primary bg-primary/20 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-primary" />
-                              </div>
-                            ) : (
-                              <div className="h-4 w-4 rounded border border-muted-foreground/30 bg-background/80"></div>
-                            )}
+                          <div className="flex flex-col items-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedColumns.includes(header.key)}
+                              onChange={() => toggleColumns(header.key)}
+                              className="mb-2"
+                            />
                           </div>
                         )}
-                        <span className={isSelectionMode && selectedColumns.has(key) ? "text-primary font-bold" : ""}>
-                          {key}
-                        </span>
-                      </div>
-                    </TableHead>
-                  ))}
-
-                  {!isSelectionMode && (
-                    <>
-                      <TableHead className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
-                        Upload Documents
+                        <div className={isSelectionMode ? "uppercase text-xs font-bold" : ""}>{header.label}</div>
                       </TableHead>
-                      <TableHead className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
-                        Edit
-                      </TableHead>
-                      <TableHead className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
-                        Actions
-                      </TableHead>
-                      <TableHead className="px-6 py-3 text-left text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap bg-muted/30">
-                        View
-                      </TableHead>
-                    </>
-                  )}
+                    ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((row, rowIndex) => (
-                  <TableRow
-                    key={rowIndex}
-                    className={`border-b border-border/50 hover:bg-muted/30 transition-colors ${
-                      isSelectionMode && selectedRows.has(rowIndex) ? "bg-primary/5" : ""
-                    }`}
-                  >
-                    {isSelectionMode && (
-                      <TableCell
-                        className="w-12 px-4 py-4 whitespace-nowrap text-sm text-foreground"
-                        onClick={() => toggleRowSelection(rowIndex)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="flex items-center justify-center">
-                          {selectedRows.has(rowIndex) ? (
-                            <div className="h-5 w-5 rounded border border-primary bg-primary/20 flex items-center justify-center">
-                              <Check className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                          ) : (
-                            <div className="h-5 w-5 rounded border border-muted-foreground/30 bg-background/80"></div>
-                          )}
-                        </div>
-                      </TableCell>
-                    )}
-
-                    {Object.entries(row)
-                      .filter(([key]) => key !== "propertyImages")
-                      .map(([key, val]: [string, any], index) => {
-                        const isSelected = isCellSelected(rowIndex, key)
-                        const isRowSelected = selectedRows.has(rowIndex)
-                        const isColumnSelected = selectedColumns.has(key)
-
-                        return (
-                          <TableCell
-                            key={index}
-                            className={`px-6 py-4 whitespace-nowrap text-sm ${
-                              isSelectionMode
-                                ? isSelected
-                                  ? "bg-primary/20 font-medium"
-                                  : isRowSelected || isColumnSelected
-                                    ? "bg-primary/5"
-                                    : ""
-                                : ""
-                            } ${
-                              isSelectionMode && isSelected
-                                ? "border border-primary/30"
-                                : isSelectionMode && (isRowSelected || isColumnSelected)
-                                  ? "border-transparent"
-                                  : ""
-                            }`}
-                            onClick={(e) => {
-                              if (isSelectionMode) {
-                                // If we click on a cell, we want to select both the row and column
-                                if (!selectedRows.has(rowIndex) && !selectedColumns.has(key)) {
-                                  toggleRowSelection(rowIndex)
-                                  toggleColumnSelection(key)
-                                } else if (selectedRows.has(rowIndex) && !selectedColumns.has(key)) {
-                                  toggleColumnSelection(key)
-                                } else if (!selectedRows.has(rowIndex) && selectedColumns.has(key)) {
-                                  toggleRowSelection(rowIndex)
-                                }
-                              }
-                            }}
-                            style={{ cursor: isSelectionMode ? "pointer" : "default" }}
-                          >
-                            {key === "_id" ? (
-                              <div className="flex items-center space-x-2">
-                                <span>{formatId(val)}</span>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleCopy(val)
-                                        }}
-                                        className="h-6 w-6 p-0 hover:bg-muted"
-                                      >
-                                        {copiedId === val ? (
-                                          <Check className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                          <Copy className="h-4 w-4 text-muted-foreground" />
-                                        )}
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>{copiedId === val ? "Copied" : "Copy"}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </div>
-                            ) : key === "unitView" && Array.isArray(val) ? (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
-                                    View <ChevronDown className="ml-2 h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  {val.map((item: string, i: number) => (
-                                    <div key={i} className="px-2 py-1 text-sm">
-                                      {item}
-                                    </div>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            ) : (
-                              val
-                            )}
+                {loading ? (
+                  Array(5)
+                    .fill(0)
+                    .map((_, index) => (
+                      <TableRow key={index}>
+                        {isSelectionMode && (
+                          <TableCell className="text-center">
+                            <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
                           </TableCell>
-                        )
-                      })}
-
-                    {!isSelectionMode && (
-                      <>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openDocumentModal(row._id)
-                            }}
-                            className="bg-black text-white dark:bg-white dark:text-black hover:bg-black/80 dark:hover:bg-white/80 transition-colors"
-                          >
-                            <FileText className="h-4 w-4 mr-2" />
-                            Documents
-                          </Button>
+                        )}
+                        {tableHeaders
+                          .filter((header) => visibleColumns[header.key])
+                          .map((header) => (
+                            <TableCell key={`${index}-${header.key}`}>
+                              <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
+                            </TableCell>
+                          ))}
+                      </TableRow>
+                    ))
+                ) : data.length > 0 ? (
+                  data.map((record, index) => (
+                    <TableRow key={record._id} className={index % 2 === 0 ? "bg-gray-50 dark:bg-gray-800/50" : ""}>
+                      {isSelectionMode && (
+                        <TableCell className="text-center">
+                          <input
+                            type="checkbox"
+                            checked={isRowSelected(record._id)}
+                            onChange={() => toggleRow(record._id)}
+                          />
                         </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onEdit && onEdit(row)
-                            }}
-                            className="hover:bg-muted text-muted-foreground hover:text-foreground"
-                          >
-                            <FilePenLine className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDelete && onDelete(row._id)
-                            }}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm">
-                          <Link
-                            href={`/dashboard/properties/${row._id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                        </TableCell>
-                      </>
-                    )}
+                      )}
+                      {tableHeaders
+                        .filter((header) => visibleColumns[header.key])
+                        .map((header) => (
+                          <TableCell key={`${record._id}-${header.key}`} className="text-center">
+                            {renderCellContent(record, header.key)}
+                          </TableCell>
+                        ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={
+                        isSelectionMode
+                          ? tableHeaders.filter((header) => visibleColumns[header.key]).length + 1
+                          : tableHeaders.filter((header) => visibleColumns[header.key]).length
+                      }
+                      className="text-center py-10"
+                    >
+                      Your records will be shown here
+                    </TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           </div>
         </div>
 
-        {!isSelectionMode && (
-          <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/30">
-            <span></span> {/* Empty span to maintain layout */}
-            <div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
-              <span className="text-sm text-muted-foreground ml-0 sm:ml-2 mt-1 sm:mt-0 w-full sm:w-auto text-center sm:text-left">
-                {data.length} records
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
+        {/* Pagination moved to the bottom */}
+        <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
+          <span className="text-sm text-muted-foreground">{data.length} records</span>
 
-      <DocumentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} rowId={selectedRowId} />
+          <div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className="hover:bg-muted h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {totalPages <= 3 ? (
+              // If 3 or fewer pages on mobile, 5 or fewer on desktop, show all page numbers
+              Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                <Button
+                  key={pageNumber}
+                  variant={page === pageNumber ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(pageNumber)}
+                  className={`min-w-7 sm:min-w-8 ${page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  {pageNumber}
+                </Button>
+              ))
+            ) : (
+              // If more than 3 pages on mobile, 5 on desktop, show simplified pagination
+              <>
+                {/* Always show page 1 */}
+                <Button
+                  variant={page === 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(1)}
+                  className={`min-w-7 sm:min-w-8 ${page === 1 ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  1
+                </Button>
+
+                {/* Show ellipsis if current page > 3 */}
+                {page > 3 && <span className="px-2 text-muted-foreground">...</span>}
+
+                {/* Show current page and surrounding pages */}
+                {page > 2 && page < totalPages - 1 && (
+                  <>
+                    {page > 3 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => goToPage(page - 1)}
+                        className="min-w-7 sm:min-w-8 hover:bg-muted hidden sm:inline-flex"
+                      >
+                        {page - 1}
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="min-w-7 sm:min-w-8 bg-primary text-primary-foreground"
+                    >
+                      {page}
+                    </Button>
+
+                    {page < totalPages - 2 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => goToPage(page + 1)}
+                        className="min-w-7 sm:min-w-8 hover:bg-muted hidden sm:inline-flex"
+                      >
+                        {page + 1}
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                {/* Show ellipsis if current page < totalPages - 2 */}
+                {page < totalPages - 2 && <span className="px-2 text-muted-foreground">...</span>}
+
+                {/* Always show last page */}
+                <Button
+                  variant={page === totalPages ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(totalPages)}
+                  className={`min-w-7 sm:min-w-8 ${page === totalPages ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  {totalPages}
+                </Button>
+              </>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages || totalPages === 0}
+              className="hover:bg-muted h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            <span className="text-sm text-muted-foreground ml-2">
+              Page {page} of {totalPages || 1}
+            </span>
+          </div>
+        </div>
+      </div>
     </>
   )
 }

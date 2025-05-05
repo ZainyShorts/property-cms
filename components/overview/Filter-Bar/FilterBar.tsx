@@ -4,7 +4,10 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" 
+import {Upload , Download} from "lucide-react" 
+import { ImportRecordsModal } from "@/app/dashboard/properties/master-development/import-records/import-records"
+import { useState } from "react"
 import { ChevronDown, ChevronRight, Filter, CalendarIcon, Trash2, FileDown } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { format } from "date-fns"
@@ -26,12 +29,14 @@ interface FilterBarProps {
   breadcrumbs: BreadcrumbItem[]
   onAddButton?: () => void
   onFilter: () => void
-  onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void 
+  
   onFilterChange?: (key: string, value: string) => void
   showDatePickers?: boolean
   onApplyFilters: () => void
   startDate?: Date | null
-  endDate?: Date | null
+  endDate?: Date | null 
+  
   onStartDateChange?: (date: Date | null) => void
   onEndDateChange?: (date: Date | null) => void
   onClear?: () => void
@@ -44,7 +49,14 @@ export function FilterBar({
   filters,
   breadcrumbs,
   onAddButton,
-  onFilter,
+  onFilter, 
+  selectedRows, 
+  setSelectedColumns,  
+  setSelectedRows,
+  selectedColumns,   
+  fetchRecords,
+  setIsSelectionMode, 
+  isSelectionMode,
   onSearch,
   onFilterChange,
   showDatePickers = false,
@@ -57,13 +69,16 @@ export function FilterBar({
   selectedOptions,
   setSelectedOptions,
   onExport,
-}: FilterBarProps) {
+}: any) { 
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  
   const handleOptionSelect = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
     if (onFilterChange) {
       onFilterChange(key, value)
     }
-  }
+  } 
+  
 
   return (
     <div className="space-y-4">
@@ -86,7 +101,7 @@ export function FilterBar({
               </ol>
             </nav>
             <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto"> 
-              {onExport && 
+              {/* {onExport && 
               <Button
                 variant="default"
                 className="flex items-center gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
@@ -95,7 +110,15 @@ export function FilterBar({
                 <FileDown className="cursor-pointer" />
                 Export
               </Button> 
-              }
+              }  */}
+                <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+                            <Upload size={18} />
+                            Import Records
+                          </Button>
+                          <Button variant="outline" onClick={onExport} className="gap-2">
+                            <Download size={18} />
+                            {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
+                          </Button>
               {onAddButton && 
               <Button
                 variant="default"
@@ -185,14 +208,7 @@ export function FilterBar({
 
           <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-0">
             <TooltipProvider>
-              {onSearch && (
-                <input
-                  type="text"
-                  placeholder="Search records"
-                  onChange={onSearch}
-                  className="w-full sm:w-auto h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                />
-              )}
+           
               <div className="flex items-center gap-2 sm:gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -223,7 +239,12 @@ export function FilterBar({
             >
               Apply Filters
             </Button>
-          </div>
+          </div> 
+           <ImportRecordsModal
+                  isOpen={isImportModalOpen}
+                  onClose={() => setIsImportModalOpen(false)}
+                  fetchRecords={fetchRecords}
+                />
         </div>
       </div>
     </div>

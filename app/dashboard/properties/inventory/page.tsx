@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSelector } from "react-redux"
 import { useQuery } from "@apollo/client"
 import { DataTable } from "@/components/overview/Data-Table/DataTable"
@@ -81,13 +81,20 @@ export default function PropertiesPage() {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [totalCount, setCount] = useState<number>(0)
   const [endDate, setEndDate] = useState<Date | null>(null)
+  const [isSelectionMode, setIsSelectionMode] = useState(false)
+  const [selectedRows, setSelectedRows] = useState<string[]>([])
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([])
   const [propertyType, setPropertyType] = useState("")
   const [pendingSearchFilter, setPendingSearchFilter] = useState("")
+  const [selectedRecordsCache, setSelectedRecordsCache] = useState<Record<string, any>>({})
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const dispatch = useDispatch()
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   // Add a new state for the share modal
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
+  const allDataCache = useRef<Record<string, any>>({})
+
   const [shareData, setShareData] = useState(null)
 
   const sidebarFilters = useSelector((state: RootState) => state.filter)
@@ -102,6 +109,84 @@ export default function PropertiesPage() {
       page: String(currentPage),
     },
   })
+
+  const transformedData =
+    data?.getProperties?.data?.map((property: any) => ({
+      _id: property._id || "N/A",
+      roadLocation: property.roadLocation || "N/A",
+      developmentName: property.developmentName || "N/A",
+      subDevelopmentName: property.subDevelopmentName || "N/A",
+      projectName: property.projectName || "N/A",
+      propertyType: property.propertyType || "N/A",
+      propertyHeight: property.propertyHeight || "N/A",
+      projectLocation: property.projectLocation || "N/A",
+      propertyImages: property.propertyImages || "N/A",
+      unitNumber: property.unitNumber || "N/A",
+      bedrooms: property.bedrooms || "N/A",
+      unitLandSize: property.unitLandSize || "N/A",
+      unitBua: property.unitBua || "N/A",
+      unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
+      unitLocation: property.unitLocation || "N/A",
+      Purpose: property.Purpose || "N/A",
+      vacancyStatus: property.vacancyStatus || "N/A",
+      primaryPrice: property.primaryPrice || "N/A",
+      resalePrice: property.resalePrice || "N/A",
+      premiumAndLoss:
+        property.resalePrice && property.primaryPrice ? property.resalePrice - property.primaryPrice : "N/A",
+      Rent: property.rent || "N/A",
+      noOfCheques: property.noOfCheques || "N/A",
+      listed: property.listed ? "YES" : "NO",
+      createdAt: property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
+    })) || []
+
+  // Update the toggleRow function to properly maintain the selection state
+  const toggleRow = (id: string) => {
+    setSelectedRowsMap((prev) => {
+      const newMap = { ...prev }
+      newMap[id] = !prev[id]
+
+      // If we're selecting a row, add it to the cache
+      if (newMap[id]) {
+        const record = transformedData.find((r) => r._id === id)
+        if (record) {
+          setSelectedRecordsCache((cache) => ({
+            ...cache,
+            [id]: record,
+          }))
+        }
+      }
+
+      return newMap
+    })
+  }
+
+  const toggleColumns = (columnKey: any) => {
+    setSelectedColumns((prev) =>
+      prev.includes(columnKey) ? prev.filter((key) => key != columnKey) : [...prev, columnKey],
+    )
+  }
+
+  // Update selectedRows whenever selectedRowsMap changes
+  useEffect(() => {
+    const selected = Object.entries(selectedRowsMap)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([id]) => id)
+
+    setSelectedRows(selected)
+  }, [selectedRowsMap])
+
+  // Cache the current page data
+  useEffect(() => {
+    if (transformedData && transformedData.length > 0) {
+      const newCache = { ...allDataCache.current }
+
+      transformedData.forEach((record) => {
+        newCache[record._id] = record
+      })
+
+      allDataCache.current = newCache
+    }
+  }, [transformedData])
 
   useEffect(() => {
     if (!data) return
@@ -257,7 +342,7 @@ export default function PropertiesPage() {
   const handleAdd = () => setSelectionModalOpen(true)
 
   const handleManualSelect = () => {
-    setSelectionModalOpen(false)
+    // setSelectionModalOpen(false)
     setAddPropertyModalOpen(true)
   }
 
@@ -303,8 +388,83 @@ export default function PropertiesPage() {
     setPropertyToEdit(null)
   }
 
+  // Improved getSelectedData function to use both cache and current data
+  const getSelectedData = () => {
+    if (selectedRows.length === 0 || selectedColumns.length === 0) {
+      return []
+    }
+
+    return selectedRows
+      .map((id) => {
+        // First check the selectedRecordsCache, then allDataCache, then current page data
+        const record = selectedRecordsCache[id] || allDataCache.current[id] || transformedData.find((r) => r._id === id)
+
+        if (!record) {
+          console.warn(`Record with ID ${id} not found in any cache or current data`)
+          return null
+        }
+
+        const selectedData: Record<string, any> = {}
+        selectedColumns.forEach((col) => {
+          selectedData[col] = record[col]
+        })
+        return selectedData
+      })
+      .filter(Boolean)
+  }
+
+  const isRowSelected = (id: string): boolean => {
+    return !!selectedRowsMap[id]
+  }
+
+  // Improved exportSelectedData function
+  const exportSelectedData = () => {
+    if (selectedRows.length === 0 || selectedColumns.length === 0) {
+      toast.error("Please select at least one row and one column to export")
+      return
+    }
+
+    const selectedData = getSelectedData()
+
+    if (selectedData.length === 0) {
+      toast.error("No data found for the selected rows")
+      return
+    }
+
+    let csvContent = selectedColumns.join(",") + "\n"
+
+    selectedData.forEach((item) => {
+      const row = selectedColumns.map((col) => {
+        const value = item[col]
+        if (value === null || value === undefined) return ""
+        if (Array.isArray(value)) return `"${value.join(", ")}"`
+        if (typeof value === "string" && value.includes(",")) return `"${value}"`
+        return value
+      })
+      csvContent += row.join(",") + "\n"
+    })
+
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.setAttribute("href", url)
+    link.setAttribute("download", `selected-data-export-${new Date().toISOString().split("T")[0]}.csv`)
+    link.style.visibility = "hidden"
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    toast.success(`Exported ${selectedData.length} records successfully`)
+  }
+
   const handleSubmitExport = async (exportOption: any, count: any) => {
     setLoading(true)
+    if (isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0) {
+      exportSelectedData()
+      setLoading(false)
+      return
+    }
     console.log(`Exporting with option: ${exportOption}`)
 
     let dataToExport = null
@@ -396,54 +556,6 @@ export default function PropertiesPage() {
     setLoading(false)
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    )
-  }
-  if (Loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">Error loading properties</div>
-  }
-
-  const transformedData =
-    data?.getProperties?.data?.map((property: any) => ({
-      _id: property._id || "N/A",
-      roadLocation: property.roadLocation || "N/A",
-      developmentName: property.developmentName || "N/A",
-      subDevelopmentName: property.subDevelopmentName || "N/A",
-      projectName: property.projectName || "N/A",
-      propertyType: property.propertyType || "N/A",
-      propertyHeight: property.propertyHeight || "N/A",
-      projectLocation: property.projectLocation || "N/A",
-      propertyImages: property.propertyImages || "N/A",
-      unitNumber: property.unitNumber || "N/A",
-      bedrooms: property.bedrooms || "N/A",
-      unitLandSize: property.unitLandSize || "N/A",
-      unitBua: property.unitBua || "N/A",
-      unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
-      unitLocation: property.unitLocation || "N/A",
-      Purpose: property.Purpose || "N/A",
-      vacancyStatus: property.vacancyStatus || "N/A",
-      primaryPrice: property.primaryPrice || "N/A",
-      resalePrice: property.resalePrice || "N/A",
-      premiumAndLoss:
-        property.resalePrice && property.primaryPrice ? property.resalePrice - property.primaryPrice : "N/A",
-      Rent: property.rent || "N/A",
-      noOfCheques: property.noOfCheques || "N/A",
-      listed: property.listed ? "YES" : "NO",
-      createdAt: property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
-    })) || []
-
   const handleClearFilters = () => {
     dispatch(clearAllFilters())
     dispatch(resetRangess())
@@ -461,16 +573,50 @@ export default function PropertiesPage() {
     })
     setCurrentPage(1)
   }
+
+  const clearAllSelections = () => {
+    setSelectedRows([])
+    setSelectedColumns([])
+    setSelectedRowsMap({})
+    setSelectedRecordsCache({})
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+  }
+  if (Loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
+  }
+
+  // if (error) {
+  //   return <div className="min-h-screen bg-background flex items-center justify-center">Error loading properties</div>
+  // }
+
   return (
     <div className="min-h-screen bg-background ">
       <FilterBar
         filters={filter}
         breadcrumbs={breadcrumbs}
-        onAddButton={handleAdd}
+        onAddButton={handleManualSelect}
         onFilter={handleFilter}
         onSearch={handleSearch}
         onFilterChange={handleFilterChange}
         showDatePickers={true}
+        setIsSelectionMode={setIsSelectionMode}
+        fetchRecords={refetch}
+        isSelectionMode={isSelectionMode}
+        setSelectedColumns={setSelectedColumns}
+        selectedRows={selectedRows}
+        selectedColumns={selectedColumns}
+        setSelectedRows={setSelectedRows}
         onApplyFilters={handleApplyFilters}
         onStartDateChange={handleStartDateChange}
         onEndDateChange={handleEndDateChange}
@@ -487,12 +633,24 @@ export default function PropertiesPage() {
             headers={tableHeaders}
             page={currentPage}
             setPage={setCurrentPage}
+            toggleRow={toggleRow}
+            toggleColumns={toggleColumns}
             Count={totalCount}
+            setSelectedRowsMap={setSelectedRowsMap}
+            setIsSelectionMode={setIsSelectionMode}
+            selectedRowsMap={selectedRowsMap}
+            isSelectionMode={isSelectionMode}
+            setSelectedColumns={setSelectedColumns}
+            selectedRows={selectedRows}
+            selectedColumns={selectedColumns}
+            setSelectedRows={setSelectedRows}
             data={transformedData}
+            isRowSelected={isRowSelected}
             onAddButton={handleAdd}
             onShare={handleShareButton}
             onDelete={handleDelete}
             onEdit={handleUpdate}
+            clearAllSelections={clearAllSelections}
           />
         ) : (
           <Alert>

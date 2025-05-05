@@ -109,7 +109,7 @@ const tableHeaders = [
   { key: "sold", label: "SOLD" },
   { key: "available", label: "AVAILABLE" },
   { key: "plot" , label : "PLOT DETAILS"},
-  { key: "attachDocument", label: "DOCUMENT" },
+  { key: "attachDocument" , label: "DOCUMENT" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
