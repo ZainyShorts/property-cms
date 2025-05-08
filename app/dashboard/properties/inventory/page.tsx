@@ -4,8 +4,7 @@ import type React from "react"
 
 import { useEffect, useState, useRef } from "react"
 import { useSelector } from "react-redux"
-import { useQuery } from "@apollo/client"
-import { DataTable } from "@/components/overview/Data-Table/DataTable"
+import PropertyDataTable from "@/components/overview/Data-Table/DataTable"
 import { FilterBar } from "@/components/overview/Filter-Bar/FilterBar"
 import { AddPropertyModal } from "./AddProperty-Modal/Modal"
 import { SelectionModal } from "./Select-Option/SelectionModal"
@@ -13,9 +12,8 @@ import { FileUploadModal } from "./FileUpload/FileUploadModal"
 import { PropertyFilterSidebar } from "./Filteration-sidebar/filteration"
 import { toast } from "react-toastify"
 import axios from "axios"
-import { GET_PROPERTIES } from "@/lib/query"
 import type { RootState } from "@/lib/store/store"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from 'lucide-react'
 import { useDispatch } from "react-redux"
 import { clearAllFilters } from "@/lib/store/slices/filterSlice"
 import { resetRangess } from "@/lib/store/slices/rangeSlice"
@@ -43,29 +41,30 @@ const breadcrumbs = [
 ]
 
 const tableHeaders = [
-  "ID",
-  "Road Location",
-  "Development Name",
-  "Sub Development Name",
-  "Project Name",
-  "Property Type",
-  "Property Height",
-  "Project Location",
-  "Unit Number",
-  "Bedrooms",
-  "Unit Land Size",
-  "Unit BUA",
-  "Unit View",
-  "Unit Location",
-  "Purpose",
-  "Vacancy Status",
-  "Primary Price",
-  "Resale Price",
-  "Premium & Loss",
-  "Rent",
-  "No of Cheques",
-  "Listed",
-  "Created At",
+  "_id",
+  "roadLocation",
+  "developmentName",
+  "subDevelopmentName",
+  "projectName",
+  "unitHeight",
+  "unitInternalDesign",
+  "unitExternalDesign",
+  "plotSizeSqFt",
+  "BuaSqFt",
+  "unitType",
+  "unitView",
+  "unitPurpose",
+  "listingDate",
+  "chequeFrequency",
+  "rentalPrice",
+  "salePrice",
+  "rentedAt",
+  "rentedTill",
+  "vacantOn",
+  "originalPrice",
+  "paidTODevelopers",
+  "payableTODevelopers",
+  "premiumAndLoss",
 ]
 
 export default function PropertiesPage() {
@@ -76,7 +75,7 @@ export default function PropertiesPage() {
   const [propertyToEdit, setPropertyToEdit] = useState(null)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [searchFilter, setSearchFilter] = useState({})
-  const [Loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(true)
   const [sortOrder, setSortOrder] = useState("desc")
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [totalCount, setCount] = useState<number>(0)
@@ -90,54 +89,88 @@ export default function PropertiesPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false)
   const dispatch = useDispatch()
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
-  // Add a new state for the share modal
   const [shareModalOpen, setShareModalOpen] = useState(false)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
   const allDataCache = useRef<Record<string, any>>({})
-
   const [shareData, setShareData] = useState(null)
+  const [properties, setProperties] = useState<any[]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [dataChanged, setDataChanged] = useState(false)
 
   const sidebarFilters = useSelector((state: RootState) => state.filter)
   const rangeFilters = useSelector((state: any) => state.range)
 
-  const { loading, error, data, refetch } = useQuery(GET_PROPERTIES, {
-    variables: {
+  // Function to fetch properties data
+  const fetchProperties = async (params: any = {}) => {
+    setLoading(true)
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
+        params: {
+          ...params,
+          limit: 10,
+          page: currentPage,
+        },
+      })
+      console.log(response.data)
+      if (response.data) {
+        setProperties(response.data.data || [])
+        setCount(response.data.totalCount || 0)
+      }
+      setError(null)
+    } catch (err) {
+      console.error("Error fetching properties:", err)
+      setError("Failed to load properties. Please try again.")
+      toast.error("Failed to load properties")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchProperties({
+      sortBy: "createdAt",
+      sortOrder: sortOrder,
+    })
+  }, [])
+
+  // Fetch data when page or sort order changes
+  useEffect(() => {
+    fetchProperties({
       filter: searchFilter,
       sortBy: "createdAt",
       sortOrder: sortOrder,
-      limit: "10",
-      page: String(currentPage),
-    },
-  })
+    })
+  }, [currentPage, sortOrder])
 
-  const transformedData =
-    data?.getProperties?.data?.map((property: any) => ({
-      _id: property._id || "N/A",
-      roadLocation: property.roadLocation || "N/A",
-      developmentName: property.developmentName || "N/A",
-      subDevelopmentName: property.subDevelopmentName || "N/A",
-      projectName: property.projectName || "N/A",
-      propertyType: property.propertyType || "N/A",
-      propertyHeight: property.propertyHeight || "N/A",
-      projectLocation: property.projectLocation || "N/A",
-      propertyImages: property.propertyImages || "N/A",
-      unitNumber: property.unitNumber || "N/A",
-      bedrooms: property.bedrooms || "N/A",
-      unitLandSize: property.unitLandSize || "N/A",
-      unitBua: property.unitBua || "N/A",
-      unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
-      unitLocation: property.unitLocation || "N/A",
-      Purpose: property.Purpose || "N/A",
-      vacancyStatus: property.vacancyStatus || "N/A",
-      primaryPrice: property.primaryPrice || "N/A",
-      resalePrice: property.resalePrice || "N/A",
-      premiumAndLoss:
-        property.resalePrice && property.primaryPrice ? property.resalePrice - property.primaryPrice : "N/A",
-      Rent: property.rent || "N/A",
-      noOfCheques: property.noOfCheques || "N/A",
-      listed: property.listed ? "YES" : "NO",
-      createdAt: property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
-    })) || []
+  const transformedData = properties.map((property: any) => ({
+    _id: property._id || "N/A",
+    roadLocation: property.roadLocation || "N/A",
+    developmentName: property.developmentName || "N/A",
+    subDevelopmentName: property.subDevelopmentName || "N/A",
+    projectName: property.projectName || "N/A",
+    unitHeight: property.unitHeight || "N/A",
+    unitInternalDesign: property.unitInternalDesign || "N/A",
+    unitExternalDesign: property.unitExternalDesign || "N/A",
+    plotSizeSqFt: property.plotSizeSqFt || "N/A",
+    BuaSqFt: property.BuaSqFt || "N/A",
+    unitType: property.unitType || "N/A",
+    unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
+    unitPurpose: property.unitPurpose || "N/A",
+    listingDate: property.listingDate || "N/A",
+    chequeFrequency: property.chequeFrequency || "N/A",
+    rentalPrice: property.rentalPrice || "N/A",
+    salePrice: property.salePrice || "N/A",
+    rentedAt: property.rentedAt || "N/A",
+    rentedTill: property.rentedTill || "N/A",
+    vacantOn: property.vacantOn || "N/A",
+    originalPrice: property.originalPrice || "N/A",
+    paidTODevelopers: property.paidTODevelopers || "N/A",
+    payableTODevelopers: property.payableTODevelopers || "N/A",
+    premiumAndLoss:
+      property.premiumAndLoss ||
+      (property.salePrice && property.originalPrice ? property.salePrice - property.originalPrice : "N/A"),
+  }))
 
   // Update the toggleRow function to properly maintain the selection state
   const toggleRow = (id: string) => {
@@ -188,15 +221,6 @@ export default function PropertiesPage() {
     }
   }, [transformedData])
 
-  useEffect(() => {
-    if (!data) return
-
-    const totalCount = data?.getProperties?.totalCount || 0
-
-    setCount(totalCount)
-    console.log("data", data)
-  }, [data])
-
   const handleStartDateChange = (date: Date | undefined) => {
     setStartDate(date || null)
   }
@@ -204,11 +228,12 @@ export default function PropertiesPage() {
   const handleEndDateChange = (date: Date | undefined) => {
     setEndDate(date || null)
   }
-  // Replace the handleShareButton function with this
+
   const handleShareButton = (data: any) => {
     setShareData(data)
     setShareModalOpen(true)
   }
+
   const handleFilterChange = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
     if (key === "sortBy") {
@@ -313,25 +338,15 @@ export default function PropertiesPage() {
           },
         }),
     }
+
     console.log("new", newFilters)
-    if (Object.keys(newFilters).length > 0) {
-      setSearchFilter(newFilters)
-      refetch({
-        filter: newFilters,
-        sortBy: "createdAt",
-        sortOrder: sortOrder,
-        limit: "10",
-        page: String(currentPage),
-      })
-    } else {
-      setSearchFilter({})
-      refetch({
-        filter: {},
-        sortBy: "createdAt",
-        sortOrder: sortOrder,
-        page: String(currentPage),
-      })
-    }
+    setSearchFilter(newFilters)
+
+    fetchProperties({
+      filter: Object.keys(newFilters).length > 0 ? newFilters : {},
+      sortBy: "createdAt",
+      sortOrder: sortOrder,
+    })
   }
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -344,6 +359,7 @@ export default function PropertiesPage() {
   const handleManualSelect = () => {
     // setSelectionModalOpen(false)
     setAddPropertyModalOpen(true)
+    setDataChanged(false) // Reset data changed flag when opening modal for adding
   }
 
   const handleFileSelect = () => {
@@ -357,15 +373,23 @@ export default function PropertiesPage() {
 
   const handleDelete = async (_id: string) => {
     try {
-      const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/deleteProperty`, {
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
         params: { _id: _id },
       })
       console.log("id", _id)
       console.log("Property deleted successfully:", response)
       if (response) {
         toast.success("Property Deleted successfully!")
+        setDataChanged(true) // Set data changed flag when deleting
       }
-      refetch()
+
+      // Refresh the data after deletion
+      fetchProperties({
+        filter: searchFilter,
+        sortBy: "createdAt",
+        sortOrder: sortOrder,
+      })
+
       return response.data
     } catch (error) {
       console.error("Error deleting property")
@@ -375,8 +399,12 @@ export default function PropertiesPage() {
 
   const handleUpdate = (property: any) => {
     console.log("property", property)
-    setPropertyToEdit(property)
+    // Find the original property data from the API response instead of using the transformed data
+    const originalProperty = properties.find((p) => p._id === property._id)
+    // Pass the original property data to the edit modal
+    setPropertyToEdit(originalProperty || property)
     setAddPropertyModalOpen(true)
+    setDataChanged(false) // Reset data changed flag when opening modal for editing
   }
 
   const handleExport = () => {
@@ -386,6 +414,11 @@ export default function PropertiesPage() {
   const handleCloseExportModal = () => {
     setExportModalOpen(false)
     setPropertyToEdit(null)
+  }
+
+  // Function to handle property changes from the modal
+  const handlePropertyChange = (changed: boolean) => {
+    setDataChanged(changed)
   }
 
   // Improved getSelectedData function to use both cache and current data
@@ -467,19 +500,20 @@ export default function PropertiesPage() {
     }
     console.log(`Exporting with option: ${exportOption}`)
 
-    let dataToExport = null
+    const dataToExport = null
 
     if (exportOption === "false" || exportOption === false) {
       try {
-        dataToExport = await refetch({
-          filter: {},
-          sortBy: "createdAt",
-          sortOrder: "asc",
-          limit: count.toString(),
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
+          params: {
+            sortBy: "createdAt",
+            sortOrder: "asc",
+            limit: count.toString(),
+          },
         })
 
-        if (dataToExport?.data?.getProperties?.data) {
-          exportToExcel(dataToExport.data.getProperties.data)
+        if (response.data?.data) {
+          exportToExcel(response.data.data)
         } else {
           console.error("No data available for export")
         }
@@ -535,18 +569,21 @@ export default function PropertiesPage() {
 
         console.log("Applying filters:", newFilters)
 
-        dataToExport = await refetch({
-          filter: newFilters,
-          sortBy: "createdAt",
-          sortOrder: "asc",
-          limit: count.toString(),
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
+          params: {
+            filter: newFilters,
+            sortBy: "createdAt",
+            sortOrder: "asc",
+            limit: count.toString(),
+          },
         })
-        if (dataToExport?.data?.getProperties?.data) {
-          exportToExcel(dataToExport.data.getProperties.data)
+
+        if (response.data?.data) {
+          exportToExcel(response.data.data)
         } else {
           console.error("No data available for export")
         }
-        console.log("Mapped export data:", dataToExport)
+
         handleCloseExportModal()
       } catch (error) {
         console.error("Error fetching data:", error)
@@ -566,11 +603,12 @@ export default function PropertiesPage() {
     setPropertyType("")
     setPendingSearchFilter("")
     setSelectedOptions({})
-    refetch({
-      filter: {},
+
+    fetchProperties({
       sortBy: "createdAt",
       sortOrder: "desc",
     })
+
     setCurrentPage(1)
   }
 
@@ -588,17 +626,17 @@ export default function PropertiesPage() {
       </div>
     )
   }
-  if (Loading) {
+
+  if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       </div>
     )
   }
-
-  // if (error) {
-  //   return <div className="min-h-screen bg-background flex items-center justify-center">Error loading properties</div>
-  // }
 
   return (
     <div className="min-h-screen bg-background ">
@@ -611,7 +649,13 @@ export default function PropertiesPage() {
         onFilterChange={handleFilterChange}
         showDatePickers={true}
         setIsSelectionMode={setIsSelectionMode}
-        fetchRecords={refetch}
+        fetchRecords={() =>
+          fetchProperties({
+            filter: searchFilter,
+            sortBy: "createdAt",
+            sortOrder: sortOrder,
+          })
+        }
         isSelectionMode={isSelectionMode}
         setSelectedColumns={setSelectedColumns}
         selectedRows={selectedRows}
@@ -629,8 +673,7 @@ export default function PropertiesPage() {
       />
       <main className="container mx-auto md:px-4 py-6">
         {transformedData.length > 0 ? (
-          <DataTable
-            headers={tableHeaders}
+          <PropertyDataTable
             page={currentPage}
             setPage={setCurrentPage}
             toggleRow={toggleRow}
@@ -646,7 +689,6 @@ export default function PropertiesPage() {
             setSelectedRows={setSelectedRows}
             data={transformedData}
             isRowSelected={isRowSelected}
-            onAddButton={handleAdd}
             onShare={handleShareButton}
             onDelete={handleDelete}
             onEdit={handleUpdate}
@@ -671,15 +713,38 @@ export default function PropertiesPage() {
 
       <AddPropertyModal
         isOpen={addPropertyModalOpen}
-        onClose={() => setAddPropertyModalOpen(false)}
+        onClose={() => {
+          setAddPropertyModalOpen(false)
+          setPropertyToEdit(null)
+          
+          // Only refresh data when changes were made
+          if (dataChanged) {
+            fetchProperties({
+              filter: searchFilter,
+              sortBy: "createdAt",
+              sortOrder: sortOrder,
+            })
+          }
+        }}
         propertyToEdit={propertyToEdit}
+        onPropertyChange={handlePropertyChange}
       />
 
-      <FileUploadModal isOpen={fileUploadModalOpen} onClose={() => setFileUploadModalOpen(false)} />
+      <FileUploadModal
+        isOpen={fileUploadModalOpen}
+        onClose={() => {
+          setFileUploadModalOpen(false)
+          // Refresh data when modal is closed
+          fetchProperties({
+            filter: searchFilter,
+            sortBy: "createdAt",
+            sortOrder: sortOrder,
+          })
+        }}
+      />
 
       <PropertyFilterSidebar open={filterSidebarOpen} onOpenChange={setFilterSidebarOpen} />
       <ExportModal isOpen={exportModalOpen} onClose={handleCloseExportModal} onSubmitExport={handleSubmitExport} />
-      {/* Add the ShareModal component at the end of the return statement, just before the closing </div> */}
       <ShareModal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
@@ -692,3 +757,4 @@ export default function PropertiesPage() {
     </div>
   )
 }
+

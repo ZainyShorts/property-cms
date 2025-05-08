@@ -62,20 +62,6 @@ interface FormValues {
   postHandOver: Date | undefined
 
   // Unit Counts
-  shops: string
-  offices: string
-  studios: string
-  oneBr: string
-  twoBr: string
-  threeBr: string
-  fourBr: string
-  fiveBr: string
-  sixBr: string
-  sevenBr: string
-  eightBr: string
-  total: number
-  sold: string
-  available: number
 
   facilityCategories: string[]
   amenitiesCategories: string[]
@@ -156,20 +142,6 @@ export function AddRecordModal({
       installmentDate: undefined,
       uponCompletion: undefined,
       postHandOver: undefined,
-      shops: "10",
-      offices: "5",
-      studios: "20",
-      oneBr: "30",
-      twoBr: "25",
-      threeBr: "15",
-      fourBr: "10",
-      fiveBr: "5",
-      sixBr: "2",
-      sevenBr: "1",
-      eightBr: "0",
-      total: 123,
-      sold: "30",
-      available: 93,
       facilityCategories: [],
       amenitiesCategories: [],
       pictures: [],
@@ -210,53 +182,7 @@ export function AddRecordModal({
     }
   }, [multiStepFormData, setValue])
 
-  const watchShops = watch("shops")
-  const watchOffices = watch("offices")
-  const watchStudios = watch("studios")
-  const watchOneBr = watch("oneBr")
-  const watchTwoBr = watch("twoBr")
-  const watchThreeBr = watch("threeBr")
-  const watchFourBr = watch("fourBr")
-  const watchFiveBr = watch("fiveBr")
-  const watchSixBr = watch("sixBr")
-  const watchSevenBr = watch("sevenBr")
-  const watchEightBr = watch("eightBr")
-  const watchSold = watch("sold")
 
-  // Fixed: Changed useState to useEffect for calculating totals
-  useEffect(() => {
-    const parseValue = (value: string) => (value === "" ? 0 : Number(value))
-
-    const totalUnits =
-      parseValue(watchShops) +
-      parseValue(watchOffices) +
-      parseValue(watchStudios) +
-      parseValue(watchOneBr) +
-      parseValue(watchTwoBr) +
-      parseValue(watchThreeBr) +
-      parseValue(watchFourBr) +
-      parseValue(watchFiveBr) +
-      parseValue(watchSixBr) +
-      parseValue(watchSevenBr) +
-      parseValue(watchEightBr)
-
-    setValue("total", totalUnits)
-    setValue("available", totalUnits - parseValue(watchSold))
-  }, [
-    watchShops,
-    watchOffices,
-    watchStudios,
-    watchOneBr,
-    watchTwoBr,
-    watchThreeBr,
-    watchFourBr,
-    watchFiveBr,
-    watchSixBr,
-    watchSevenBr,
-    watchEightBr,
-    watchSold,
-    setValue,
-  ])
 
   const uploadImageToAWS = async (file: File, index: number): Promise<{ awsUrl: string; key: string }> => {
     try {
@@ -389,19 +315,7 @@ export function AddRecordModal({
       setValue("downPayment", editRecord.downPayment || 10)
 
       // Unit counts
-      setValue("shops", editRecord.shops || "0")
-      setValue("offices", editRecord.offices || "0")
-      setValue("studios", editRecord.studios || "0")
-      setValue("oneBr", editRecord.oneBr || "0")
-      setValue("twoBr", editRecord.twoBr || "0")
-      setValue("threeBr", editRecord.threeBr || "0")
-      setValue("fourBr", editRecord.fourBr || "0")
-      setValue("fiveBr", editRecord.fiveBr || "0")
-      setValue("sixBr", editRecord.sixBr || "0")
-      setValue("sevenBr", editRecord.sevenBr || "0")
-      setValue("eightBr", editRecord.eightBr || "0")
-      setValue("sold", editRecord.sold?.toString() || "0")
-
+     
       // Categories
       setValue("facilityCategories", editRecord.facilityCategories || [])
       setValue("amenitiesCategories", editRecord.amenitiesCategories || [])
@@ -455,20 +369,6 @@ export function AddRecordModal({
         installmentDate: undefined,
         uponCompletion: undefined,
         postHandOver: undefined,
-        shops: "10",
-        offices: "5",
-        studios: "20",
-        oneBr: "30",
-        twoBr: "25",
-        threeBr: "15",
-        fourBr: "10",
-        fiveBr: "5",
-        sixBr: "2",
-        sevenBr: "1",
-        eightBr: "0",
-        total: 123,
-        sold: "30",
-        available: 93,
         facilityCategories: [],
         amenitiesCategories: [],
         pictures: [],
@@ -548,20 +448,6 @@ export function AddRecordModal({
         installmentDate: formatDateForAPI(data.installmentDate),
         uponCompletion: formatDateForAPI(data.uponCompletion),
         postHandOver: formatDateForAPI(data.postHandOver),
-        shops: data.shops,
-        offices: data.offices,
-        studios: data.studios,
-        oneBr: data.oneBr,
-        twoBr: data.twoBr,
-        threeBr: data.threeBr,
-        fourBr: data.fourBr,
-        fiveBr: data.fiveBr,
-        sixBr: data.sixBr,
-        sevenBr: data.sevenBr,
-        eightBr: data.eightBr,
-        total: data.total,
-        sold: data.sold,
-        available: data.available,
         facilityCategories: data.facilityCategories,
         amenitiesCategories: data.amenitiesCategories,
         pictures: pictureUrls,
@@ -574,18 +460,7 @@ export function AddRecordModal({
       }
 
       // Update submitData for numeric fields
-      submitData.shops = convertEmptyToZero(data.shops)
-      submitData.offices = convertEmptyToZero(data.offices)
-      submitData.studios = convertEmptyToZero(data.studios)
-      submitData.oneBr = convertEmptyToZero(data.oneBr)
-      submitData.twoBr = convertEmptyToZero(data.twoBr)
-      submitData.threeBr = convertEmptyToZero(data.threeBr)
-      submitData.fourBr = convertEmptyToZero(data.fourBr)
-      submitData.fiveBr = convertEmptyToZero(data.fiveBr)
-      submitData.sixBr = convertEmptyToZero(data.sixBr)
-      submitData.sevenBr = convertEmptyToZero(data.sevenBr)
-      submitData.eightBr = convertEmptyToZero(data.eightBr)
-      submitData.sold = convertEmptyToZero(data.sold)
+    
       submitData.constructionStatus = convertEmptyToZero(data.constructionStatus)
       submitData.downPayment = convertEmptyToZero(data.downPayment)
       submitData.percentOfConstruction = convertEmptyToZero(data.percentOfConstruction)
@@ -648,20 +523,6 @@ export function AddRecordModal({
         installmentDate: undefined,
         uponCompletion: undefined,
         postHandOver: undefined,
-        shops: "10",
-        offices: "5",
-        studios: "20",
-        oneBr: "30",
-        twoBr: "25",
-        threeBr: "15",
-        fourBr: "10",
-        fiveBr: "5",
-        sixBr: "2",
-        sevenBr: "1",
-        eightBr: "0",
-        total: 123,
-        sold: "30",
-        available: 93,
         facilityCategories: [],
         amenitiesCategories: [],
         pictures: [],
@@ -1204,330 +1065,7 @@ export function AddRecordModal({
           </div>
 
           {/* Unit Counts Section */}
-          <div className="p-4 border rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4">Unit Counts</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="shops" className="text-sm font-medium">
-                  Shops *
-                </label>
-                <Controller
-                  name="shops"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="shops"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="offices" className="text-sm font-medium">
-                  Offices *
-                </label>
-                <Controller
-                  name="offices"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="offices"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="studios" className="text-sm font-medium">
-                  Studios *
-                </label>
-                <Controller
-                  name="studios"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="studios"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="oneBr" className="text-sm font-medium">
-                  One BR *
-                </label>
-                <Controller
-                  name="oneBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="oneBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="twoBr" className="text-sm font-medium">
-                  Two BR *
-                </label>
-                <Controller
-                  name="twoBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="twoBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="threeBr" className="text-sm font-medium">
-                  Three BR *
-                </label>
-                <Controller
-                  name="threeBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="threeBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="fourBr" className="text-sm font-medium">
-                  Four BR *
-                </label>
-                <Controller
-                  name="fourBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="fourBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="fiveBr" className="text-sm font-medium">
-                  Five BR *
-                </label>
-                <Controller
-                  name="fiveBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="fiveBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="sixBr" className="text-sm font-medium">
-                  Six BR *
-                </label>
-                <Controller
-                  name="sixBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="sixBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="sevenBr" className="text-sm font-medium">
-                  Seven BR *
-                </label>
-                <Controller
-                  name="sevenBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="sevenBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="eightBr" className="text-sm font-medium">
-                  Eight BR *
-                </label>
-                <Controller
-                  name="eightBr"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="eightBr"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-4">
-              <div className="space-y-2">
-                <label htmlFor="total" className="text-sm font-medium">
-                  Total Units
-                </label>
-                <Controller
-                  name="total"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      min="0"
-                      id="total"
-                      placeholder="0"
-                      value={field.value}
-                      disabled
-                      className="bg-muted/50"
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="sold" className="text-sm font-medium">
-                  Sold Units *
-                </label>
-                <Controller
-                  name="sold"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      id="sold"
-                      placeholder="0"
-                      {...field}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        field.onChange(value === "" ? "" : value)
-                      }}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor="available" className="text-sm font-medium">
-                  Available Units
-                </label>
-                <Controller
-                  name="available"
-                  control={control}
-                  render={({ field }) => (
-                    <Input
-                      type="number"
-                      min="0"
-                      id="available"
-                      placeholder="0"
-                      value={field.value}
-                      disabled
-                      className="bg-muted/50"
-                    />
-                  )}
-                />
-              </div>
-            </div>
-          </div>
+       
 
           {/* Images Section */}
           <div className="p-4 border rounded-lg shadow-sm">

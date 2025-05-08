@@ -47,7 +47,7 @@ import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sideba
 import { resetFilters } from "@/lib/store/slices/projectSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
-import { projectDetails, projectStatus, paymentPlan , projectInventory } from "./data/data"
+import { projectDetails, projectStatus, paymentPlan  } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MultiStepModal, type MultiStepFormData } from "./add-record/multi-step"
 import { AddRecordModal } from "./add-record/addRecord"
@@ -94,20 +94,6 @@ const tableHeaders = [
   { key: "installmentDate", label: "INSTALLMENT DATA" },
   { key: "uponCompletion", label: "UPON COMPLETION" }, 
   { key: "postHandOver", label: "POST HANDOVER" },
-  { key: "shops", label: "SHOPS" },
-  { key: "offices", label: "OFFICES" },
-  { key: "studios", label: "STUDIOS" },
-  { key: "oneBr", label: "ONE BR" },
-  { key: "twoBr", label: "TWO BR" },
-  { key: "threeBr", label: "THREE BR" },
-  { key: "fourBr", label: "four BR" },
-  { key: "fiveBr", label: "FIVE BR" },
-  { key: "sixBr", label: "SIX BR" },
-  { key: "sevenBr", label: "SEVEN BR" },
-  { key: "eightBr", label: "EIGHT BR" },
-  { key: "total", label: "TOTAL" },
-  { key: "sold", label: "SOLD" },
-  { key: "available", label: "AVAILABLE" },
   { key: "plot" , label : "PLOT DETAILS"},
   { key: "attachDocument" , label: "DOCUMENT" },
   { key: "edit", label: "EDIT" },
@@ -367,7 +353,9 @@ export default function MasterDevelopmentPage() {
         launchDate: filters.launchDate,
         completionDate: filters.completionDate, 
         uponCompletion: filters.uponCompletion,
-        installmentDate:filters.installmentDate,
+        installmentDate:filters.installmentDate, 
+        plotNumber: filters.plotNumber,
+        plotPermission: filters.plotPermission,
         postHandOver: filters.postHandOver,
         salesStatus: filters.saleStatus,
         percentOfConstruction: filters.percentOfConstruction,
@@ -413,7 +401,15 @@ export default function MasterDevelopmentPage() {
       if (requestData.completionDate) params.append("completionDate", requestData.completionDate)
       if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality) 
         if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
-          if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
+          if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver) 
+            if (filters.plotPermission?.length) {
+              filters.plotPermission.forEach((permission: string) => {
+                params.append("plotPermission", permission)
+              })
+    
+            }     
+             if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
+    
             if (requestData.uponCompletion) params.append("uponCompletion", requestData.uponCompletion)
 
       if (requestData.constructionStatus !== undefined)
@@ -592,16 +588,6 @@ export default function MasterDevelopmentPage() {
           return updated
         })
       } 
-      else if (headers === "projectInventory") {
-        setCheckState("projectInventory")
-        setVisibleColumns((prev) => {
-          const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = projectInventory.includes(key)
-            return acc
-          }, {})
-          return updated
-        })
-      }  
       else if (headers === "all") {
         setCheckState("all")
         setVisibleColumns((prev) => {
@@ -665,18 +651,6 @@ export default function MasterDevelopmentPage() {
       case "salesStatus":
       case "installmentDate":
       case "postHandOver":
-      case "shops":
-      case "oneBr":
-      case "twoBr":
-      case "threeBr":
-      case "fourBr":
-      case "fiveBr":
-      case "sixBr":
-      case "sevenBr":
-      case "eightBr":
-      case "total":
-      case "sold":
-      case "available":
         return record[key].toLocaleString() 
         case "plot":
           // First check if plot object exists in record
@@ -1186,7 +1160,7 @@ export default function MasterDevelopmentPage() {
 
       const exportData = response.data.data
 
-      let csvContent = "Master Development,Sub Development,Project Name,Property Type,Project Quality,Construction Status,Facilities Count,Amenities Count,Launch Date,Completion Date,Sales Status,Total Units,Sold Units,Available Units\n"
+      let csvContent = "Master Development,Sub Development,Project Name,Property Type,Project Quality,Construction Status,Facilities Count,Amenities Count,Launch Date,Completion Date,Sales Status\n"
 
       exportData.forEach((record) => {
         const row = [ 
@@ -1201,9 +1175,7 @@ export default function MasterDevelopmentPage() {
           record.launchDate,
           record.completionDate,
           record.salesStatus,
-          record.total,
-          record.sold,
-          record.available,
+       
         ]
 
         const escapedRow = row.map((field) => {
@@ -1511,27 +1483,7 @@ export default function MasterDevelopmentPage() {
                           )}
                         </TableHead>
                       )} 
-                      {(checkState === "projectInventory" || checkState === "all") && (
-                        <TableHead
-                          onClick={() => toggleColumnVisibility("a", "projectInventory")}
-                          colSpan={isSelectionMode ? 14 : 14}
-                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-blue-500 to-blue-400 border-r border-border relative"
-                        >
-                          Project Inventory
-                          {checkState === "projectInventory" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleColumnVisibility("a", "all")
-                              }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
-                            >
-                              <ArrowLeft className="w-4 h-4" />
-                              Back
-                            </button>
-                          )}
-                        </TableHead>
-                      )}
+                    
 
                       {(checkState === "actions" || checkState === "all") && (
                         <TableHead

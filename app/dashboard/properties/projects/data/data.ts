@@ -1,7 +1,7 @@
 export const projectDetails = ["_id","roadLocation", "masterDevelopment", "subDevelopment" , "propertyType", "projectName", "projectQuality", "facilityCategories", "amenitiesCategories"] 
 export const projectStatus =  ["constructionStatus", "launchDate","completionDate","salesStatus"] 
 export const paymentPlan = ["downPayment", "percentOfConstruction", "installmentDate", "uponCompletion", "postHandOver"]  
-export const projectInventory = ["shops", "offices","studios", "oneBr", "twoBr", "threeBr", "fourBr","fiveBr","sixBr", "sevenBr","eightBr","total","sold","available"]
+
 export interface CountryData {
     id: string;
     name: string;

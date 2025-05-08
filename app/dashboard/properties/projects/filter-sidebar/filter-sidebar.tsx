@@ -22,7 +22,9 @@ import {
   setLaunchDate,
   setCompletionDate,
   setSaleStatus,
-  setpercentOfConstruction,
+  setpercentOfConstruction, 
+    setPlotPermission,
+    setPlotStatus,
   setInstallmentDate,
   setPostHandOver,
   setUponCompletion,
@@ -140,6 +142,23 @@ const amenitiesCategoriesOptions = [
 
 const projectQualityOptions = ["A", "B", "C"]
 
+const plotPermissionOptions = [
+  "Apartment",
+  "Shops",
+  "Offices",
+  "Hotel",
+  "Townhouse",
+  "Villas",
+  "Mansions",
+  "Showroom",
+  "Warehouse",
+  "Labour Camp",
+  "Hospital",
+  "School",
+  "Bungalow",
+]
+
+const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const dispatch = useDispatch()
   const filters = useSelector((state: RootState) => state.projectFilter)
@@ -202,7 +221,17 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const handleUponCompletionChange = (date: Date | undefined) => {
     dispatch(setUponCompletion(date ? format(date, "yyyy-MM-dd") : ""))
   }
-
+   const handlePlotPermissionChange = (value: string, checked: boolean) => {
+     const currentValues = filters.plotPermission || []
+     const updated = checked 
+       ? [...currentValues, value]
+       : currentValues.filter(item => item !== value)
+     dispatch(setPlotPermission(updated))
+   }
+ 
+   const handlePlotStatusChange = (value: string) => {
+     dispatch(setPlotStatus(value))
+   }
   const handleCheckboxChange = (
     category: "facilitiesCategories" | "amentiesCategories",
     value: string,
@@ -451,7 +480,42 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               </PopoverContent>
             </Popover>
           </div>
-
+      <div className="space-y-3">
+                 <Label className="text-base">Plot Permission</Label>
+                 <div className="grid grid-cols-2 gap-2">
+                   {plotPermissionOptions.map((permission) => (
+                     <div key={permission} className="flex items-center space-x-2">
+                       <Checkbox
+                         id={`permission-${permission}`}
+                         checked={filters.plotPermission?.includes(permission) || false}
+                         onCheckedChange={(checked) =>
+                           handlePlotPermissionChange(permission, checked as boolean)
+                         }
+                       />
+                       <Label htmlFor={`permission-${permission}`} className="text-sm font-normal">
+                         {permission}
+                       </Label>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+     
+               {/* Plot Status */}
+               <div className="space-y-2">
+                 <Label>Plot Status</Label>
+                 <Select value={filters.plotStatus || ""} onValueChange={handlePlotStatusChange}>
+                   <SelectTrigger>
+                     <SelectValue placeholder="Select plot status" />
+                   </SelectTrigger>
+                   <SelectContent>
+                     {plotStatusOptions.map((option) => (
+                       <SelectItem key={option} value={option}>
+                         {option}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
           <Separator />
 
           {/* Facilities Categories */}

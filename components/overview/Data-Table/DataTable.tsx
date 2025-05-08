@@ -14,54 +14,89 @@ import {
   ClipboardCheck,
   Info,
   ArrowLeft,
-  Upload,
   Edit,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { projectDetails, unitDetails, availability, unitTenancyDetails, paymentDetails } from "./data"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/app/dashboard/properties/master-development/switch"
+import { Switch } from "@/components/ui/switch" 
+import { DeleteConfirmationModal } from "@/app/dashboard/properties/projects/delete-confirmation-modal"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { cn } from "@/lib/utils"
 
-interface DataTableProps {
+// Define categories for column grouping
+const projectDetails = ["_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
+
+const unitDetails = [
+  "unitHeight",
+  "unitInternalDesign",
+  "unitExternalDesign",
+  "plotSizeSqFt",
+  "BuaSqFt",
+  "unitType",
+  "unitView",
+]
+
+const availability = ["unitPurpose", "listingDate", "chequeFrequency", "rentalPrice", "salePrice"]
+
+const unitTenancyDetails = ["rentedAt", "rentedTill", "vacantOn"]
+
+const paymentDetails = ["originalPrice", "paidTODevelopers", "payableTODevelopers", "premiumAndLoss"]
+
+const actions = ["edit", "delete"]
+
+interface PropertyDataTableProps {
   data?: any[]
-  page?: any
-  setPage: any
-  Count: any
+  page?: number
+  setPage: (page: number) => void
+  Count: number
   onDelete?: (id: string) => void
   onShare?: (data: any) => void
   onEdit?: (row: any) => void
   onAttachDocument?: (id: string) => void
   loading?: boolean
+  selectedRows?: string[]
+  setSelectedRows?: (rows: string[]) => void
+  selectedColumns?: string[]
+  setSelectedColumns?: (columns: string[]) => void
+  toggleColumns?: (column: string) => void
+  toggleRow?: (id: string) => void
+  selectedRowsMap?: Record<string, boolean>
+  setSelectedRowsMap?: (map: Record<string, boolean>) => void
+  isSelectionMode?: boolean
+  setIsSelectionMode?: (mode: boolean) => void
+  isRowSelected?: (id: string) => boolean
+  clearAllSelections?: () => void
 }
 
-export function DataTable({
+export default function PropertyDataTable({
   data = [],
-  page,
+  page = 1,
   setPage,
   Count,
   onDelete,
   onShare,
-  selectedRows,
-  setSelectedColumns,
-  setSelectedRows,
-  toggleColumns,
-  toggleRow,
-  selectedColumns,
-  setIsSelectionMode,
-  selectedRowsMap,
-  isRowSelected, 
-  setSelectedRowsMap,
-  isSelectionMode,
+  selectedRows = [],
+  setSelectedColumns = () => {},
+  setSelectedRows = () => {},
+  toggleColumns = () => {},
+  toggleRow = () => {},
+  selectedColumns = [],
+  setIsSelectionMode = () => {},
+  selectedRowsMap = {},
+  isRowSelected = () => false,
+  setSelectedRowsMap = () => {},
+  isSelectionMode = false,
   onEdit,
   onAttachDocument,
-  loading = false,
-}: any) {
+  loading = false, 
+  clearAllSelections = () => {},
+}: PropertyDataTableProps) {
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
-  const [checkState, setCheckState] = useState<any>("all")
-
-  const [isAttachingDocument, setIsAttachingDocument] = useState(false)
+  const [checkState, setCheckState] = useState<string>("all")
+  const [isAttachingDocument, setIsAttachingDocument] = useState(false) 
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false) 
+    const [recordDelete , setRecordToDelete] = useState<any>("");
+  
   const itemsPerPage = 10
 
   // Table headers configuration
@@ -69,33 +104,36 @@ export function DataTable({
     // Project Details
     { key: "_id", label: "ID" },
     { key: "roadLocation", label: "LOCATION NAME" },
+    { key: "developmentName", label: "DEVELOPMENT NAME" },
     { key: "subDevelopmentName", label: "SUB DEVELOPMENT" },
     { key: "projectName", label: "PROJECT NAME" },
-    { key: "propertyType", label: "PROPERTY TYPE" },
 
     // Unit Details
-    { key: "unitNumber", label: "UNIT NUMBER" },
-    { key: "propertyHeight", label: "PROPERTY HEIGHT" },
-    { key: "unitLandSize", label: "UNIT LAND SIZE (SQ. FT)" },
-    { key: "unitBua", label: "UNIT BUA (SQ. FT)" },
-    { key: "unitLocation", label: "UNIT LOCATION" },
+    { key: "unitHeight", label: "UNIT HEIGHT" },
+    { key: "unitInternalDesign", label: "INTERNAL DESIGN" },
+    { key: "unitExternalDesign", label: "EXTERNAL DESIGN" },
+    { key: "plotSizeSqFt", label: "PLOT SIZE (SQ. FT)" },
+    { key: "BuaSqFt", label: "BUA (SQ. FT)" },
+    { key: "unitType", label: "UNIT TYPE" },
     { key: "unitView", label: "UNIT VIEW" },
 
-    { key: "Purpose", label: "PURPOSE" },
-    { key: "createdAt", label: "LISTING DATE" },
-    { key: "noOfCheques", label: "NO OF CHEQUE" },
-    { key: "Rent", label: "RENT" },
-    { key: "resalePrice", label: "RESALE PRICE" },
+    // Availability
+    { key: "unitPurpose", label: "PURPOSE" },
+    { key: "listingDate", label: "LISTING DATE" },
+    { key: "chequeFrequency", label: "CHEQUE FREQUENCY" },
+    { key: "rentalPrice", label: "RENTAL PRICE" },
+    { key: "salePrice", label: "SALE PRICE" },
 
     // Unit Tenancy Details
-    { key: "vacancyStatus", label: "VACCANCY STATUS" },
+    { key: "rentedAt", label: "RENTED AT" },
+    { key: "rentedTill", label: "RENTED TILL" },
+    { key: "vacantOn", label: "VACANT ON" },
 
     // Payment Details
-    { key: "primaryPrice", label: "PRIMARY PRICE" },
+    { key: "originalPrice", label: "ORIGINAL PRICE" },
+    { key: "paidTODevelopers", label: "PAID TO DEVELOPERS" },
+    { key: "payableTODevelopers", label: "PAYABLE TO DEVELOPERS" },
     { key: "premiumAndLoss", label: "PREMIUM / LOSS" },
-
-    // Marketing Material
-    { key: "attachDocument", label: "DOCUMENTS" },
 
     // Actions
     { key: "edit", label: "EDIT" },
@@ -124,12 +162,13 @@ export function DataTable({
     onEdit?.(record)
   }
 
-  const handleDeleteClick = (id: string) => {
-    onDelete?.(id)
+  const confirmDelete = () => {
+    onDelete?.(recordDelete)
   }
+
   const [showHeaderCategories, setShowHeaderCategories] = useState(false)
 
-  const toggleColumnVisibility = (columnKey: string, headers?: any) => {
+  const toggleColumnVisibility = (columnKey: string, headers?: string) => {
     if (headers) {
       if (headers === "projectDetails") {
         setCheckState("projectDetails")
@@ -196,24 +235,23 @@ export function DataTable({
       }))
     }
   }
+
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap, setSelectedRows])
 
-  const totalPages = Math.ceil(Count / itemsPerPage) - 1
+  const totalPages = Math.ceil(Count / itemsPerPage) || 1
 
   const goToPage = (pageNumber: number) => {
     setPage(pageNumber)
   }
-
-  // Toggle row selection
 
   const toggleSelectionMode = () => {
     if (isSelectionMode) {
       setIsSelectionMode(false)
       setSelectedRows([])
       setSelectedColumns([])
-      setSelectedRowsMap({}) // Add this line
+      setSelectedRowsMap({})
     } else {
       setIsSelectionMode(true)
     }
@@ -254,13 +292,6 @@ export function DataTable({
     setSelectedColumns(tableHeaders.map((header) => header.key))
   }
 
-  const clearAllSelections = () => {
-    setSelectedRows([])
-    setSelectedColumns([])
-    // Add this line to clear the map as well
-    setSelectedRowsMap({})
-  }
-
   const renderCellContent = (record: any, key: string) => {
     switch (key) {
       case "_id":
@@ -284,11 +315,14 @@ export function DataTable({
             </Button>
           </div>
         )
-      case "unitBua":
-      case "unitLandSize":
-      case "primaryPrice":
-      case "resalePrice":
-      case "Rent":
+      case "plotSizeSqFt":
+      case "BuaSqFt":
+      case "originalPrice":
+      case "rentalPrice":
+      case "salePrice":
+      case "paidTODevelopers":
+      case "payableTODevelopers":
+      case "premiumAndLoss":
         return record[key] ? record[key].toLocaleString() : "-"
       case "unitView":
         if (Array.isArray(record[key])) {
@@ -332,19 +366,6 @@ export function DataTable({
           )
         }
         return record[key] || "-"
-      case "attachDocument":
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-            onClick={() => handleAttachDocument(record._id)}
-            disabled={isAttachingDocument}
-          >
-            <Upload className="h-4 w-4 mr-1" />
-            Attach
-          </Button>
-        )
       case "edit":
         return (
           <Button
@@ -363,14 +384,22 @@ export function DataTable({
             variant="outline"
             size="sm"
             className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-            onClick={() => handleDeleteClick(record._id)}
+            onClick={() => {setRecordToDelete(record._id); setIsDeleteModalOpen(true);}}
           >
             <Trash2 className="h-4 w-4 mr-1" />
             Delete
           </Button>
         )
-      case "createdAt":
-        return record[key] ? new Date(record[key]).toLocaleDateString() : "-"
+        case "listingDate":
+case "rentedAt":
+case "rentedTill":
+case "vacantOn":
+  const value = record[key];
+  if (value === "") return "N/A";
+  if (!value) return "-";
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString();
+
       default:
         return record[key] || "-"
     }
@@ -443,7 +472,7 @@ export function DataTable({
           </div>
         )}
 
-        {/* Main toolbar - with Add Record button removed */}
+        {/* Main toolbar */}
         <div className="p-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
             {!isSelectionMode ? (
@@ -461,11 +490,12 @@ export function DataTable({
                 </Tooltip>
               </TooltipProvider>
             ) : null}
-            <Switch
-              enabled={showHeaderCategories}
-              onChange={() => setShowHeaderCategories(!showHeaderCategories)}
-              label="Show Headers"
-            />
+            <div className="flex items-center gap-2">
+              <Switch checked={showHeaderCategories} onCheckedChange={setShowHeaderCategories} id="show-headers" />
+              <label htmlFor="show-headers" className="text-sm cursor-pointer">
+                Show Headers
+              </label>
+            </div>
           </div>
         </div>
 
@@ -475,10 +505,16 @@ export function DataTable({
               <TableHeader>
                 {showHeaderCategories && (
                   <TableRow>
+                    {isSelectionMode && (
+                      <TableHead className="w-12 px-4 py-3 text-center">
+                        <span className="sr-only">Selection</span>
+                      </TableHead>
+                    )}
+
                     {(checkState === "projectDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "projectDetails")}
-                        colSpan={isSelectionMode ? 5 : 5}
+                        colSpan={projectDetails.filter((key) => visibleColumns[key]).length}
                         className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
                       >
                         Project Details
@@ -500,7 +536,7 @@ export function DataTable({
                     {(checkState === "unitDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "unitDetails")}
-                        colSpan={isSelectionMode ? 6 : 6}
+                        colSpan={unitDetails.filter((key) => visibleColumns[key]).length}
                         className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
                       >
                         Unit Details
@@ -522,7 +558,7 @@ export function DataTable({
                     {(checkState === "availability" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "availability")}
-                        colSpan={isSelectionMode ? 5 : 5}
+                        colSpan={availability.filter((key) => visibleColumns[key]).length}
                         className="text-center cursor-pointer font-bold bg-gradient-to-b from-orange-500 to-orange-400 border-r border-border relative"
                       >
                         Availability
@@ -540,13 +576,14 @@ export function DataTable({
                         )}
                       </TableHead>
                     )}
+
                     {(checkState === "unitTenancyDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "unitTenancyDetails")}
-                        colSpan={isSelectionMode ? 1 : 1}
+                        colSpan={unitTenancyDetails.filter((key) => visibleColumns[key]).length}
                         className="text-center cursor-pointer font-bold bg-gradient-to-b from-blue-500 to-blue-400 border-r border-border relative"
                       >
-                        Unit Tenency Details
+                        Unit Tenancy Details
                         {checkState === "unitTenancyDetails" && (
                           <button
                             onClick={(e) => {
@@ -561,10 +598,11 @@ export function DataTable({
                         )}
                       </TableHead>
                     )}
+
                     {(checkState === "paymentDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "paymentDetails")}
-                        colSpan={isSelectionMode ? 2 : 2}
+                        colSpan={paymentDetails.filter((key) => visibleColumns[key]).length}
                         className="text-center cursor-pointer font-bold bg-gradient-to-b from-blue-500 to-blue-400 border-r border-border relative"
                       >
                         Payment Details
@@ -582,17 +620,20 @@ export function DataTable({
                         )}
                       </TableHead>
                     )}
-                    {(checkState === "actions" || checkState === "all") && (
-                      <TableHead
-                        onClick={() => toggleColumnVisibility("a", "actions")}
-                        colSpan={isSelectionMode ? 3 : 3}
-                        className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
-                      >
-                        Other Actions
-                      </TableHead>
-                    )}
+
+                    {(checkState === "actions" || checkState === "all") &&
+                      actions.some((key) => visibleColumns[key]) && (
+                        <TableHead
+                          onClick={() => toggleColumnVisibility("a", "actions")}
+                          colSpan={actions.filter((key) => visibleColumns[key]).length}
+                          className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                        >
+                          Actions
+                        </TableHead>
+                      )}
                   </TableRow>
                 )}
+
                 <TableRow className="border-b border-border hover:bg-transparent">
                   {isSelectionMode && (
                     <TableHead className="w-12 px-4 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
@@ -611,24 +652,28 @@ export function DataTable({
                           "whitespace-nowrap text-center border-b",
                           header.key === "_id" && "w-[120px]",
                           header.key === "roadLocation" && "w-[120px]",
+                          header.key === "developmentName" && "w-[150px]",
                           header.key === "subDevelopmentName" && "w-[150px]",
                           header.key === "projectName" && "w-[150px]",
-                          header.key === "propertyType" && "w-[180px]",
-                          header.key === "unitNumber" && "w-[180px]",
-                          header.key === "propertyHeight" && "w-[150px]",
-                          header.key === "unitLandSize" && "w-[120px]",
-                          header.key === "unitBua" && "w-[120px]",
-                          header.key === "unitLocation" && "w-[120px]",
+                          header.key === "unitHeight" && "w-[120px]",
+                          header.key === "unitInternalDesign" && "w-[150px]",
+                          header.key === "unitExternalDesign" && "w-[150px]",
+                          header.key === "plotSizeSqFt" && "w-[120px]",
+                          header.key === "BuaSqFt" && "w-[120px]",
+                          header.key === "unitType" && "w-[120px]",
                           header.key === "unitView" && "w-[100px]",
-                          header.key === "Purpose" && "w-[100px]",
-                          header.key === "createdAt" && "w-[100px]",
-                          header.key === "noOfCheques" && "w-[100px]",
-                          header.key === "Rent" && "w-[100px]",
-                          header.key === "resalePrice" && "w-[100px]",
-                          header.key === "vacancyStatus" && "w-[100px]",
-                          header.key === "primaryPrice" && "w-[100px]",
-                          header.key === "premiumAndLoss" && "w-[100px]",
-                          header.key === "attachDocument" && "w-[100px]",
+                          header.key === "unitPurpose" && "w-[100px]",
+                          header.key === "listingDate" && "w-[120px]",
+                          header.key === "chequeFrequency" && "w-[150px]",
+                          header.key === "rentalPrice" && "w-[120px]",
+                          header.key === "salePrice" && "w-[120px]",
+                          header.key === "rentedAt" && "w-[120px]",
+                          header.key === "rentedTill" && "w-[120px]",
+                          header.key === "vacantOn" && "w-[120px]",
+                          header.key === "originalPrice" && "w-[120px]",
+                          header.key === "paidTODevelopers" && "w-[150px]",
+                          header.key === "payableTODevelopers" && "w-[150px]",
+                          header.key === "premiumAndLoss" && "w-[120px]",
                           header.key === "edit" && "w-[100px]",
                           header.key === "delete" && "w-[100px]",
                         )}
@@ -708,7 +753,7 @@ export function DataTable({
           </div>
         </div>
 
-        {/* Pagination moved to the bottom */}
+        {/* Pagination */}
         <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <span className="text-sm text-muted-foreground">{data.length} records</span>
 
@@ -724,7 +769,7 @@ export function DataTable({
             </Button>
 
             {totalPages <= 3 ? (
-              // If 3 or fewer pages on mobile, 5 or fewer on desktop, show all page numbers
+              // If 3 or fewer pages, show all page numbers
               Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
                 <Button
                   key={pageNumber}
@@ -737,7 +782,7 @@ export function DataTable({
                 </Button>
               ))
             ) : (
-              // If more than 3 pages on mobile, 5 on desktop, show simplified pagination
+              // If more than 3 pages, show simplified pagination
               <>
                 {/* Always show page 1 */}
                 <Button
@@ -817,7 +862,12 @@ export function DataTable({
             </span>
           </div>
         </div>
-      </div>
+      </div> 
+       <DeleteConfirmationModal
+              isOpen={isDeleteModalOpen}
+              onClose={() => {setIsDeleteModalOpen(false) ; setRecordToDelete("")}}
+              onConfirm={confirmDelete}
+            />
     </>
   )
 }
