@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { File, Plus, Minus } from "lucide-react"
+import { File, Plus, Minus, X } from 'lucide-react'
 import axios from "axios"
 import { useUser } from "@clerk/nextjs"
 import { toast } from "react-toastify"
@@ -97,6 +97,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   const [projectSearchTerm, setProjectSearchTerm] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [showProjectResults, setShowProjectResults] = useState(false)
 
   // Fetch projects on component mount
   useEffect(() => {
@@ -207,6 +208,14 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     setIsEditing(false)
     setImagesToDelete([])
     setSelectedProject(null)
+    // Reset search state
+    setProjectSearchTerm("")
+    setIsSearching(false)
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = null
+    }
+    setShowProjectResults(false);
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
@@ -224,6 +233,33 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     }
 
     setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
+  }
+
+  const fetchProjects = async (searchTerm = "") => {
+    setIsSearching(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `&projectName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setProjects(response.data.data)
+      } else {
+        setProjects([])
+        console.error("Invalid response format:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      setProjects([])
+      toast.error("Failed to load projects. Please try again.")
+    } finally {
+      setIsSearching(false)
+    }
   }
 
   const uploadImageToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
@@ -349,7 +385,10 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
         }
 
         console.log("Updating property:", updatedData)
-        response = await axios.patch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${propertyToEdit._id}`, updatedData)
+        response = await axios.patch(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${propertyToEdit._id}`,
+          updatedData,
+        )
       } else {
         console.log("Adding property:", finalData)
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData)
@@ -485,6 +524,31 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     }))
   }
 
+  // Add this useEffect for cleanup
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Add click outside handler to close project results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const searchInput = document.getElementById('projectSearch');
+      if (searchInput && !searchInput.contains(target)) {
+        setShowProjectResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <Dialog
       open={isOpen}
@@ -509,73 +573,95 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
               <h3 className="text-lg font-semibold">Project Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="project">Project</Label>
+                  <Label htmlFor="projectSearch">Project</Label>
                   <div className="relative">
-                    <Select
-                      value={dataForm.project || ""}
-                      onValueChange={(value) => handleSelectChange(value, "project")}
-                    >
-                      <SelectTrigger
-                        id="project"
-                        className={`bg-input border-input ${errors.project ? "border-destructive" : ""}`}
-                      >
-                        <SelectValue placeholder="Search or select project..." />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover border-border max-h-[200px]">
-                        <div className="px-2 py-2 fixed top-0 w-full  bg-popover z-10">
-                          <Input
-                            placeholder="Search projects..."
-                            value={projectSearchTerm}
-                            onChange={(e) => {
-                              const value = e.target.value
-                              setProjectSearchTerm(value)
+                    <Input
+                      id="projectSearch"
+                      placeholder="Search projects..."
+                      value={projectSearchTerm}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        setProjectSearchTerm(value)
 
-                              // Clear previous timeout
-                              if (searchTimeoutRef.current) {
-                                clearTimeout(searchTimeoutRef.current)
-                              }
+                        // Clear previous timeout
+                        if (searchTimeoutRef.current) {
+                          clearTimeout(searchTimeoutRef.current)
+                        }
 
-                              // Set searching state
-                              setIsSearching(true)
+                        // Set searching state
+                        setIsSearching(true)
 
-                              searchTimeoutRef.current = setTimeout(async () => {
-                                try {
-                                  const response = await axios.get(
-                                    `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment${
-                                      value ? `&projectName=${value}` : ""
-                                    }`,
-                                  )
-                                  if (response.data) {
-                                    setProjects(response.data.data)
-                                  }
-                                } catch (error) {
-                                  console.error("Error searching projects:", error)
-                                } finally {
-                                  setIsSearching(false)
-                                }
-                              }, 300)
-                            }}
-                            className="h-8 w-full"
-                          />
-                          {isSearching && (
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        // Set a new timeout for debouncing
+                        searchTimeoutRef.current = setTimeout(() => {
+                          fetchProjects(value)
+                        }, 300) // 500ms debounce time
+                      }}
+                      className={`w-full pr-10 ${errors.project ? "border-destructive" : ""}`}
+                      autoComplete="off"
+                      onFocus={() => setShowProjectResults(true)}
+                    />
+                    {isSearching && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                    
+                    {/* Dropdown results */}
+                    {showProjectResults && (
+                      <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md">
+                        <div className="max-h-[200px] overflow-y-auto">
+                          {projects.length > 0 ? (
+                            <div className="divide-y">
+                              {projects.map((project) => (
+                                <button
+                                  key={project._id}
+                                  className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors ${
+                                    dataForm.project === project._id ? "bg-muted font-medium" : ""
+                                  }`}
+                                  onClick={() => {
+                                    setSelectedProject(project)
+                                    handleSelectChange(project._id, "project")
+                                    setShowProjectResults(false)
+                                  }}
+                                >
+                                  {project.projectName}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="px-3 py-4 text-center text-muted-foreground">
+                              {isSearching ? "Searching..." : "No projects found"}
                             </div>
                           )}
                         </div>
-                        {(Array.isArray(projects) ? projects : []).length > 0 ? (
-                          (Array.isArray(projects) ? projects : []).map((project) => (
-                            <SelectItem className="mt-1.5" key={project._id} value={project._id}>
-                              {project.projectName}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="px-2 py-4 text-center text-muted-foreground">No projects found</div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {errors.project && <p className="text-sm text-destructive">Project is required</p>}
+                      </div>
+                    )}
                   </div>
+
+                  {selectedProject && (
+                    <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                      <span>Selected: {selectedProject.projectName}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedProject(null)
+                          setDataForm((prev) => ({
+                            ...prev,
+                            project: "",
+                            masterDevelopment: "",
+                            masterDevelopmentName: "",
+                            subDevelopment: "",
+                            subDevelopmentName: "",
+                          }))
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {errors.project && <p className="text-sm text-destructive">Project is required</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -989,7 +1075,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   )
 }
 
-function PropertySection({ title, children }: { title: string; children: React.ReactNode }) {
+export function PropertySection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">{title}</h3>
@@ -998,7 +1084,7 @@ function PropertySection({ title, children }: { title: string; children: React.R
   )
 }
 
-function SelectField({
+export function SelectField({
   label,
   fieldKey,
   options,

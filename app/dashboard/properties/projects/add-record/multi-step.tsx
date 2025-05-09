@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Check, ChevronRight, X } from "lucide-react"
 import {
   Dialog,
@@ -93,6 +93,10 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   const [loading, setLoading] = useState<boolean>(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
+  const [subDevelopmentSearchTerm, setSubDevelopmentSearchTerm] = useState<string>("")
+  const [isSearchingSubDevelopment, setIsSearchingSubDevelopment] = useState<boolean>(false)
+  const subDevelopmentSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [showSubDevResults, setShowSubDevResults] = useState(false)
 
   // Reset form and set edit mode when modal opens/closes
   useEffect(() => {
@@ -152,15 +156,34 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     }
   }
 
-  const fetchSubDevelopments = async (masterDevelopmentId: string) => {
-    setLoading(true)
+  const fetchSubDevelopments = async (masterDevelopmentId: string, searchTerm = "") => {
+    setIsSearchingSubDevelopment(true)
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment`)
-      setSubDevelopments(response.data.data)
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?subDevelopment=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setSubDevelopments(response.data.data)
+      } else {
+        setSubDevelopments([])
+        console.error("Invalid response format:", response.data)
+      }
     } catch (error) {
       console.error("Error fetching sub developments:", error)
+      setSubDevelopments([])
+      toast({
+        title: "Error",
+        description: "Failed to load sub developments. Please try again.",
+        variant: "destructive",
+      })
     } finally {
-      setLoading(false)
+      setIsSearchingSubDevelopment(false)
     }
   }
 
@@ -180,6 +203,19 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       buaAreaSqFt: "",
     })
     setErrors({})
+
+    // Clear search state
+    setSubDevelopmentSearchTerm("")
+    setIsSearchingSubDevelopment(false)
+    setSubDevelopments([])
+
+    // Clear any pending timeouts
+    if (subDevelopmentSearchTimeoutRef.current) {
+      clearTimeout(subDevelopmentSearchTimeoutRef.current)
+      subDevelopmentSearchTimeoutRef.current = null
+    }
+
+    setShowSubDevResults(false)
   }
 
   const handleClose = () => {
@@ -191,6 +227,8 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     const selectedDevelopment = masterDevelopments.find((dev) => dev._id === id)
     if (selectedDevelopment) {
       setMasterDevelopmentName(selectedDevelopment.developmentName)
+      setSubDevelopmentSearchTerm("")
+      setIsSearchingSubDevelopment(false)
       fetchSubDevelopments(id)
     }
   }
@@ -215,8 +253,7 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
         if (editedData.plot) {
           delete editedData.plot
         }
-      }
-      else if (step === 3 && stepNo !== 3) {
+      } else if (step === 3 && stepNo !== 3) {
         editedData.plot = plotDetails
         if (editedData.subDevelopment) {
           delete editedData.subDevelopment
@@ -364,6 +401,31 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (subDevelopmentSearchTimeoutRef.current) {
+        clearTimeout(subDevelopmentSearchTimeoutRef.current)
+        subDevelopmentSearchTimeoutRef.current = null
+      }
+    }
+  }, [])
+
+  // Add click outside handler to close sub development results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      const searchInput = document.getElementById("subDevelopmentSearch")
+      if (searchInput && !searchInput.contains(target)) {
+        setShowSubDevResults(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
@@ -411,28 +473,90 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
                   <Label className="text-sm text-muted-foreground">Selected Master Development</Label>
                   <div className="mt-1 p-2 bg-muted rounded-md">{masterDevelopmentName}</div>
                 </div>
-                <Label htmlFor="subDevelopmentName">Sub Development Name</Label>
+                <Label htmlFor="subDevelopmentSearch">Search Sub Development</Label>
                 {loading ? (
                   <div className="h-10 w-full bg-gray-100 animate-pulse rounded-md"></div>
                 ) : (
-                  <Select
-                    value={subDevelopmentName}
-                    onValueChange={(value) => {
-                      const subDev = subDevelopments.find((sd) => sd.subDevelopment === value)
-                      handleSubDevelopmentChange(value, subDev?._id || "")
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select sub development" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subDevelopments.map((subDev) => (
-                        <SelectItem key={subDev._id} value={subDev.subDevelopment}>
-                          {subDev.subDevelopment}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        id="subDevelopmentSearch"
+                        placeholder="Search sub developments..."
+                        value={subDevelopmentSearchTerm}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setSubDevelopmentSearchTerm(value)
+
+                          // Clear previous timeout
+                          if (subDevelopmentSearchTimeoutRef.current) {
+                            clearTimeout(subDevelopmentSearchTimeoutRef.current)
+                          }
+
+                          // Set searching state
+                          setIsSearchingSubDevelopment(true)
+
+                          // Set a new timeout for debouncing
+                          subDevelopmentSearchTimeoutRef.current = setTimeout(() => {
+                            fetchSubDevelopments(selectedMasterDevelopmentId, value)
+                          }, 300) // 500ms debounce time
+                        }}
+                        className="w-full pr-10"
+                        autoComplete="off"
+                        onFocus={() => setShowSubDevResults(true)}
+                      />
+                      {isSearchingSubDevelopment && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        </div>
+                      )}
+
+                      {/* Dropdown results */}
+                      {showSubDevResults && (
+                        <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md">
+                          <div className="max-h-[200px] overflow-y-auto">
+                            {subDevelopments.length > 0 ? (
+                              <div className="divide-y">
+                                {subDevelopments.map((subDev) => (
+                                  <button
+                                    key={subDev._id}
+                                    className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors ${
+                                      selectedSubDevelopmentId === subDev._id ? "bg-muted font-medium" : ""
+                                    }`}
+                                    onClick={() => {
+                                      handleSubDevelopmentChange(subDev.subDevelopment, subDev._id)
+                                      setShowSubDevResults(false)
+                                    }}
+                                  >
+                                    {subDev.subDevelopment}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="px-3 py-4 text-center text-muted-foreground">
+                                {isSearchingSubDevelopment ? "Searching..." : "No sub developments found"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {subDevelopmentName && (
+                      <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                        <span>Selected: {subDevelopmentName}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSubDevelopmentName("")
+                            setSelectedSubDevelopmentId("")
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
