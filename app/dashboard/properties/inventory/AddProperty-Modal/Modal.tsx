@@ -340,7 +340,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     try {
       let response
       if (isEditing) {
-        const updatedData = { ...finalData, _id: propertyToEdit._id }
+        const updatedData = { ...finalData }
 
         // Process any images marked for deletion
         if (imagesToDelete.length > 0) {
@@ -349,7 +349,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
         }
 
         console.log("Updating property:", updatedData)
-        response = await axios.put(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, updatedData)
+        response = await axios.patch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${propertyToEdit._id}`, updatedData)
       } else {
         console.log("Adding property:", finalData)
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData)

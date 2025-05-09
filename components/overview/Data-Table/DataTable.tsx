@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, memo, useCallback } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +18,7 @@ import {
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch" 
+import { Switch } from "@/components/ui/switch"
 import { DeleteConfirmationModal } from "@/app/dashboard/properties/projects/delete-confirmation-modal"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { cn } from "@/lib/utils"
@@ -26,7 +26,8 @@ import { cn } from "@/lib/utils"
 // Define categories for column grouping
 const projectDetails = ["_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
 
-const unitDetails = [
+const unitDetails = [ 
+  "unitNumber",
   "unitHeight",
   "unitInternalDesign",
   "unitExternalDesign",
@@ -68,7 +69,7 @@ interface PropertyDataTableProps {
   clearAllSelections?: () => void
 }
 
-export default function PropertyDataTable({
+function PropertyDataTable({
   data = [],
   page = 1,
   setPage,
@@ -88,15 +89,15 @@ export default function PropertyDataTable({
   isSelectionMode = false,
   onEdit,
   onAttachDocument,
-  loading = false, 
+  loading = false,
   clearAllSelections = () => {},
 }: PropertyDataTableProps) {
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [checkState, setCheckState] = useState<string>("all")
-  const [isAttachingDocument, setIsAttachingDocument] = useState(false) 
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false) 
-    const [recordDelete , setRecordToDelete] = useState<any>("");
-  
+  const [isAttachingDocument, setIsAttachingDocument] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [recordDelete, setRecordToDelete] = useState<any>("")
+
   const itemsPerPage = 10
 
   // Table headers configuration
@@ -109,6 +110,7 @@ export default function PropertyDataTable({
     { key: "projectName", label: "PROJECT NAME" },
 
     // Unit Details
+    { key: "unitNumber", label: "UNIT NUMBER" },
     { key: "unitHeight", label: "UNIT HEIGHT" },
     { key: "unitInternalDesign", label: "INTERNAL DESIGN" },
     { key: "unitExternalDesign", label: "EXTERNAL DESIGN" },
@@ -144,31 +146,40 @@ export default function PropertyDataTable({
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
   )
 
-  const handleCopyId = (id: string) => {
-    navigator.clipboard.writeText(id)
-    setCopiedIds({ ...copiedIds, [id]: true })
-    setTimeout(() => {
-      setCopiedIds((prev) => ({ ...prev, [id]: false }))
-    }, 2000)
-  }
+  const handleCopyId = useCallback(
+    (id: string) => {
+      navigator.clipboard.writeText(id)
+      setCopiedIds({ ...copiedIds, [id]: true })
+      setTimeout(() => {
+        setCopiedIds((prev) => ({ ...prev, [id]: false }))
+      }, 2000)
+    },
+    [copiedIds],
+  )
 
-  const handleAttachDocument = (id: string) => {
-    setIsAttachingDocument(true)
-    onAttachDocument?.(id)
-    setTimeout(() => setIsAttachingDocument(false), 1000)
-  }
+  const handleAttachDocument = useCallback(
+    (id: string) => {
+      setIsAttachingDocument(true)
+      onAttachDocument?.(id)
+      setTimeout(() => setIsAttachingDocument(false), 1000)
+    },
+    [onAttachDocument],
+  )
 
-  const handleEditRecord = (record: any) => {
-    onEdit?.(record)
-  }
+  const handleEditRecord = useCallback(
+    (record: any) => {
+      onEdit?.(record)
+    },
+    [onEdit],
+  )
 
-  const confirmDelete = () => {
+  const confirmDelete = useCallback(() => {
     onDelete?.(recordDelete)
-  }
+  }, [onDelete, recordDelete])
 
   const [showHeaderCategories, setShowHeaderCategories] = useState(false)
 
-  const toggleColumnVisibility = (columnKey: string, headers?: string) => {
+  const toggleColumnVisibility = useCallback((columnKey: string, headers?: string) => {
     if (headers) {
       if (headers === "projectDetails") {
         setCheckState("projectDetails")
@@ -234,7 +245,7 @@ export default function PropertyDataTable({
         [columnKey]: !prev[columnKey],
       }))
     }
-  }
+  }, [])
 
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
@@ -242,11 +253,14 @@ export default function PropertyDataTable({
 
   const totalPages = Math.ceil(Count / itemsPerPage) || 1
 
-  const goToPage = (pageNumber: number) => {
-    setPage(pageNumber)
-  }
+  const goToPage = useCallback(
+    (pageNumber: number) => {
+      setPage(pageNumber)
+    },
+    [setPage],
+  )
 
-  const toggleSelectionMode = () => {
+  const toggleSelectionMode = useCallback(() => {
     if (isSelectionMode) {
       setIsSelectionMode(false)
       setSelectedRows([])
@@ -255,9 +269,9 @@ export default function PropertyDataTable({
     } else {
       setIsSelectionMode(true)
     }
-  }
+  }, [isSelectionMode, setIsSelectionMode, setSelectedRows, setSelectedColumns, setSelectedRowsMap])
 
-  const getSelectedData = () => {
+  const getSelectedData = useCallback(() => {
     if (selectedRows.length === 0 || selectedColumns.length === 0) return []
 
     return data
@@ -269,141 +283,147 @@ export default function PropertyDataTable({
         })
         return filteredRow
       })
-  }
+  }, [data, selectedRows, selectedColumns])
 
-  const logSelectedData = () => {
+  const logSelectedData = useCallback(() => {
     const selectedData = getSelectedData()
     onShare?.(selectedData)
-  }
+  }, [getSelectedData, onShare])
 
-  const selectAllRows = () => {
+  const selectAllRows = useCallback(() => {
     const newSelectedRows = data.map((row) => row._id)
     setSelectedRows(newSelectedRows)
 
-    // Update the map to include all rows on current page
     const newMap = { ...selectedRowsMap }
     data.forEach((row) => {
       newMap[row._id] = true
     })
     setSelectedRowsMap(newMap)
-  }
+  }, [data, selectedRowsMap, setSelectedRows, setSelectedRowsMap])
 
-  const selectAllColumns = () => {
+  const selectAllColumns = useCallback(() => {
     setSelectedColumns(tableHeaders.map((header) => header.key))
-  }
+  }, [setSelectedColumns])
 
-  const renderCellContent = (record: any, key: string) => {
-    switch (key) {
-      case "_id":
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <span>{record._id.substring(0, 8) + "..."}</span>
+  const renderCellContent = useCallback(
+    (record: any, key: string) => {
+      switch (key) {
+        case "_id":
+          return (
+            <div className="flex items-center justify-center gap-2">
+              <span>{record._id.substring(0, 8) + "..."}</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleCopyId(record._id)
+                }}
+              >
+                {copiedIds[record._id] ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+          )
+        case "plotSizeSqFt":
+        case "BuaSqFt":
+        case "originalPrice":
+        case "rentalPrice":
+        case "salePrice":
+        case "unitNumber":
+        case "paidTODevelopers":
+        case "payableTODevelopers":
+        case "premiumAndLoss":
+          return record[key] ? record[key].toLocaleString() : "-"
+        case "unitView":
+          if (Array.isArray(record[key])) {
+            return (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-center justify-center gap-2 cursor-pointer">
+                    <Badge
+                      variant="outline"
+                      className="bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-200"
+                    >
+                      {record[key].length}
+                    </Badge>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80 p-0">
+                  <div className="p-4">
+                    <h4 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-purple-500"></div>
+                      Unit Views ({record[key].length})
+                    </h4>
+                    {record[key].length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {record[key].map((view: string, idx: number) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-200"
+                          >
+                            {view}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No views</p>
+                    )}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            )
+          }
+          return record[key] || "-"
+        case "edit":
+          return (
             <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleCopyId(record._id)
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              onClick={() => handleEditRecord(record)}
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+          )
+        case "delete":
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+              onClick={() => {
+                setRecordToDelete(record._id)
+                setIsDeleteModalOpen(true)
               }}
             >
-              {copiedIds[record._id] ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Copy className="h-4 w-4 text-muted-foreground" />
-              )}
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
             </Button>
-          </div>
-        )
-      case "plotSizeSqFt":
-      case "BuaSqFt":
-      case "originalPrice":
-      case "rentalPrice":
-      case "salePrice":
-      case "paidTODevelopers":
-      case "payableTODevelopers":
-      case "premiumAndLoss":
-        return record[key] ? record[key].toLocaleString() : "-"
-      case "unitView":
-        if (Array.isArray(record[key])) {
-          return (
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <div className="flex items-center justify-center gap-2 cursor-pointer">
-                  <Badge
-                    variant="outline"
-                    className="bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-200"
-                  >
-                    {record[key].length}
-                  </Badge>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-80 p-0">
-                <div className="p-4">
-                  <h4 className="font-medium text-sm mb-2 text-purple-700 dark:text-purple-300 flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-purple-500"></div>
-                    Unit Views ({record[key].length})
-                  </h4>
-                  {record[key].length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {record[key].map((view: string, idx: number) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="bg-purple-50 text-purple-700 dark:bg-purple-900 dark:text-purple-200"
-                        >
-                          {view}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No views</p>
-                  )}
-                </div>
-              </HoverCardContent>
-            </HoverCard>
           )
-        }
-        return record[key] || "-"
-      case "edit":
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-            onClick={() => handleEditRecord(record)}
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            Edit
-          </Button>
-        )
-      case "delete":
-        return (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-            onClick={() => {setRecordToDelete(record._id); setIsDeleteModalOpen(true);}}
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
-        )
         case "listingDate":
-case "rentedAt":
-case "rentedTill":
-case "vacantOn":
-  const value = record[key];
-  if (value === "") return "N/A";
-  if (!value) return "-";
-  const date = new Date(value);
-  return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString();
+        case "rentedAt":
+        case "rentedTill":
+        case "vacantOn":
+          const value = record[key]
+          if (value === "") return "N/A"
+          if (!value) return "-"
+          const date = new Date(value)
+          return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString()
 
-      default:
-        return record[key] || "-"
-    }
-  }
+        default:
+          return record[key] || "-"
+      }
+    },
+    [copiedIds, handleCopyId, handleEditRecord],
+  )
 
   return (
     <>
@@ -655,6 +675,7 @@ case "vacantOn":
                           header.key === "developmentName" && "w-[150px]",
                           header.key === "subDevelopmentName" && "w-[150px]",
                           header.key === "projectName" && "w-[150px]",
+                          header.key === "unitNumber" && "w-[120px]",
                           header.key === "unitHeight" && "w-[120px]",
                           header.key === "unitInternalDesign" && "w-[150px]",
                           header.key === "unitExternalDesign" && "w-[150px]",
@@ -862,12 +883,17 @@ case "vacantOn":
             </span>
           </div>
         </div>
-      </div> 
-       <DeleteConfirmationModal
-              isOpen={isDeleteModalOpen}
-              onClose={() => {setIsDeleteModalOpen(false) ; setRecordToDelete("")}}
-              onConfirm={confirmDelete}
-            />
+      </div>
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false)
+          setRecordToDelete("")
+        }}
+        onConfirm={confirmDelete}
+      />
     </>
   )
 }
+
+export default memo(PropertyDataTable)

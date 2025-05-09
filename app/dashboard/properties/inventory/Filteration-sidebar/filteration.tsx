@@ -9,18 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
-import { updateFilter, updateUnitView } from "@/lib/store/slices/filterSlice"
+import { updateFilter, updateUnitView, resetFilters } from "@/lib/store/slices/filterSlice"
 import type { RootState } from "@/lib/store/store"
-import {
-  setMinBed,
-  setMaxBed,
-  setMinPrimaryPrice,
-  setMaxPrimaryPrice,
-  setMinResalePrice,
-  setMaxResalePrice,
-  setMinRent,
-  setMaxRent,
-} from "@/lib/store/slices/rangeSlice"
 
 interface PropertyFilterSidebarProps {
   open: boolean
@@ -30,7 +20,6 @@ interface PropertyFilterSidebarProps {
 export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSidebarProps) {
   const dispatch = useDispatch()
   const filter = useSelector((state: RootState) => state.filter)
-  const range = useSelector((state: any) => state.range)
   const [unitViewInput, setUnitViewInput] = useState("")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,27 +27,44 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     dispatch(updateFilter({ [id]: value }))
   }
 
+  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target
+    dispatch(updateFilter({ [id]: value ? Number(value) : undefined }))
+  }
+
+type RangeField = 'rentalPriceRange' | 'salePriceRange' | 'originalPriceRange' | 'premiumAndLossRange';
+
+const handleRangeInputChange = (
+  field: RangeField,
+  minOrMax: 'min' | 'max',
+  value: string
+) => {
+  const numValue = value ? Number(value) : undefined;
+
+  const currentRange = filter[field] || { min: undefined, max: undefined };
+  dispatch(
+    updateFilter({
+      [field]: {
+        ...currentRange,
+        [minOrMax]: numValue,
+      },
+    })
+  );
+};
+
+
+
   const handleAddUnitViewTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && unitViewInput.trim() !== "") {
-      const newTags = [...filter.unitView, unitViewInput.trim()]
+      const newTags = [...(filter.unitView || []), unitViewInput.trim()]
       dispatch(updateUnitView(newTags))
       setUnitViewInput("")
     }
   }
 
   const handleRemoveUnitViewTag = (tag: string) => {
-    const newTags = filter.unitView.filter((t) => t !== tag)
+    const newTags = (filter.unitView || []).filter((t) => t !== tag)
     dispatch(updateUnitView(newTags))
-  }
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M+`
-    }
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}k+`
-    }
-    return `${value}`
   }
 
   const formatLargeNumber = (num: number) => {
@@ -79,191 +85,193 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
         </SheetHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="roadLocation">Road Location</Label>
+            <Label htmlFor="masterDevelopment">Master Development</Label>
             <Input
-              id="roadLocation"
-              placeholder="Enter road location"
-              value={filter.roadLocation}
+              id="masterDevelopment"
+              placeholder="Enter master development"
+              value={filter.masterDevelopment || ""}
               onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="developmentName">Development Name</Label>
+            <Label htmlFor="subDevelopment">Sub Development</Label>
             <Input
-              id="developmentName"
-              placeholder="Enter development name"
-              value={filter.developmentName}
+              id="subDevelopment"
+              placeholder="Enter sub development"
+              value={filter.subDevelopment || ""}
               onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="subDevelopmentName">Sub Development</Label>
-            <Input
-              id="subDevelopmentName"
-              placeholder="Enter sub development name"
-              value={filter.subDevelopmentName}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="projectName">Project Name</Label>
-            <Input
-              id="projectName"
-              placeholder="Enter project name"
-              value={filter.projectName}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="projectLocation">Project Location</Label>
-            <Input
-              id="projectLocation"
-              placeholder="Enter project location"
-              value={filter.projectLocation}
-              onChange={handleInputChange}
-            />
+            <Label htmlFor="project">Project</Label>
+            <Input id="project" placeholder="Enter project" value={filter.project || ""} onChange={handleInputChange} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="unitNumber">Unit Number</Label>
             <Input
               id="unitNumber"
-              type="number"
               placeholder="Enter unit number"
-              value={filter.unitNumber}
+              value={filter.unitNumber || ""}
               onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="unitLocation">Unit Location</Label>
+            <Label htmlFor="unitHeight">Unit Height</Label>
             <Input
-              id="unitLocation"
-              placeholder="Enter unit location"
-              value={filter.unitLocation}
-              onChange={handleInputChange}
+              id="unitHeight"
+              type="number"
+              placeholder="Enter unit height"
+              value={filter.unitHeight || ""}
+              onChange={handleNumberInputChange}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="vacancyStatus">Vacancy Status</Label>
+            <Label htmlFor="unitInternalDesign">Unit Internal Design</Label>
             <Input
-              id="vacancyStatus"
-              placeholder="Enter vacancy status"
-              value={filter.vacancyStatus}
+              id="unitInternalDesign"
+              placeholder="Enter internal design"
+              value={filter.unitInternalDesign || ""}
               onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="bedrooms">Bedrooms</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="bedroomsMin"
-                type="number"
-                value={range.minBed}
-                placeholder="Min"
-                onChange={(e) => {
-                  const value = e.target.value
-                  dispatch(setMinBed(value))
-                }}
-                className="w-full"
-              />
-              <span>to</span>
-              <Input
-                id="bedroomsMax"
-                type="number"
-                placeholder="Max"
-                value={range.maxBed}
-                onChange={(e) => {
-                  const value = e.target.value
-                  dispatch(setMaxBed(value))
-                }}
-                className="w-full"
-              />
-            </div>
+            <Label htmlFor="unitExternalDesign">Unit External Design</Label>
+            <Input
+              id="unitExternalDesign"
+              placeholder="Enter external design"
+              value={filter.unitExternalDesign || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="plotSizeSqFt">Plot Size (sq ft)</Label>
+            <Input
+              id="plotSizeSqFt"
+              type="number"
+              placeholder="Enter plot size"
+              value={filter.plotSizeSqFt || ""}
+              onChange={handleNumberInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="buaSqFt">BUA (sq ft)</Label>
+            <Input
+              id="buaSqFt"
+              type="number"
+              placeholder="Enter BUA"
+              value={filter.buaSqFt || ""}
+              onChange={handleNumberInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="unitType">Unit Type</Label>
+            <Input
+              id="unitType"
+              placeholder="Enter unit type"
+              value={filter.unitType || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="unitPurpose">Unit Purpose</Label>
+            <Input
+              id="unitPurpose"
+              placeholder="Enter unit purpose"
+              value={filter.unitPurpose || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="chequeFrequency">Cheque Frequency</Label>
+            <Input
+              id="chequeFrequency"
+              placeholder="Enter cheque frequency"
+              value={filter.chequeFrequency || ""}
+              onChange={handleInputChange}
+            />
           </div>
 
           <div className="space-y-4">
             <div className="space-y-5">
               <div>
-                <Label className="text-sm font-normal">Primary Price Range</Label>
+                <Label className="text-sm font-normal">Rental Price Range</Label>
                 <div className="flex items-center gap-2 mt-3">
                   <Input
-                    id="primaryPriceMin"
                     type="number"
                     placeholder="Min"
-                    value={range.minPrimaryPrice}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      dispatch(setMinPrimaryPrice(value))
-                    }}
+                    value={filter.rentalPriceRange?.min || ""}
+                    onChange={(e) => handleRangeInputChange("rentalPriceRange", "min", e.target.value)}
                     className="w-full"
                   />
                   <span>to</span>
                   <Input
-                    id="primaryPriceMax"
                     type="number"
                     placeholder="Max"
-                    value={range.maxPrimaryPrice}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      dispatch(setMaxPrimaryPrice(value))
-                    }}
+                    value={filter.rentalPriceRange?.max || ""}
+                    onChange={(e) => handleRangeInputChange("rentalPriceRange", "max", e.target.value)}
                     className="w-full"
                   />
                 </div>
               </div>
 
               <div>
-                <Label className="text-sm font-normal">Resale Price Range</Label>
+                <Label className="text-sm font-normal">Sale Price Range</Label>
                 <div className="flex items-center gap-2 mt-3">
                   <Input
-                    id="resalePriceMin"
                     type="number"
                     placeholder="Min"
-                    value={range.minResalePrice}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      dispatch(setMinResalePrice(value))
-                    }}
+                    value={filter.salePriceRange?.min || ""}
+                    onChange={(e) => handleRangeInputChange("salePriceRange", "min", e.target.value)}
                     className="w-full"
                   />
                   <span>to</span>
                   <Input
-                    id="resalePriceMax"
                     type="number"
                     placeholder="Max"
-                    value={range.maxResalePrice}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      dispatch(setMaxResalePrice(value))
-                    }}
+                    value={filter.salePriceRange?.max || ""}
+                    onChange={(e) => handleRangeInputChange("salePriceRange", "max", e.target.value)}
                     className="w-full"
                   />
                 </div>
               </div>
 
               <div>
-                <Label className="text-sm font-normal">Rent Range</Label>
+                <Label className="text-sm font-normal">Original Price Range</Label>
                 <div className="flex items-center gap-2 mt-3">
                   <Input
-                    id="rentMin"
                     type="number"
                     placeholder="Min"
-                    value={range.minRent}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      dispatch(setMinRent(value))
-                    }}
+                    value={filter.originalPriceRange?.min || ""}
+                    onChange={(e) => handleRangeInputChange("originalPriceRange", "min", e.target.value)}
                     className="w-full"
                   />
                   <span>to</span>
                   <Input
-                    id="rentMax"
                     type="number"
                     placeholder="Max"
-                    value={range.maxRent}
-                    onChange={(e) => {
-                      const value = e.target.value
-                      dispatch(setMaxRent(value))
-                    }}
+                    value={filter.originalPriceRange?.max || ""}
+                    onChange={(e) => handleRangeInputChange("originalPriceRange", "max", e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-normal">Premium And Loss Range</Label>
+                <div className="flex items-center gap-2 mt-3">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filter.premiumAndLossRange?.min || ""}
+                    onChange={(e) => handleRangeInputChange("premiumAndLossRange", "min", e.target.value)}
+                    className="w-full"
+                  />
+                  <span>to</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filter.premiumAndLossRange?.max || ""}
+                    onChange={(e) => handleRangeInputChange("premiumAndLossRange", "max", e.target.value)}
                     className="w-full"
                   />
                 </div>
@@ -272,16 +280,57 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="listingDate">Listing Date</Label>
+            <Input id="listingDate" type="date" value={filter.listingDate || ""} onChange={handleInputChange} />
+          </div>
+
+        
+          <div className="space-y-2">
+            <Label htmlFor="rentedAt">Rented At</Label>
+            <Input id="rentedAt" type="date" value={filter.rentedAt || ""} onChange={handleInputChange} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="rentedTill">Rented Till</Label>
+            <Input id="rentedTill" type="date" value={filter.rentedTill || ""} onChange={handleInputChange} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="vacantOn">Vacant On</Label>
+            <Input id="vacantOn" type="date" value={filter.vacantOn || ""} onChange={handleInputChange} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="paidTODevelopers">Paid To Developers</Label>
+            <Input
+              id="paidTODevelopers"
+              placeholder="Enter paid to developers"
+              value={filter.paidTODevelopers || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="payableTODevelopers">Payable To Developers</Label>
+            <Input
+              id="payableTODevelopers"
+              placeholder="Enter payable to developers"
+              value={filter.payableTODevelopers || ""}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="unitView">Unit View</Label>
             <Input
-              id="unitView"
+              id="unitViewInput"
               value={unitViewInput}
               onChange={(e) => setUnitViewInput(e.target.value)}
               onKeyDown={handleAddUnitViewTag}
               placeholder="Type and press Enter to add tags"
             />
             <div className="flex flex-wrap gap-2 mt-2">
-              {filter.unitView.map((tag) => (
+              {(filter.unitView || []).map((tag) => (
                 <Badge key={tag} variant="secondary">
                   {tag}
                   <Button
@@ -296,6 +345,10 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
               ))}
             </div>
           </div>
+
+          <Button variant="outline" className="mt-4" onClick={() => dispatch(resetFilters())}>
+            Reset All Filters
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef , useCallback} from "react"
 import { useSelector } from "react-redux"
 import PropertyDataTable from "@/components/overview/Data-Table/DataTable"
 import { FilterBar } from "@/components/overview/Filter-Bar/FilterBar"
@@ -23,11 +23,6 @@ import { ExportModal } from "./Export-Modal/ExportModal"
 import { exportToExcel } from "@/lib/exportProperty"
 
 const filter = [
-  {
-    key: "propertiesManaged",
-    label: "Properties Managed",
-    options: ["Townhouse", "Education", "Office", "Nursery", "Shop"],
-  },
   {
     key: "sortBy",
     label: "Sort By Time",
@@ -50,7 +45,8 @@ const tableHeaders = [
   "unitInternalDesign",
   "unitExternalDesign",
   "plotSizeSqFt",
-  "BuaSqFt",
+  "BuaSqFt", 
+  "unitNumber",
   "unitType",
   "unitView",
   "unitPurpose",
@@ -100,48 +96,43 @@ export default function PropertiesPage() {
   const sidebarFilters = useSelector((state: RootState) => state.filter)
   const rangeFilters = useSelector((state: any) => state.range)
 
-  // Function to fetch properties data
-  const fetchProperties = async (params: any = {}) => {
-    setLoading(true)
-    try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
-        params: {
-          ...params,
-          limit: 10,
-          page: currentPage,
-        },
-      })
-      console.log(response.data)
-      if (response.data) {
-        setProperties(response.data.data || [])
-        setCount(response.data.totalCount || 0)
+   const fetchProperties = useCallback(
+    async (params: any = {}) => {
+      setLoading(true);
+      try {
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
+          params: {
+            ...params,
+            limit: 10,
+            page: currentPage,
+          },
+        });
+
+        console.log(response.data);
+        if (response.data) {
+          setProperties(response.data.data || []);
+          setCount(response.data.totalCount || 0);
+        }
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching properties:", err);
+        setError("Failed to load properties. Please try again.");
+        toast.error("Failed to load properties");
+      } finally {
+        setLoading(false);
       }
-      setError(null)
-    } catch (err) {
-      console.error("Error fetching properties:", err)
-      setError("Failed to load properties. Please try again.")
-      toast.error("Failed to load properties")
-    } finally {
-      setLoading(false)
-    }
-  }
+    },
+    [] 
+  );
 
-  // Initial data fetch
-  useEffect(() => {
-    fetchProperties({
-      sortBy: "createdAt",
-      sortOrder: sortOrder,
-    })
-  }, [])
 
-  // Fetch data when page or sort order changes
   useEffect(() => {
     fetchProperties({
       filter: searchFilter,
       sortBy: "createdAt",
       sortOrder: sortOrder,
     })
-  }, [currentPage, sortOrder])
+  }, [sortOrder, currentPage])
 
   const transformedData = properties.map((property: any) => ({
     _id: property._id || "N/A",
@@ -153,7 +144,8 @@ export default function PropertiesPage() {
     unitInternalDesign: property.unitInternalDesign || "N/A",
     unitExternalDesign: property.unitExternalDesign || "N/A",
     plotSizeSqFt: property.plotSizeSqFt || "N/A",
-    BuaSqFt: property.BuaSqFt || "N/A",
+    BuaSqFt: property.BuaSqFt || "N/A", 
+    unitNumber: property.unitNumber || "N/A",
     unitType: property.unitType || "N/A",
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
     unitPurpose: property.unitPurpose || "N/A",
@@ -199,8 +191,7 @@ export default function PropertiesPage() {
     )
   }
 
-  // Update selectedRows whenever selectedRowsMap changes
-  useEffect(() => {
+  useEffect(() => { 
     const selected = Object.entries(selectedRowsMap)
       .filter(([_, isSelected]) => isSelected)
       .map(([id]) => id)
@@ -208,7 +199,6 @@ export default function PropertiesPage() {
     setSelectedRows(selected)
   }, [selectedRowsMap])
 
-  // Cache the current page data
   useEffect(() => {
     if (transformedData && transformedData.length > 0) {
       const newCache = { ...allDataCache.current }
@@ -262,16 +252,15 @@ export default function PropertiesPage() {
 
       if (typeof value === "object" && "min" in value && "max" in value) {
         switch (key) {
-          case "bedrooms":
-            if (!isDefaultRange(value, 0, 10)) cleaned[key] = value
+         
+          case "salePriceRange":
+          case "rentalPriceRange": 
+          case "originalPriceRange":
+          case "premiumAndLossRange":
+
+            if (!isDefaultRange(value, 0, 10000000)) cleaned[key] = value
             break
-          case "primaryPriceRange":
-          case "resalePriceRange":
-            if (!isDefaultRange(value, 0, 1000000)) cleaned[key] = value
-            break
-          case "rentRange":
-            if (!isDefaultRange(value, 0, 50000)) cleaned[key] = value
-            break
+  
         }
         return
       }
@@ -293,7 +282,7 @@ export default function PropertiesPage() {
     return cleaned
   }
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = () => { 
     const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
     const dateFilters = {
@@ -302,8 +291,7 @@ export default function PropertiesPage() {
     }
 
     const propertyTypeFilter = propertyType ? { propertyType } : {}
-
-    const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+    const cleanedSidebarFilters = cleanFilters(sidebarFilters) 
     const newFilters = {
       ...cleanedSidebarFilters,
       ...searchFilterObj,
