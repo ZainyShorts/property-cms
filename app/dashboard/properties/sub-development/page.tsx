@@ -20,6 +20,7 @@ import {
   Settings,
   MousePointerIcon as MousePointerSquare,
   Share2,
+  ChevronDown,
 } from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -31,9 +32,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
-import { SimpleDatePicker } from "./date-picker/date-picker" 
+import { SimpleDatePicker } from "./date-picker/date-picker"
 import { ShareModal } from "../inventory/share-modal/shareModal"
-import { locationInventory, overview, facilities } from "./data/data" 
+import { locationInventory, overview, facilities } from "./data/data"
 import { ImportRecordsModal } from "./import-records/importSubDev"
 import { SubDevAddRecordModal } from "./add-record/add-record"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -47,7 +48,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { SubDevFilterSidebar } from "./filter-sidebar/filter-sidebar"
 import { resetSubDevFilter } from "@/lib/store/slices/subDevFilterSlice"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 // Define the MasterDevelopment type
 interface MasterDevelopment {
@@ -128,18 +129,18 @@ export default function SubDevelopmentPage() {
   const dispatch = useDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [currentPage , setCurrentPage] = useState<any>(1);
+  const [currentPage, setCurrentPage] = useState<any>(1)
   const sortOrder = "desc"
   const [showHeaderCategories, setShowHeaderCategories] = useState(false)
   const [records, setRecords] = useState<SubDevelopment[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false) 
-   const [shareModalOpen, setShareModalOpen] = useState(false)
-    const [shareData, setShareData] = useState(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [shareData, setShareData] = useState(null)
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [startDate, setStartDate] = useState<Date | null>(null) 
-    const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
 
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
@@ -180,29 +181,29 @@ export default function SubDevelopmentPage() {
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
- 
+
   useEffect(() => {
-      const newCache = { ...selectedRecordsCache }
-      
-      records.forEach(record => {
-        if (selectedRowsMap[record._id]) {
-          newCache[record._id] = record
-        } else {
-          delete newCache[record._id]
-        }
-      })
-      
-      setSelectedRecordsCache(newCache)
-    }, [selectedRowsMap, records])
-  const fetchRecords = async (reset?: any , page?:any) => {
+    const newCache = { ...selectedRecordsCache }
+
+    records.forEach((record) => {
+      if (selectedRowsMap[record._id]) {
+        newCache[record._id] = record
+      } else {
+        delete newCache[record._id]
+      }
+    })
+
+    setSelectedRecordsCache(newCache)
+  }, [selectedRowsMap, records])
+  const fetchRecords = async (reset?: any, page?: any) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (page) { 
+      if (page) {
         params.append("page", page.toString())
       } else {
-      params.append("page", currentPage.toString()) 
-      }      
+        params.append("page", currentPage.toString())
+      }
       params.append("sort", sortOrder)
       params.append("limit", limit.toString())
 
@@ -249,7 +250,7 @@ export default function SubDevelopmentPage() {
             params.append("amentiesCategories", amenity)
           })
         }
-      } 
+      }
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
       )
@@ -271,8 +272,8 @@ export default function SubDevelopmentPage() {
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
-    setCurrentPage(page) 
-    fetchRecords('a',page)
+    setCurrentPage(page)
+    fetchRecords("a", page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -398,13 +399,12 @@ export default function SubDevelopmentPage() {
       // Add string filters
       if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
       if (requestData.plotNumber) params.append("plotNumber", requestData.plotNumber.toString())
-        if (filters.plotPermission?.length) {
-          filters.plotPermission.forEach((permission: string) => {
-            params.append("plotPermission", permission)
-          })
-
-        }     
-         if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
+      if (filters.plotPermission?.length) {
+        filters.plotPermission.forEach((permission: string) => {
+          params.append("plotPermission", permission)
+        })
+      }
+      if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
 
       // Add array filters
       if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
@@ -422,8 +422,8 @@ export default function SubDevelopmentPage() {
       // Add date filters
       if (requestData.startDate) params.append("startDate", requestData.startDate)
       if (requestData.endDate) params.append("endDate", requestData.endDate)
-      console.log('filters', filters)
-      // Directly call the API with the filter parameters 
+      console.log("filters", filters)
+      // Directly call the API with the filter parameters
       axios
         .get<ApiResponse>(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
@@ -686,36 +686,36 @@ export default function SubDevelopmentPage() {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
       return []
     }
-    
-    return selectedRows.map(id => {
-      const record = selectedRecordsCache[id] || 
-        records.find(r => r._id === id)
-      
-      if (!record) return null 
-      
-      const selectedData: Record<string, any> = {}
-      selectedColumns.forEach((col) => {
-        switch (col) {
-          case "masterDevelopment":
-            selectedData[col] = record.masterDevelopment.developmentName;
-            break;
-          case "roadLocation":
-            selectedData[col] = record.masterDevelopment.roadLocation;
-            break;
-          default:
-            selectedData[col] = record[col];
-            break;
-        }
-      });
-      
-      return selectedData
-    }).filter(Boolean) 
+
+    return selectedRows
+      .map((id) => {
+        const record = selectedRecordsCache[id] || records.find((r) => r._id === id)
+
+        if (!record) return null
+
+        const selectedData: Record<string, any> = {}
+        selectedColumns.forEach((col) => {
+          switch (col) {
+            case "masterDevelopment":
+              selectedData[col] = record.masterDevelopment.developmentName
+              break
+            case "roadLocation":
+              selectedData[col] = record.masterDevelopment.roadLocation
+              break
+            default:
+              selectedData[col] = record[col]
+              break
+          }
+        })
+
+        return selectedData
+      })
+      .filter(Boolean)
   }
-  
 
   const shareSelectedData = () => {
     const data = getSelectedData()
-    handleShareButton(data)    
+    handleShareButton(data)
   }
 
   const exportSelectedData = () => {
@@ -861,42 +861,42 @@ export default function SubDevelopmentPage() {
         return record.masterDevelopment.developmentName
       case "roadLocation":
         return record.masterDevelopment.roadLocation
-        case "plotPermission": 
-          return (
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <div className="flex items-center justify-center gap-2 cursor-pointer">
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                    {record.plotPermission.length}
-                  </Badge>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-80 p-0">
-                <div className="p-4">
-                  <h4 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300 flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                    Plot Permissions ({record.plotPermission.length})
-                  </h4>
-                  {record.plotPermission.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {record.plotPermission.map((permission, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                        >
-                          {permission}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No Permissions</p>
-                  )}
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          )
+      case "plotPermission":
+        return (
+          <HoverCard>
+            <HoverCardTrigger asChild>
+              <div className="flex items-center justify-center gap-2 cursor-pointer">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                  {record.plotPermission.length}
+                </Badge>
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80 p-0">
+              <div className="p-4">
+                <h4 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                  Plot Permissions ({record.plotPermission.length})
+                </h4>
+                {record.plotPermission.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {record.plotPermission.map((permission, idx) => (
+                      <Badge
+                        key={idx}
+                        variant="outline"
+                        className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                      >
+                        {permission}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No Permissions</p>
+                )}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        )
       case "plotNumber":
       case "plotHeight":
       case "plotSizeSqFt":
@@ -1143,14 +1143,39 @@ export default function SubDevelopmentPage() {
         <Card>
           <CardContent className="p-0">
             <div className="flex w-full items-center mb-2 ml-2 mt-2">
-              <div className="flex items-center mr-4 " > 
-                <div className="w-[190px]">
-                <Switch
-                  enabled={showHeaderCategories}
-                  onChange={() => setShowHeaderCategories(!showHeaderCategories)}
-                  label="Show Headers"
-                /> 
+              <div className="flex items-center mr-4 ">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    enabled={showHeaderCategories}
+                    onChange={() => setShowHeaderCategories(!showHeaderCategories)}
+                    label="Show Headers"
+                  />
+
+                  {showHeaderCategories && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="ml-2 gap-1">
+                          Select Header <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "all")}>
+                          All Headers
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "locationInventory")}>
+                          Location Inventory
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "overview")}>
+                          Overview
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "facilities")}>
+                          Facilities & Amenities
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
+
                 {!isSelectionMode ? (
                   <Button
                     variant="outline"
@@ -1164,7 +1189,6 @@ export default function SubDevelopmentPage() {
                 ) : (
                   <div className="flex ml-4 items-center justify-evenly  w-full">
                     <div className="flex items-center border justify-evenly rounded-md overflow-hidden">
-                    
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1479,21 +1503,21 @@ export default function SubDevelopmentPage() {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         onSubmitExport={handleSubmitExport}
-      /> 
-        <ImportRecordsModal
-              isOpen={isImportModalOpen}
-              onClose={() => setIsImportModalOpen(false)}
-              fetchRecords={fetchRecords}
-            />
-       <ShareModal
-             isOpen={shareModalOpen}
-             onClose={() => setShareModalOpen(false)}
-             onShare={(options) => {
-               console.log("Share options:", options)
-               console.log("Share data:", shareData)
-               setShareModalOpen(false)
-             }}
-           />
+      />
+      <ImportRecordsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        fetchRecords={fetchRecords}
+      />
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        onShare={(options) => {
+          console.log("Share options:", options)
+          console.log("Share data:", shareData)
+          setShareModalOpen(false)
+        }}
+      />
       {/* Document Modal */}
       <DocumentModal
         isOpen={isDocumentModalOpen}

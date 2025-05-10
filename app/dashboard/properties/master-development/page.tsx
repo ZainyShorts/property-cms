@@ -20,6 +20,7 @@ import {
   MousePointerIcon as MousePointerSquare,
   Settings,
   Share2,
+  ChevronDown,
 } from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -43,15 +44,15 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
-import { resetFilters } from "@/lib/store/slices/masterFilterSlice" 
+import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities } from "./data/data"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 export interface MasterDevelopment {
-  _id: string 
-  country : string 
-  city : string
+  _id: string
+  country: string
+  city: string
   roadLocation: string
   developmentName: string
   locationQuality: string
@@ -73,15 +74,15 @@ interface ApiResponse {
   pageNumber: number
 }
 const tableHeaders = [
-  { key: "_id", label: "ID" }, 
-  {key : "country" , label : "COUNTRY"}, 
-  {key : "city" , label : "CITY"},
+  { key: "_id", label: "ID" },
+  { key: "country", label: "COUNTRY" },
+  { key: "city", label: "CITY" },
   { key: "roadLocation", label: "ROAD LOCATION" },
   { key: "developmentName", label: "DEVELOPMENT NAME" },
   { key: "locationQuality", label: "LOCATION QUALITY" },
   { key: "buaAreaSqFt", label: "BUA AREA (SQ FT)" },
-  { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" }, 
-  
+  { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" },
+
   { key: "amentiesAreaSqFt", label: "AMENITIES AREA (SQ FT)" },
   { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
@@ -97,7 +98,7 @@ export default function MasterDevelopmentPage() {
   const dispatch = useDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [currentPage , setCurrentPage] = useState<any>(1);
+  const [currentPage, setCurrentPage] = useState<any>(1)
   const sortOrder = "desc"
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [records, setRecords] = useState<MasterDevelopment[]>([])
@@ -118,11 +119,11 @@ export default function MasterDevelopmentPage() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [pageInputValue, setPageInputValue] = useState(currentPage.toString())
   const [activeFilters, setActiveFilters] = useState<FilterValues>({})
-  const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({}) 
+  const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false) 
-     const [shareModalOpen, setShareModalOpen] = useState(false) 
-         const [shareData, setShareData] = useState(null)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [shareData, setShareData] = useState(null)
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [selectedColumns, setSelectedColumns] = useState<any[]>([])
@@ -147,9 +148,9 @@ export default function MasterDevelopmentPage() {
   useEffect(() => {
     // Add newly selected records to cache
     const newCache = { ...selectedRecordsCache }
-    
+
     // Add current page records that are selected to the cache
-    records.forEach(record => {
+    records.forEach((record) => {
       if (selectedRowsMap[record._id]) {
         newCache[record._id] = record
       } else {
@@ -157,7 +158,7 @@ export default function MasterDevelopmentPage() {
         delete newCache[record._id]
       }
     })
-    
+
     setSelectedRecordsCache(newCache)
   }, [selectedRowsMap, records])
   // Update selectedRows when selectedRowsMap changes
@@ -165,14 +166,14 @@ export default function MasterDevelopmentPage() {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
 
-  const fetchRecords = async (reset?: any , page? : any) => {
+  const fetchRecords = async (reset?: any, page?: any) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams() 
-      if (page) { 
+      const params = new URLSearchParams()
+      if (page) {
         params.append("page", page.toString())
       } else {
-      params.append("page", currentPage.toString()) 
+        params.append("page", currentPage.toString())
       }
       params.append("sortOrder", sortOrder)
       params.append("limit", limit.toString())
@@ -250,8 +251,8 @@ export default function MasterDevelopmentPage() {
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
-    setCurrentPage(page) 
-    fetchRecords('a',page)
+    setCurrentPage(page)
+    fetchRecords("a", page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -331,9 +332,9 @@ export default function MasterDevelopmentPage() {
         developmentName: filters.developmentName,
         roadLocation: filters.roadLocation,
         locationQuality: filters.locationQuality,
-        buaAreaSqFtRange: filters.buaAreaSqFtRange, 
-        country : filters.country, 
-        city : filters.city,
+        buaAreaSqFtRange: filters.buaAreaSqFtRange,
+        country: filters.country,
+        city: filters.city,
         totalAreaSqFtRange: filters.totalAreaSqFtRange,
         facilitiesCategories: filters.facilitiesCategories,
         amentiesCategories: filters.amentiesCategories,
@@ -779,30 +780,28 @@ export default function MasterDevelopmentPage() {
 
   // First, add this state to store selected records data across pages
 
-// Update this useEffect to maintain the cache when rows are selected/deselected
+  // Update this useEffect to maintain the cache when rows are selected/deselected
 
+  // Updated getSelectedData function
+  const getSelectedData = () => {
+    if (selectedRows.length === 0 || selectedColumns.length === 0) {
+      return []
+    }
 
-// Updated getSelectedData function
-const getSelectedData = () => {
-  if (selectedRows.length === 0 || selectedColumns.length === 0) {
-    return []
+    return selectedRows
+      .map((id) => {
+        const record = selectedRecordsCache[id] || records.find((r) => r._id === id)
+
+        if (!record) return null
+
+        const selectedData: Record<string, any> = {}
+        selectedColumns.forEach((col) => {
+          selectedData[col] = record[col]
+        })
+        return selectedData
+      })
+      .filter(Boolean)
   }
-  
-  return selectedRows.map(id => {
-    const record = selectedRecordsCache[id] || 
-      records.find(r => r._id === id)
-    
-    if (!record) return null 
-    
-    const selectedData: Record<string, any> = {}
-    selectedColumns.forEach((col) => {
-       
-        selectedData[col] = record[col]
-      }
-    )
-    return selectedData
-  }).filter(Boolean) 
-}
 
   const isRowSelected = (id: any): boolean => {
     return !!selectedRowsMap[id]
@@ -810,9 +809,8 @@ const getSelectedData = () => {
 
   const shareSelectedData = () => {
     const data = getSelectedData()
-    handleShareButton(data)    
+    handleShareButton(data)
   }
-
 
   const exportSelectedData = () => {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
@@ -1003,8 +1001,7 @@ const getSelectedData = () => {
               <SelectTrigger className="w-[100px]">
                 <SelectValue placeholder="Limit" />
               </SelectTrigger>
-              <SelectContent> 
-                
+              <SelectContent>
                 <SelectItem value="10">10 rows</SelectItem>
                 <SelectItem value="30">30 rows</SelectItem>
                 <SelectItem value="50">50 rows</SelectItem>
@@ -1107,11 +1104,38 @@ const getSelectedData = () => {
           <CardContent className="p-0">
             <div className="flex w-full items-center mb-2 mt-2">
               <div className="flex items-center mr-4 ml-4 mt-2">
-                <Switch
-                  enabled={showHeaderCategories}
-                  onChange={() => setShowHeaderCategories(!showHeaderCategories)}
-                  label="Show Headers"
-                />
+                <div className="flex items-center gap-2">
+                  <Switch
+                    enabled={showHeaderCategories}
+                    onChange={() => setShowHeaderCategories(!showHeaderCategories)}
+                    label="Show Headers"
+                  />
+
+                  {showHeaderCategories && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="ml-2 gap-1">
+                          Select Header <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "all")}>
+                          All Headers
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "locationDetails")}>
+                          Location Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "overview")}>
+                          Overview
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "facilities")}>
+                          Facilities & Amenities
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+
                 {!isSelectionMode ? (
                   <Button
                     variant="outline"
@@ -1144,7 +1168,7 @@ const getSelectedData = () => {
                       <Button variant="ghost" size="sm" onClick={clearSelection} className="rounded-none h-9 px-4">
                         Clear Selection
                       </Button>
-                      
+
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1252,7 +1276,7 @@ const getSelectedData = () => {
                   )}
 
                   <TableRow>
-                    {/* {isSelectionMode && (
+                    {isSelectionMode && (
                       <TableHead className="w-[50px] text-center border-b">
                         <Checkbox
                           checked={selectedRows.length === records.length && records.length > 0}
@@ -1265,7 +1289,7 @@ const getSelectedData = () => {
                           }}
                         />
                       </TableHead>
-                    )} */}
+                    )}
 
                     {tableHeaders
                       .filter((header) => visibleColumns[header.key])
@@ -1310,7 +1334,7 @@ const getSelectedData = () => {
                           {isSelectionMode && (
                             <TableCell className="text-center">
                               <Skeleton className="h-4 w-full" />
-                            </TableCell> 
+                            </TableCell>
                           )}
                           {tableHeaders
                             .filter((header) => visibleColumns[header.key])
@@ -1434,15 +1458,15 @@ const getSelectedData = () => {
         onClose={() => setIsExportModalOpen(false)}
         onSubmitExport={handleSubmitExport}
       />
-       <ShareModal
-                   isOpen={shareModalOpen}
-                   onClose={() => setShareModalOpen(false)}
-                   onShare={(options) => {
-                     console.log("Share options:", options)
-                     console.log("Share data:", shareData)
-                     setShareModalOpen(false)
-                   }}
-                 />
+      <ShareModal
+        isOpen={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        onShare={(options) => {
+          console.log("Share options:", options)
+          console.log("Share data:", shareData)
+          setShareModalOpen(false)
+        }}
+      />
       {/* Document Modal */}
       <DocumentModal
         isOpen={isDocumentModalOpen}

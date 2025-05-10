@@ -22,11 +22,13 @@ import { Switch } from "@/components/ui/switch"
 import { DeleteConfirmationModal } from "@/app/dashboard/properties/projects/delete-confirmation-modal"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { cn } from "@/lib/utils"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ChevronDown } from "lucide-react"
 
 // Define categories for column grouping
 const projectDetails = ["_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
 
-const unitDetails = [ 
+const unitDetails = [
   "unitNumber",
   "unitHeight",
   "unitInternalDesign",
@@ -64,7 +66,7 @@ interface PropertyDataTableProps {
   selectedRowsMap?: Record<string, boolean>
   setSelectedRowsMap?: (map: Record<string, boolean>) => void
   isSelectionMode?: boolean
-  setIsSelectionMode?: (mode: boolean) => void
+  setIsSelectionMode?: (mode: boolean) => boolean
   isRowSelected?: (id: string) => boolean
   clearAllSelections?: () => void
 }
@@ -515,6 +517,34 @@ function PropertyDataTable({
               <label htmlFor="show-headers" className="text-sm cursor-pointer">
                 Show Headers
               </label>
+
+              {showHeaderCategories && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="ml-2 gap-1">
+                      Select Header <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "all")}>All Headers</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "projectDetails")}>
+                      Project Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "unitDetails")}>
+                      Unit Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "availability")}>
+                      Availability
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "unitTenancyDetails")}>
+                      Unit Tenancy Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "paymentDetails")}>
+                      Payment Details
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         </div>
