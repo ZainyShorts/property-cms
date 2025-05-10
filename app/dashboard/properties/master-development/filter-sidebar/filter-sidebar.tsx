@@ -1,41 +1,48 @@
-import { useState, useEffect } from "react";
-import { X } from 'lucide-react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  setCity, 
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
+import { Search, Loader2 } from "lucide-react"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  setCity,
   setCountry,
   setDevelopmentName,
   setRoadLocation,
   setLocationQuality,
-  setBuaAreaSqFtRange,
-  setTotalAreaSqFtRange,
   setFacilitiesCategories,
   setAmentiesCategories,
-} from "@/lib/store/slices/masterFilterSlice";
-import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store";
-import { Button } from "@/components/ui/button";
-import { countries } from "../data/data";
-import { getCitiesByCountry } from "../data/data";
-import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+} from "@/lib/store/slices/masterFilterSlice"
+import { useDispatch, useSelector } from "react-redux"
+import type { RootState } from "@/store"
+import { countries } from "../data/data"
+import { getCitiesByCountry } from "../data/data"
+import { Separator } from "@/components/ui/separator"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import axios from "axios"
 
 interface FilterSidebarProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export interface FilterValues {
-  developmentName?: string;
-  roadLocation?: string;
-  locationQuality?: string;
-  buaAreaSqFtRange?: { min?: number; max?: number };
-  totalAreaSqFtRange?: { min?: number; max?: number };
-  facilitiesCategories?: string[];
-  amentiesCategories?: string[];
+  developmentName?: string
+  roadLocation?: string
+  locationQuality?: string
+  buaAreaSqFtRange?: { min?: number; max?: number }
+  totalAreaSqFtRange?: { min?: number; max?: number }
+  facilitiesCategories?: string[]
+  amentiesCategories?: string[]
+}
+
+interface MasterDevelopment {
+  _id: string
+  developmentName: string
 }
 
 const facilitiesCategoriesOptions = [
@@ -45,8 +52,8 @@ const facilitiesCategoriesOptions = [
   "Hospitals",
   "Clinics",
   "Malls",
-  "Public Transport"
-];
+  "Public Transport",
+]
 
 const amenitiesCategoriesOptions = [
   "Gym",
@@ -114,69 +121,127 @@ const amenitiesCategoriesOptions = [
   "Handyman on-call services",
   "Pest control & Fumigation Support",
   "Green Building Certification",
-  "Community Recycling Points"
-];
+  "Community Recycling Points",
+]
 
-const locationQualityOptions = ["A", "B", "C"];
+const locationQualityOptions = ["A", "B", "C"]
 
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
-  const dispatch = useDispatch();
-  const filters = useSelector((state: RootState) => state.masterFilter);
-  const [availableCities, setAvailableCities] = useState<{id: string, name: string}[]>([]);
+  const dispatch = useDispatch()
+  const filters = useSelector((state: RootState) => state.masterFilter)
+  const [availableCities, setAvailableCities] = useState<{ id: string; name: string }[]>([])
+
+  // Development name search states
+  const [devNameSearchTerm, setDevNameSearchTerm] = useState("")
+  const [isSearchingDevName, setIsSearchingDevName] = useState(false)
+  const [devNameResults, setDevNameResults] = useState<MasterDevelopment[]>([])
+  const devNameSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Handle country change
   const handleCountryChange = (country: string) => {
-    dispatch(setCountry(country));
-    dispatch(setCity("")); // Reset city when country changes
-  };
+    dispatch(setCountry(country))
+    dispatch(setCity("")) // Reset city when country changes
+  }
 
   // Handle city change
   const handleCityChange = (city: string) => {
-    dispatch(setCity(city));
-  };
+    dispatch(setCity(city))
+  }
 
   // Update available cities when country changes
   useEffect(() => {
     if (filters.country) {
-      const cities = getCitiesByCountry(filters.country);
-      setAvailableCities(cities);
+      const cities = getCitiesByCountry(filters.country)
+      setAvailableCities(cities)
     } else {
-      setAvailableCities([]);
+      setAvailableCities([])
     }
-  }, [filters.country]);
+  }, [filters.country])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    switch (name) {
-      case "developmentName":
-        dispatch(setDevelopmentName(value));
-        break;
-      case "roadLocation":
-        dispatch(setRoadLocation(value));
-        break;
+    const { name, value } = e.target
+
+    if (name === "developmentNameQuery") {
+      setDevNameSearchTerm(value)
+
+      // Clear previous timeout
+      if (devNameSearchTimeoutRef.current) {
+        clearTimeout(devNameSearchTimeoutRef.current)
+      }
+
+      // Set searching state
+      setIsSearchingDevName(true)
+
+      // Set a new timeout for debouncing
+      devNameSearchTimeoutRef.current = setTimeout(() => {
+        fetchDevelopmentNames(value)
+      }, 300) // 300ms debounce time
+    } else if (name === "roadLocation") {
+      dispatch(setRoadLocation(value))
     }
-  };
+  }
 
   const handleLocationQualityChange = (value: string) => {
-    dispatch(setLocationQuality(value));
-  };
+    dispatch(setLocationQuality(value))
+  }
 
   const handleCheckboxChange = (
     category: "facilitiesCategories" | "amentiesCategories",
     value: string,
-    checked: boolean
+    checked: boolean,
   ) => {
-    const currentValues = filters[category] || [];
-    const updated = checked
-      ? [...currentValues, value]
-      : currentValues.filter((item) => item !== value);
+    const currentValues = filters[category] || []
+    const updated = checked ? [...currentValues, value] : currentValues.filter((item) => item !== value)
 
     if (category === "facilitiesCategories") {
-      dispatch(setFacilitiesCategories(updated));
+      dispatch(setFacilitiesCategories(updated))
     } else {
-      dispatch(setAmentiesCategories(updated));
+      dispatch(setAmentiesCategories(updated))
     }
-  };
+  }
+
+  // Fetch development names
+  const fetchDevelopmentNames = async (searchTerm = "") => {
+    setIsSearchingDevName(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?developmentName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setDevNameResults(response.data.data)
+      } else {
+        setDevNameResults([])
+        console.error("Invalid response format for development names:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching development names:", error)
+      setDevNameResults([])
+    } finally {
+      setIsSearchingDevName(false)
+    }
+  }
+
+  // Fetch all development names on component mount
+  useEffect(() => {
+    if (open) {
+      fetchDevelopmentNames(devNameSearchTerm)
+    }
+  }, [open, devNameSearchTerm])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (devNameSearchTimeoutRef.current) {
+        clearTimeout(devNameSearchTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -190,10 +255,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           {/* Country Dropdown */}
           <div className="space-y-2">
             <Label>Country</Label>
-            <Select
-              value={filters.country || ""}
-              onValueChange={handleCountryChange}
-            >
+            <Select value={filters.country || ""} onValueChange={handleCountryChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select country" />
               </SelectTrigger>
@@ -210,11 +272,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           {/* City Dropdown */}
           <div className="space-y-2">
             <Label>City</Label>
-            <Select
-              value={filters.city || ""}
-              onValueChange={handleCityChange}
-              disabled={!filters.country}
-            >
+            <Select value={filters.city || ""} onValueChange={handleCityChange} disabled={!filters.country}>
               <SelectTrigger>
                 <SelectValue placeholder={filters.country ? "Select city" : "Select country first"} />
               </SelectTrigger>
@@ -240,25 +298,62 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
             />
           </div>
 
-          {/* Development Name */}
-          <div className="space-y-2">
-            <Label htmlFor="developmentName">Development Name</Label>
-            <Input
-              id="developmentName"
-              name="developmentName"
-              placeholder="Enter development name"
-              value={filters.developmentName}
-              onChange={handleInputChange}
-            />
+          {/* Development Name Dropdown */} 
+            <div className="space-y-2"> 
+                          <Label htmlFor="developmentName">Development Name</Label>
+
+            <div className="relative">
+              <Input
+                id="developmentNameQuery"
+                name="developmentNameQuery"
+                placeholder="Search development names..."
+                value={devNameSearchTerm}
+                onChange={handleInputChange}
+                className="pr-10"
+              />
+              {isSearchingDevName ? (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
           </div>
+          <div className="space-y-2">
+            <div className="relative">
+              <Select
+                value={filters.developmentName || ""}
+                onValueChange={(value) => dispatch(setDevelopmentName(value))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select development" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isSearchingDevName ? (
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading...</span>
+                    </div>
+                  ) : (
+                    devNameResults.map((dev) => (
+                      <SelectItem key={dev._id} value={dev.developmentName}>
+                        {dev.developmentName}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Development Name Search Query */}
+        
 
           {/* Location Quality - Now a dropdown */}
           <div className="space-y-2">
             <Label>Location Quality</Label>
-            <Select 
-              value={filters.locationQuality || ""}
-              onValueChange={handleLocationQualityChange}
-            >
+            <Select value={filters.locationQuality || ""} onValueChange={handleLocationQualityChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select location quality" />
               </SelectTrigger>
@@ -318,5 +413,5 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

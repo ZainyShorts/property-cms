@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from "react"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { X, ImageIcon, Upload } from "lucide-react"
+import { X, ImageIcon, Upload, Search, Loader2 } from "lucide-react"
 import { toast } from "react-toastify"
 import axios from "axios"
 import { DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -18,7 +18,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
 
-// Define the MasterDevelopment type
 interface MasterDevelopment {
   _id: string
   roadLocation: string
@@ -95,8 +94,8 @@ interface ImageData {
 }
 
 export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
-  const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null)) 
-  const [error , setError] = useState<any>(null)
+  const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
+  const [error, setError] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
@@ -104,6 +103,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   const [masterDevelopments, setMasterDevelopments] = useState<MasterDevelopment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const isEditMode = !!editRecord
+  const [devNameSearchTerm, setDevNameSearchTerm] = useState("")
+  const [isSearchingDevName, setIsSearchingDevName] = useState(false)
 
   // Extract masterDevelopment ID if it's an object
   const getMasterDevelopmentId = () => {
@@ -144,21 +145,49 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     },
   })
 
-  // Fetch master developments on component mount
-  useEffect(() => {
-    const fetchMasterDevelopments = async () => {
-      try {
-        setIsLoading(true)
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`)
-        setMasterDevelopments(response.data.data)
-      } catch (error) {
-        console.error("Error fetching master developments:", error)
-        toast.error("Failed to load master developments")
-      } finally {
-        setIsLoading(false)
-      }
-    }
+  // Get the current masterDevelopment value from the form
+  const masterDevelopment = useWatch({
+    control: form.control,
+    name: "masterDevelopment",
+  })
 
+  // Update the fetchMasterDevelopments function to check if the currently selected masterDevelopment
+  // is still in the filtered results, and clear it if not
+  const fetchMasterDevelopments = async (searchTerm = "") => {
+    try {
+      setIsLoading(true)
+      const endpoint = searchTerm
+        ? `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?developmentName=${searchTerm}`
+        : `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+
+      const response = await axios.get(endpoint)
+      const fetchedDevelopments = response.data.data
+      setMasterDevelopments(fetchedDevelopments)
+
+      // If there's a search term and a currently selected masterDevelopment,
+      // check if the selected masterDevelopment is still in the filtered results
+      if (searchTerm && masterDevelopment) {
+        const isSelectedDevInResults = fetchedDevelopments.some(
+          (dev: MasterDevelopment) => dev._id === masterDevelopment,
+        )
+
+        // If the selected development is not in the filtered results, clear the selection
+        if (!isSelectedDevInResults) {
+          form.setValue("masterDevelopment", "")
+          form.setValue("roadLocation", "")
+          form.setValue("developmentName", "")
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching master developments:", error)
+      toast.error("Failed to load master developments")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Update the useEffect to call fetchMasterDevelopments without a search term on mount
+  useEffect(() => {
     fetchMasterDevelopments()
   }, [])
 
@@ -246,12 +275,6 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     defaultValue: editRecord?.amenitiesAreaSqFt || 0,
   })
 
-  // Update the masterDevelopmentId watch to masterDevelopment
-  const masterDevelopment = useWatch({
-    control: form.control,
-    name: "masterDevelopment",
-  })
-
   // Update development name and road location when master development changes
   useEffect(() => {
     if (masterDevelopment) {
@@ -260,6 +283,10 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         form.setValue("roadLocation", selectedDevelopment.roadLocation)
         form.setValue("developmentName", selectedDevelopment.developmentName)
       }
+    } else {
+      // Clear roadLocation and developmentName if no masterDevelopment is selected
+      form.setValue("roadLocation", "")
+      form.setValue("developmentName", "")
     }
   }, [masterDevelopment, masterDevelopments, form])
 
@@ -413,8 +440,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     }
   }
 
-  const onSubmit = async (data: FormValues) => { 
-    console.log('submitting',data)
+  const onSubmit = async (data: FormValues) => {
+    console.log("submitting", data)
     setIsSubmitting(true)
     try {
       // Upload all images to AWS and get their URLs
@@ -446,9 +473,16 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         .map((pic) => pic.awsUrl)
 
       // Prepare the data to submit, including AWS URLs for images
-      const submitData = {
+      // Only include roadLocation if masterDevelopment is selected
+      const submitData: Record<string, any> = {
         ...data,
         pictures: pictureUrls,
+      }
+
+      // Remove roadLocation if no masterDevelopment is selected
+      if (!data.masterDevelopment) {
+        delete submitData.roadLocation
+        delete submitData.developmentName
       }
 
       if (isEditMode && editRecord) {
@@ -457,6 +491,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
         // Force include pictures in changedFields to ensure they're updated
         changedFields.pictures = pictureUrls
+
+        // Remove roadLocation from changedFields if no masterDevelopment is selected
+        if (!data.masterDevelopment) {
+          delete changedFields.roadLocation
+          delete changedFields.developmentName
+        }
 
         if (Object.keys(changedFields).length === 0) {
           toast.info("No changes detected")
@@ -612,6 +652,24 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
   const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
 
+  // Update the handleDevNameSearchChange function to call fetchMasterDevelopments with the search term
+  const handleDevNameSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value
+    setDevNameSearchTerm(term)
+
+    // Set searching state
+    setIsSearchingDevName(true)
+
+    // Debounce the search
+    const timeoutId = setTimeout(() => {
+      fetchMasterDevelopments(term)
+      setIsSearchingDevName(false)
+    }, 500)
+
+    // Clear the timeout if the component unmounts or the search term changes again
+    return () => clearTimeout(timeoutId)
+  }
+
   return (
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
       <DialogHeader>
@@ -624,30 +682,60 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Master Development Selection */}
-            <FormField
-              control={form.control}
-              name="masterDevelopment"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Master Development</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select master development" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {masterDevelopments.map((dev) => (
-                        <SelectItem key={dev._id} value={dev._id}>
-                          {dev.developmentName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="space-y-4">
+              <FormLabel>Master Development</FormLabel>
+
+              {/* Search Input for Development Names */}
+              <div className="relative mb-2">
+                <Input
+                  placeholder="Search development names..."
+                  value={devNameSearchTerm}
+                  onChange={handleDevNameSearchChange}
+                  className="pr-10"
+                />
+                {isSearchingDevName ? (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+
+              {/* Master Development Dropdown */}
+              <FormField
+                control={form.control}
+                name="masterDevelopment"
+                render={({ field }) => (
+                  <FormItem>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select master development" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {isLoading ? (
+                          <div className="flex items-center justify-center py-2">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            <span>Loading...</span>
+                          </div>
+                        ) : masterDevelopments.length > 0 ? (
+                          masterDevelopments.map((dev) => (
+                            <SelectItem key={dev._id} value={dev._id}>
+                              {dev.developmentName}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="p-2 text-center text-muted-foreground">No developments found</div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Road Location (Read-only) */}
             <FormField
@@ -715,7 +803,6 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             />
 
             {/* Plot Permission */}
-           
 
             {/* Plot Size SqFt */}
             <FormField
@@ -917,8 +1004,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-6"> 
-          <FormField
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+            <FormField
               control={form.control}
               name="plotPermission"
               render={({ field }) => (
@@ -928,22 +1015,22 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                     {plotPermissionOptions.map((permission) => (
                       <FormItem key={permission} className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
-                        <Checkbox
-  className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-  checked={field.value?.includes(permission)}
-  onCheckedChange={(checked) => {
-    if (checked) {
-      if (field.value?.length >= 5) {
-        setError( 'You can only select up to 5 permissions.')
-        return; 
-      }
-      field.onChange([...field.value, permission]);
-    } else {
-      field.onChange(field.value?.filter((value) => value !== permission));
-    }
-  }}
-/>                    
-     </FormControl>
+                          <Checkbox
+                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                            checked={field.value?.includes(permission)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                if (field.value?.length >= 5) {
+                                  setError("You can only select up to 5 permissions.")
+                                  return
+                                }
+                                field.onChange([...field.value, permission])
+                              } else {
+                                field.onChange(field.value?.filter((value) => value !== permission))
+                              }
+                            }}
+                          />
+                        </FormControl>
                         <FormLabel className="font-normal">{permission}</FormLabel>
                       </FormItem>
                     ))}
@@ -951,7 +1038,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                   <FormMessage />
                 </FormItem>
               )}
-            /> 
+            />
             {error && <p className="text-red-500">{error}</p>}
 
             <FormField

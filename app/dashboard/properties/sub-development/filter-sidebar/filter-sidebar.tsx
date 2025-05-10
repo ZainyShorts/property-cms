@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useState, useEffect } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,10 +16,12 @@ import {
   setAmentiesCategories,
   resetSubDevFilter,
 } from "@/lib/store/slices/subDevFilterSlice"
-import type { RootState } from "@/store" 
+import type { RootState } from "@/store"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Search, Loader2 } from "lucide-react"
+import axios from "axios"
 
 interface SubDevFilterSidebarProps {
   open: boolean
@@ -32,6 +35,16 @@ export interface SubDevFilterValues {
   plotStatus?: string
   facilitiesCategories?: string[]
   amentiesCategories?: string[]
+}
+
+// Define the SubDevelopment type
+interface SubDevelopment {
+  _id: string
+  subDevelopment: string
+  masterDevelopment?: string
+  plotNumber?: number
+  plotPermission?: string[]
+  plotStatus?: string
 }
 
 const facilitiesCategoriesOptions = [
@@ -134,13 +147,78 @@ const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"
 export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarProps) {
   const dispatch = useDispatch()
   const filters = useSelector((state: RootState) => state.subDevFilter)
+  const [subDevelopments, setSubDevelopments] = useState<SubDevelopment[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
+
+  // Set isMounted to true after component mounts to prevent auto-focus behavior
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
+  // Fetch sub-developments on component mount
+
+  const fetchSubDevelopments = async (search? : any) => {
+    try {
+      setIsLoading(true)
+      const endpoint = search
+        ? `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?subDevelopment=${search}`
+        : `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment`
+
+      const response = await axios.get(endpoint)
+      setSubDevelopments(response.data.data)
+    } catch (error) {
+      console.error("Error fetching sub-developments:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value
+    setSearchTerm(term)
+
+    // Set searching state
+    setIsSearching(true)
+
+    // Debounce the search
+    const timeoutId = setTimeout(() => {
+      fetchSubDevelopments(term)
+      setIsSearching(false)
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }
+
+  // Add a function to handle input focus
+  const handleInputFocus = () => {
+    // Only show dropdown if component has already mounted
+    if (!isMounted) return
+
+    setShowDropdown(true)
+    // Only fetch sub-developments if we don't have any yet
+    if (subDevelopments.length === 0) {
+      fetchSubDevelopments(searchTerm)
+    }
+  }
+
+  // Add a function to handle clicking outside
+  const handleClickOutside = () => {
+    setShowDropdown(false)
+  }
+
+  const handleSubDevSelect = (subDev: SubDevelopment) => {
+    dispatch(setSubDevelopment(subDev.subDevelopment))
+    setSearchTerm(subDev.subDevelopment)
+    setShowDropdown(false)
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     switch (name) {
-      case "subDevelopment":
-        dispatch(setSubDevelopment(value))
-        break
       case "plotNumber":
         const plotNum = value ? Number.parseInt(value, 10) : undefined
         if (!isNaN(plotNum as number)) {
@@ -152,9 +230,7 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
 
   const handlePlotPermissionChange = (value: string, checked: boolean) => {
     const currentValues = filters.plotPermission || []
-    const updated = checked 
-      ? [...currentValues, value]
-      : currentValues.filter(item => item !== value)
+    const updated = checked ? [...currentValues, value] : currentValues.filter((item) => item !== value)
     dispatch(setPlotPermission(updated))
   }
 
@@ -179,6 +255,7 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
 
   const handleReset = () => {
     dispatch(resetSubDevFilter())
+    setSearchTerm("")
   }
 
   return (
@@ -191,16 +268,7 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
 
         <div className="space-y-6">
           {/* Sub Development */}
-          <div className="space-y-2">
-            <Label htmlFor="subDevelopment">Sub Development</Label>
-            <Input
-              id="subDevelopment"
-              name="subDevelopment"
-              placeholder="Enter sub development name"
-              value={filters.subDevelopment || ""}
-              onChange={handleInputChange}
-            />
-          </div>
+         
 
           {/* Plot Number */}
           <div className="space-y-2">
@@ -213,6 +281,54 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
               value={filters.plotNumber || ""}
               onChange={handleInputChange}
             />
+          </div> 
+           <div className="space-y-2">
+            <Label htmlFor="subDevelopment">Sub Development</Label>
+            <div className="relative">
+              <Input
+                id="subDevelopment"
+                name="subDevelopment"
+                placeholder="Search sub development name"
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onFocus={handleInputFocus}
+                onBlur={() => setTimeout(() => handleClickOutside(), 200)}
+                className="pr-10"
+              />
+              {isSearching ? (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              )}
+
+              {/* Dropdown for sub-developments */}
+              {showDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto border">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-2">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading...</span>
+                    </div>
+                  ) : subDevelopments.length > 0 ? (
+                    <div>
+                      {subDevelopments.map((subDev) => (
+                        <div
+                          key={subDev._id}
+                          className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+                          onClick={() => handleSubDevSelect(subDev)}
+                        >
+                          {subDev.subDevelopment}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-2 text-center text-muted-foreground">No sub-developments found</div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Plot Permission */}
@@ -224,9 +340,7 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
                   <Checkbox
                     id={`permission-${permission}`}
                     checked={filters.plotPermission?.includes(permission) || false}
-                    onCheckedChange={(checked) =>
-                      handlePlotPermissionChange(permission, checked as boolean)
-                    }
+                    onCheckedChange={(checked) => handlePlotPermissionChange(permission, checked as boolean)}
                   />
                   <Label htmlFor={`permission-${permission}`} className="text-sm font-normal">
                     {permission}
