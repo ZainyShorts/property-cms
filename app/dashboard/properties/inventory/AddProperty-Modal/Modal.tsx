@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { File, Plus, Minus, X } from 'lucide-react'
+import { File, Plus, Minus, X, Search } from "lucide-react"
 import axios from "axios"
 import { useUser } from "@clerk/nextjs"
 import { toast } from "react-toastify"
@@ -101,20 +101,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
 
   // Fetch projects on component mount
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment`,
-        )
-        if (response.data) {
-          setProjects(response.data.data)
-        }
-      } catch (error) {
-        console.error("Error fetching projects:", error)
-        toast.error("Failed to load projects")
-      }
-    }
-
     fetchProjects()
   }, [])
 
@@ -215,7 +201,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       clearTimeout(searchTimeoutRef.current)
       searchTimeoutRef.current = null
     }
-    setShowProjectResults(false);
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
@@ -233,6 +218,23 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     }
 
     setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
+  }
+
+  const handleProjectSearch = (searchTerm: string) => {
+    setProjectSearchTerm(searchTerm)
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearching(true)
+
+    // Set a new timeout for debouncing
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchProjects(searchTerm)
+    }, 300) // 300ms debounce time
   }
 
   const fetchProjects = async (searchTerm = "") => {
@@ -536,18 +538,18 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   // Add click outside handler to close project results
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const searchInput = document.getElementById('projectSearch');
+      const target = event.target as Node
+      const searchInput = document.getElementById("projectSearch")
       if (searchInput && !searchInput.contains(target)) {
-        setShowProjectResults(false);
+        setShowProjectResults(false)
       }
-    };
+    }
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   return (
     <Dialog
@@ -574,93 +576,73 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="projectSearch">Project</Label>
-                  <div className="relative">
-                    <Input
-                      id="projectSearch"
-                      placeholder="Search projects..."
-                      value={projectSearchTerm}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        setProjectSearchTerm(value)
-
-                        // Clear previous timeout
-                        if (searchTimeoutRef.current) {
-                          clearTimeout(searchTimeoutRef.current)
-                        }
-
-                        // Set searching state
-                        setIsSearching(true)
-
-                        // Set a new timeout for debouncing
-                        searchTimeoutRef.current = setTimeout(() => {
-                          fetchProjects(value)
-                        }, 300) // 500ms debounce time
-                      }}
-                      className={`w-full pr-10 ${errors.project ? "border-destructive" : ""}`}
-                      autoComplete="off"
-                      onFocus={() => setShowProjectResults(true)}
-                    />
-                    {isSearching && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        id="projectSearch"
+                        placeholder="Search projects..."
+                        value={projectSearchTerm}
+                        onChange={(e) => handleProjectSearch(e.target.value)}
+                        className={`w-full pl-10 ${errors.project ? "border-destructive" : ""}`}
+                        autoComplete="off"
+                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <Search className="h-4 w-4" />
                       </div>
-                    )}
-                    
-                    {/* Dropdown results */}
-                    {showProjectResults && (
-                      <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md">
-                        <div className="max-h-[200px] overflow-y-auto">
-                          {projects.length > 0 ? (
-                            <div className="divide-y">
-                              {projects.map((project) => (
-                                <button
-                                  key={project._id}
-                                  className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors ${
-                                    dataForm.project === project._id ? "bg-muted font-medium" : ""
-                                  }`}
-                                  onClick={() => {
-                                    setSelectedProject(project)
-                                    handleSelectChange(project._id, "project")
-                                    setShowProjectResults(false)
-                                  }}
-                                >
-                                  {project.projectName}
-                                </button>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="px-3 py-4 text-center text-muted-foreground">
-                              {isSearching ? "Searching..." : "No projects found"}
-                            </div>
-                          )}
+                      {isSearching && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                         </div>
+                      )}
+                    </div>
+
+                    <Select
+                      value={dataForm.project || ""}
+                      onValueChange={(value) => handleSelectChange(value, "project")}
+                      disabled={isSearching}
+                    >
+                      <SelectTrigger className={`w-full ${errors.project ? "border-destructive" : ""}`}>
+                        <SelectValue placeholder="Select a project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.length > 0 ? (
+                          projects.map((project) => (
+                            <SelectItem key={project._id} value={project._id}>
+                              {project.projectName}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-center text-muted-foreground">
+                            {isSearching ? "Searching..." : "No projects found"}
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedProject && (
+                      <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                        <span>Selected: {selectedProject.projectName}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProject(null)
+                            setProjectSearchTerm("")
+                            setDataForm((prev) => ({
+                              ...prev,
+                              project: "",
+                              masterDevelopment: "",
+                              masterDevelopmentName: "",
+                              subDevelopment: "",
+                              subDevelopmentName: "",
+                            }))
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                   </div>
-
-                  {selectedProject && (
-                    <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-                      <span>Selected: {selectedProject.projectName}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedProject(null)
-                          setDataForm((prev) => ({
-                            ...prev,
-                            project: "",
-                            masterDevelopment: "",
-                            masterDevelopmentName: "",
-                            subDevelopment: "",
-                            subDevelopmentName: "",
-                          }))
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                  
                   {errors.project && <p className="text-sm text-destructive">Project is required</p>}
                 </div>
 

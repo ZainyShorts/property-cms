@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Check, ChevronRight, X } from "lucide-react"
+import { Check, ChevronRight, Search, X } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -93,10 +93,9 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   const [loading, setLoading] = useState<boolean>(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
-  const [subDevelopmentSearchTerm, setSubDevelopmentSearchTerm] = useState<string>("")
   const [isSearchingSubDevelopment, setIsSearchingSubDevelopment] = useState<boolean>(false)
+  const [subDevelopmentSearchTerm, setSubDevelopmentSearchTerm] = useState<string>("")
   const subDevelopmentSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [showSubDevResults, setShowSubDevResults] = useState(false)
 
   // Reset form and set edit mode when modal opens/closes
   useEffect(() => {
@@ -113,6 +112,15 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       loadEditData()
     }
   }, [open, onEdit])
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (subDevelopmentSearchTimeoutRef.current) {
+        clearTimeout(subDevelopmentSearchTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const loadEditData = () => {
     console.log("Loading edit data:", onEdit)
@@ -203,19 +211,15 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       buaAreaSqFt: "",
     })
     setErrors({})
-
-    // Clear search state
-    setSubDevelopmentSearchTerm("")
-    setIsSearchingSubDevelopment(false)
     setSubDevelopments([])
+    setIsSearchingSubDevelopment(false)
+    setSubDevelopmentSearchTerm("")
 
     // Clear any pending timeouts
     if (subDevelopmentSearchTimeoutRef.current) {
       clearTimeout(subDevelopmentSearchTimeoutRef.current)
       subDevelopmentSearchTimeoutRef.current = null
     }
-
-    setShowSubDevResults(false)
   }
 
   const handleClose = () => {
@@ -227,15 +231,35 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     const selectedDevelopment = masterDevelopments.find((dev) => dev._id === id)
     if (selectedDevelopment) {
       setMasterDevelopmentName(selectedDevelopment.developmentName)
+      // Reset sub development selection
+      setSubDevelopmentName("")
+      setSelectedSubDevelopmentId("")
       setSubDevelopmentSearchTerm("")
-      setIsSearchingSubDevelopment(false)
+      // Fetch sub developments for this master development
       fetchSubDevelopments(id)
     }
   }
 
-  const handleSubDevelopmentChange = (value: string, id: string) => {
-    setSubDevelopmentName(value)
-    setSelectedSubDevelopmentId(id)
+  const handleSubDevelopmentChange = (id: string) => {
+    const selectedSubDev = subDevelopments.find((subDev) => subDev._id === id)
+    if (selectedSubDev) {
+      setSelectedSubDevelopmentId(id)
+      setSubDevelopmentName(selectedSubDev.subDevelopment)
+    }
+  }
+
+  const handleSubDevelopmentSearch = (searchTerm: string) => {
+    setSubDevelopmentSearchTerm(searchTerm)
+
+    // Clear previous timeout
+    if (subDevelopmentSearchTimeoutRef.current) {
+      clearTimeout(subDevelopmentSearchTimeoutRef.current)
+    }
+
+    // Set a new timeout for debouncing
+    subDevelopmentSearchTimeoutRef.current = setTimeout(() => {
+      fetchSubDevelopments(selectedMasterDevelopmentId, searchTerm)
+    }, 300) // 300ms debounce time
   }
 
   const completeForm = (stepNo?: any) => {
@@ -333,7 +357,7 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       }
       setStep(2)
     } else if (step === 2) {
-      if (subDevelopmentName.trim()) {
+      if (selectedSubDevelopmentId && subDevelopmentName.trim()) {
         // If SubDevelopment is selected, complete the form
         completeForm()
       } else {
@@ -401,31 +425,6 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     }
   }
 
-  useEffect(() => {
-    return () => {
-      if (subDevelopmentSearchTimeoutRef.current) {
-        clearTimeout(subDevelopmentSearchTimeoutRef.current)
-        subDevelopmentSearchTimeoutRef.current = null
-      }
-    }
-  }, [])
-
-  // Add click outside handler to close sub development results
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      const searchInput = document.getElementById("subDevelopmentSearch")
-      if (searchInput && !searchInput.contains(target)) {
-        setShowSubDevResults(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
@@ -473,73 +472,49 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
                   <Label className="text-sm text-muted-foreground">Selected Master Development</Label>
                   <div className="mt-1 p-2 bg-muted rounded-md">{masterDevelopmentName}</div>
                 </div>
-                <Label htmlFor="subDevelopmentSearch">Search Sub Development</Label>
-                {loading ? (
+
+                {/* Search input for sub-developments */}
+                <div className="space-y-2">
+                  <Label htmlFor="subDevelopmentSearch">Search Sub Development</Label>
+                  <div className="relative">
+                    <Input
+                      id="subDevelopmentSearch"
+                      placeholder="Search sub developments..."
+                      value={subDevelopmentSearchTerm}
+                      onChange={(e) => handleSubDevelopmentSearch(e.target.value)}
+                      className="w-full pl-10"
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      <Search className="h-4 w-4" />
+                    </div>
+                    {isSearchingSubDevelopment && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isSearchingSubDevelopment ? (
                   <div className="h-10 w-full bg-gray-100 animate-pulse rounded-md"></div>
                 ) : (
                   <div className="space-y-2">
-                    <div className="relative">
-                      <Input
-                        id="subDevelopmentSearch"
-                        placeholder="Search sub developments..."
-                        value={subDevelopmentSearchTerm}
-                        onChange={(e) => {
-                          const value = e.target.value
-                          setSubDevelopmentSearchTerm(value)
-
-                          // Clear previous timeout
-                          if (subDevelopmentSearchTimeoutRef.current) {
-                            clearTimeout(subDevelopmentSearchTimeoutRef.current)
-                          }
-
-                          // Set searching state
-                          setIsSearchingSubDevelopment(true)
-
-                          // Set a new timeout for debouncing
-                          subDevelopmentSearchTimeoutRef.current = setTimeout(() => {
-                            fetchSubDevelopments(selectedMasterDevelopmentId, value)
-                          }, 300) // 500ms debounce time
-                        }}
-                        className="w-full pr-10"
-                        autoComplete="off"
-                        onFocus={() => setShowSubDevResults(true)}
-                      />
-                      {isSearchingSubDevelopment && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                        </div>
-                      )}
-
-                      {/* Dropdown results */}
-                      {showSubDevResults && (
-                        <div className="absolute z-50 mt-1 w-full bg-popover border rounded-md shadow-md">
-                          <div className="max-h-[200px] overflow-y-auto">
-                            {subDevelopments.length > 0 ? (
-                              <div className="divide-y">
-                                {subDevelopments.map((subDev) => (
-                                  <button
-                                    key={subDev._id}
-                                    className={`w-full text-left px-3 py-2 hover:bg-muted transition-colors ${
-                                      selectedSubDevelopmentId === subDev._id ? "bg-muted font-medium" : ""
-                                    }`}
-                                    onClick={() => {
-                                      handleSubDevelopmentChange(subDev.subDevelopment, subDev._id)
-                                      setShowSubDevResults(false)
-                                    }}
-                                  >
-                                    {subDev.subDevelopment}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="px-3 py-4 text-center text-muted-foreground">
-                                {isSearchingSubDevelopment ? "Searching..." : "No sub developments found"}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                    <Select value={selectedSubDevelopmentId} onValueChange={handleSubDevelopmentChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select sub development" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subDevelopments.length > 0 ? (
+                          subDevelopments.map((subDev) => (
+                            <SelectItem key={subDev._id} value={subDev._id}>
+                              {subDev.subDevelopment}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-4 text-center text-muted-foreground">No sub developments found</div>
+                        )}
+                      </SelectContent>
+                    </Select>
 
                     {subDevelopmentName && (
                       <div className="flex items-center justify-between p-2 bg-muted rounded-md">

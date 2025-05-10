@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useState, useEffect, useRef } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
-import { CalendarIcon } from "lucide-react"
+import { CalendarIcon, Search, Loader2, X } from "lucide-react"
 import { format } from "date-fns"
 import {
   setmasterDevelopment,
@@ -22,9 +23,9 @@ import {
   setLaunchDate,
   setCompletionDate,
   setSaleStatus,
-  setpercentOfConstruction, 
-    setPlotPermission,
-    setPlotStatus,
+  setpercentOfConstruction,
+  setPlotPermission,
+  setPlotStatus,
   setInstallmentDate,
   setPostHandOver,
   setUponCompletion,
@@ -33,10 +34,21 @@ import { useDispatch, useSelector } from "react-redux"
 import type { RootState } from "@/store"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import axios from "axios"
 
 interface FilterSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+interface MasterDevelopment {
+  _id: string
+  developmentName: string
+}
+
+interface SubDevelopment {
+  _id: string
+  subDevelopment: string
 }
 
 enum PropertyType {
@@ -159,19 +171,28 @@ const plotPermissionOptions = [
 ]
 
 const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
+
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const dispatch = useDispatch()
   const filters = useSelector((state: RootState) => state.projectFilter)
 
+  // Search states for master development
+  const [masterDevSearchTerm, setMasterDevSearchTerm] = useState("")
+  const [isSearchingMasterDev, setIsSearchingMasterDev] = useState(false)
+  const [masterDevResults, setMasterDevResults] = useState<MasterDevelopment[]>([])
+  const [selectedMasterDev, setSelectedMasterDev] = useState<MasterDevelopment | null>(null)
+  const masterDevSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Search states for sub development
+  const [subDevSearchTerm, setSubDevSearchTerm] = useState("")
+  const [isSearchingSubDev, setIsSearchingSubDev] = useState(false)
+  const [subDevResults, setSubDevResults] = useState<SubDevelopment[]>([])
+  const [selectedSubDev, setSelectedSubDev] = useState<SubDevelopment | null>(null)
+  const subDevSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     switch (name) {
-      case "masterDevelopment":
-        dispatch(setmasterDevelopment(value))
-        break
-      case "subDevelopment":
-        dispatch(setsubDevelopment(value))
-        break
       case "projectName":
         dispatch(setProjectName(value))
         break
@@ -187,6 +208,118 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           dispatch(setpercentOfConstruction(percent))
         }
         break
+    }
+  }
+
+  // Fetch master developments with debouncing
+  const fetchMasterDevelopments = async (searchTerm = "") => {
+    setIsSearchingMasterDev(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?developmentName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setMasterDevResults(response.data.data)
+      } else {
+        setMasterDevResults([])
+        console.error("Invalid response format for master developments:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching master developments:", error)
+      setMasterDevResults([])
+    } finally {
+      setIsSearchingMasterDev(false)
+    }
+  }
+
+  // Fetch sub developments with debouncing
+  const fetchSubDevelopments = async (searchTerm = "") => {
+    setIsSearchingSubDev(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?subDevelopment=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setSubDevResults(response.data.data)
+      } else {
+        setSubDevResults([])
+        console.error("Invalid response format for sub developments:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching sub developments:", error)
+      setSubDevResults([])
+    } finally {
+      setIsSearchingSubDev(false)
+    }
+  }
+
+  // Handle master development search input change with debouncing
+  const handleMasterDevSearchChange = (value: string) => {
+    setMasterDevSearchTerm(value)
+    dispatch(setmasterDevelopment(value))
+
+    // Clear previous timeout
+    if (masterDevSearchTimeoutRef.current) {
+      clearTimeout(masterDevSearchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearchingMasterDev(true)
+
+    // Set a new timeout for debouncing
+    masterDevSearchTimeoutRef.current = setTimeout(() => {
+      fetchMasterDevelopments(value)
+    }, 300) // 300ms debounce time
+  }
+
+  // Handle sub development search input change with debouncing
+  const handleSubDevSearchChange = (value: string) => {
+    setSubDevSearchTerm(value)
+    dispatch(setsubDevelopment(value))
+
+    // Clear previous timeout
+    if (subDevSearchTimeoutRef.current) {
+      clearTimeout(subDevSearchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearchingSubDev(true)
+
+    // Set a new timeout for debouncing
+    subDevSearchTimeoutRef.current = setTimeout(() => {
+      fetchSubDevelopments(value)
+    }, 300) // 300ms debounce time
+  }
+
+  // Select master development from dropdown
+  const handleSelectMasterDev = (id: string) => {
+    const selected = masterDevResults.find((dev) => dev._id === id)
+    if (selected) {
+      setSelectedMasterDev(selected)
+      setMasterDevSearchTerm(selected.developmentName)
+      dispatch(setmasterDevelopment(selected.developmentName))
+    }
+  }
+
+  // Select sub development from dropdown
+  const handleSelectSubDev = (id: string) => {
+    const selected = subDevResults.find((dev) => dev._id === id)
+    if (selected) {
+      setSelectedSubDev(selected)
+      setSubDevSearchTerm(selected.subDevelopment)
+      dispatch(setsubDevelopment(selected.subDevelopment))
     }
   }
 
@@ -221,17 +354,17 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const handleUponCompletionChange = (date: Date | undefined) => {
     dispatch(setUponCompletion(date ? format(date, "yyyy-MM-dd") : ""))
   }
-   const handlePlotPermissionChange = (value: string, checked: boolean) => {
-     const currentValues = filters.plotPermission || []
-     const updated = checked 
-       ? [...currentValues, value]
-       : currentValues.filter(item => item !== value)
-     dispatch(setPlotPermission(updated))
-   }
- 
-   const handlePlotStatusChange = (value: string) => {
-     dispatch(setPlotStatus(value))
-   }
+
+  const handlePlotPermissionChange = (value: string, checked: boolean) => {
+    const currentValues = filters.plotPermission || []
+    const updated = checked ? [...currentValues, value] : currentValues.filter((item) => item !== value)
+    dispatch(setPlotPermission(updated))
+  }
+
+  const handlePlotStatusChange = (value: string) => {
+    dispatch(setPlotStatus(value))
+  }
+
   const handleCheckboxChange = (
     category: "facilitiesCategories" | "amentiesCategories",
     value: string,
@@ -247,6 +380,26 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     }
   }
 
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (masterDevSearchTimeoutRef.current) {
+        clearTimeout(masterDevSearchTimeoutRef.current)
+      }
+      if (subDevSearchTimeoutRef.current) {
+        clearTimeout(subDevSearchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Initialize search terms from filter state
+  useEffect(() => {
+    if (open) {
+      setMasterDevSearchTerm(filters.masterDevelopment || "")
+      setSubDevSearchTerm(filters.subDevelopment || "")
+    }
+  }, [open, filters.masterDevelopment, filters.subDevelopment])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
@@ -259,25 +412,125 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
           {/* Master Development */}
           <div className="space-y-2">
             <Label htmlFor="masterDevelopment">Master Development</Label>
-            <Input
-              id="masterDevelopment"
-              name="masterDevelopment"
-              placeholder="Enter master development"
-              value={filters.masterDevelopment}
-              onChange={handleInputChange}
-            />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="masterDevelopmentSearch"
+                  placeholder="Search master development..."
+                  value={masterDevSearchTerm}
+                  onChange={(e) => handleMasterDevSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingMasterDev && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select
+                value={selectedMasterDev?._id || ""}
+                onValueChange={handleSelectMasterDev}
+                disabled={isSearchingMasterDev}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select master development" />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterDevResults.length > 0 ? (
+                    masterDevResults.map((dev) => (
+                      <SelectItem key={dev._id} value={dev._id}>
+                        {dev.developmentName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingMasterDev ? "Searching..." : "No master developments found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedMasterDev && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedMasterDev.developmentName}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMasterDev(null)
+                      setMasterDevSearchTerm("")
+                      dispatch(setmasterDevelopment(""))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Sub Development */}
           <div className="space-y-2">
             <Label htmlFor="subDevelopment">Sub Development</Label>
-            <Input
-              id="subDevelopment"
-              name="subDevelopment"
-              placeholder="Enter sub development"
-              value={filters.subDevelopment}
-              onChange={handleInputChange}
-            />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="subDevelopmentSearch"
+                  placeholder="Search sub development..."
+                  value={subDevSearchTerm}
+                  onChange={(e) => handleSubDevSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingSubDev && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select value={selectedSubDev?._id || ""} onValueChange={handleSelectSubDev} disabled={isSearchingSubDev}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select sub development" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subDevResults.length > 0 ? (
+                    subDevResults.map((dev) => (
+                      <SelectItem key={dev._id} value={dev._id}>
+                        {dev.subDevelopment}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingSubDev ? "Searching..." : "No sub developments found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedSubDev && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedSubDev.subDevelopment}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedSubDev(null)
+                      setSubDevSearchTerm("")
+                      dispatch(setsubDevelopment(""))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Property Type */}
@@ -480,42 +733,42 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               </PopoverContent>
             </Popover>
           </div>
-      <div className="space-y-3">
-                 <Label className="text-base">Plot Permission</Label>
-                 <div className="grid grid-cols-2 gap-2">
-                   {plotPermissionOptions.map((permission) => (
-                     <div key={permission} className="flex items-center space-x-2">
-                       <Checkbox
-                         id={`permission-${permission}`}
-                         checked={filters.plotPermission?.includes(permission) || false}
-                         onCheckedChange={(checked) =>
-                           handlePlotPermissionChange(permission, checked as boolean)
-                         }
-                       />
-                       <Label htmlFor={`permission-${permission}`} className="text-sm font-normal">
-                         {permission}
-                       </Label>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-     
-               {/* Plot Status */}
-               <div className="space-y-2">
-                 <Label>Plot Status</Label>
-                 <Select value={filters.plotStatus || ""} onValueChange={handlePlotStatusChange}>
-                   <SelectTrigger>
-                     <SelectValue placeholder="Select plot status" />
-                   </SelectTrigger>
-                   <SelectContent>
-                     {plotStatusOptions.map((option) => (
-                       <SelectItem key={option} value={option}>
-                         {option}
-                       </SelectItem>
-                     ))}
-                   </SelectContent>
-                 </Select>
-               </div>
+
+          <div className="space-y-3">
+            <Label className="text-base">Plot Permission</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {plotPermissionOptions.map((permission) => (
+                <div key={permission} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`permission-${permission}`}
+                    checked={filters.plotPermission?.includes(permission) || false}
+                    onCheckedChange={(checked) => handlePlotPermissionChange(permission, checked as boolean)}
+                  />
+                  <Label htmlFor={`permission-${permission}`} className="text-sm font-normal">
+                    {permission}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Plot Status */}
+          <div className="space-y-2">
+            <Label>Plot Status</Label>
+            <Select value={filters.plotStatus || ""} onValueChange={handlePlotStatusChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select plot status" />
+              </SelectTrigger>
+              <SelectContent>
+                {plotStatusOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Separator />
 
           {/* Facilities Categories */}

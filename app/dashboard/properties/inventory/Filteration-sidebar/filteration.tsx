@@ -1,26 +1,64 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import { X } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { X, Search, Loader2 } from "lucide-react"
 import { updateFilter, updateUnitView, resetFilters } from "@/lib/store/slices/filterSlice"
 import type { RootState } from "@/lib/store/store"
+import axios from "axios"
 
 interface PropertyFilterSidebarProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
+interface MasterDevelopment {
+  _id: string
+  developmentName: string
+}
+
+interface SubDevelopment {
+  _id: string
+  subDevelopment: string
+}
+
+interface Project {
+  _id: string
+  projectName: string
+}
+
 export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSidebarProps) {
   const dispatch = useDispatch()
   const filter = useSelector((state: RootState) => state.filter)
   const [unitViewInput, setUnitViewInput] = useState("")
+
+  // Search states for master development
+  const [masterDevSearchTerm, setMasterDevSearchTerm] = useState("")
+  const [isSearchingMasterDev, setIsSearchingMasterDev] = useState(false)
+  const [masterDevResults, setMasterDevResults] = useState<MasterDevelopment[]>([])
+  const [selectedMasterDev, setSelectedMasterDev] = useState<MasterDevelopment | null>(null)
+  const masterDevSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Search states for sub development
+  const [subDevSearchTerm, setSubDevSearchTerm] = useState("")
+  const [isSearchingSubDev, setIsSearchingSubDev] = useState(false)
+  const [subDevResults, setSubDevResults] = useState<SubDevelopment[]>([])
+  const [selectedSubDev, setSelectedSubDev] = useState<SubDevelopment | null>(null)
+  const subDevSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Search states for project
+  const [projectSearchTerm, setProjectSearchTerm] = useState("")
+  const [isSearchingProject, setIsSearchingProject] = useState(false)
+  const [projectResults, setProjectResults] = useState<Project[]>([])
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const projectSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
@@ -32,27 +70,21 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     dispatch(updateFilter({ [id]: value ? Number(value) : undefined }))
   }
 
-type RangeField = 'rentalPriceRange' | 'salePriceRange' | 'originalPriceRange' | 'premiumAndLossRange';
+  type RangeField = "rentalPriceRange" | "salePriceRange" | "originalPriceRange" | "premiumAndLossRange"
 
-const handleRangeInputChange = (
-  field: RangeField,
-  minOrMax: 'min' | 'max',
-  value: string
-) => {
-  const numValue = value ? Number(value) : undefined;
+  const handleRangeInputChange = (field: RangeField, minOrMax: "min" | "max", value: string) => {
+    const numValue = value ? Number(value) : undefined
 
-  const currentRange = filter[field] || { min: undefined, max: undefined };
-  dispatch(
-    updateFilter({
-      [field]: {
-        ...currentRange,
-        [minOrMax]: numValue,
-      },
-    })
-  );
-};
-
-
+    const currentRange = filter[field] || { min: undefined, max: undefined }
+    dispatch(
+      updateFilter({
+        [field]: {
+          ...currentRange,
+          [minOrMax]: numValue,
+        },
+      }),
+    )
+  }
 
   const handleAddUnitViewTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && unitViewInput.trim() !== "") {
@@ -76,6 +108,208 @@ const handleRangeInputChange = (
     return num.toString()
   }
 
+  // Fetch master developments with debouncing
+  const fetchMasterDevelopments = async (searchTerm = "") => {
+    setIsSearchingMasterDev(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?developmentName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setMasterDevResults(response.data.data)
+      } else {
+        setMasterDevResults([])
+        console.error("Invalid response format for master developments:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching master developments:", error)
+      setMasterDevResults([])
+    } finally {
+      setIsSearchingMasterDev(false)
+    }
+  }
+
+  // Fetch sub developments with debouncing
+  const fetchSubDevelopments = async (searchTerm = "") => {
+    setIsSearchingSubDev(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?subDevelopment=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setSubDevResults(response.data.data)
+      } else {
+        setSubDevResults([])
+        console.error("Invalid response format for sub developments:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching sub developments:", error)
+      setSubDevResults([])
+    } finally {
+      setIsSearchingSubDev(false)
+    }
+  }
+
+  // Fetch projects with debouncing
+  const fetchProjects = async (searchTerm = "") => {
+    setIsSearchingProject(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `?projectName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setProjectResults(response.data.data)
+      } else {
+        setProjectResults([])
+        console.error("Invalid response format for projects:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      setProjectResults([])
+    } finally {
+      setIsSearchingProject(false)
+    }
+  }
+
+  // Handle master development search input change with debouncing
+  const handleMasterDevSearchChange = (value: string) => {
+    setMasterDevSearchTerm(value)
+    dispatch(updateFilter({ masterDevelopment: value }))
+
+    // Clear previous timeout
+    if (masterDevSearchTimeoutRef.current) {
+      clearTimeout(masterDevSearchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearchingMasterDev(true)
+
+    // Set a new timeout for debouncing
+    masterDevSearchTimeoutRef.current = setTimeout(() => {
+      fetchMasterDevelopments(value)
+    }, 300) // 300ms debounce time
+  }
+
+  // Handle sub development search input change with debouncing
+  const handleSubDevSearchChange = (value: string) => {
+    setSubDevSearchTerm(value)
+    dispatch(updateFilter({ subDevelopment: value }))
+
+    // Clear previous timeout
+    if (subDevSearchTimeoutRef.current) {
+      clearTimeout(subDevSearchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearchingSubDev(true)
+
+    // Set a new timeout for debouncing
+    subDevSearchTimeoutRef.current = setTimeout(() => {
+      fetchSubDevelopments(value)
+    }, 300) // 300ms debounce time
+  }
+
+  // Handle project search input change with debouncing
+  const handleProjectSearchChange = (value: string) => {
+    setProjectSearchTerm(value)
+    dispatch(updateFilter({ project: value }))
+
+    // Clear previous timeout
+    if (projectSearchTimeoutRef.current) {
+      clearTimeout(projectSearchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearchingProject(true)
+
+    // Set a new timeout for debouncing
+    projectSearchTimeoutRef.current = setTimeout(() => {
+      fetchProjects(value)
+    }, 300) // 300ms debounce time
+  }
+
+  // Select master development from dropdown
+  const handleSelectMasterDev = (id: string) => {
+    const selected = masterDevResults.find((dev) => dev._id === id)
+    if (selected) {
+      setSelectedMasterDev(selected)
+      setMasterDevSearchTerm(selected.developmentName)
+      dispatch(updateFilter({ masterDevelopment: selected.developmentName }))
+    }
+  }
+
+  // Select sub development from dropdown
+  const handleSelectSubDev = (id: string) => {
+    const selected = subDevResults.find((dev) => dev._id === id)
+    if (selected) {
+      setSelectedSubDev(selected)
+      setSubDevSearchTerm(selected.subDevelopment)
+      dispatch(updateFilter({ subDevelopment: selected.subDevelopment }))
+    }
+  }
+
+  // Select project from dropdown
+  const handleSelectProject = (id: string) => {
+    const selected = projectResults.find((proj) => proj._id === id)
+    if (selected) {
+      setSelectedProject(selected)
+      setProjectSearchTerm(selected.projectName)
+      dispatch(updateFilter({ project: selected.projectName }))
+    }
+  }
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (masterDevSearchTimeoutRef.current) {
+        clearTimeout(masterDevSearchTimeoutRef.current)
+      }
+      if (subDevSearchTimeoutRef.current) {
+        clearTimeout(subDevSearchTimeoutRef.current)
+      }
+      if (projectSearchTimeoutRef.current) {
+        clearTimeout(projectSearchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Initialize search terms from filter state
+  useEffect(() => {
+    if (open) {
+      setMasterDevSearchTerm(filter.masterDevelopment || "")
+      setSubDevSearchTerm(filter.subDevelopment || "")
+      setProjectSearchTerm(filter.project || "")
+    }
+  }, [open, filter.masterDevelopment, filter.subDevelopment, filter.project])
+
+  // Fetch initial data when sidebar opens
+  useEffect(() => {
+    if (open) {
+      // Fetch all master developments, sub developments, and projects when sidebar opens
+      fetchMasterDevelopments()
+      fetchSubDevelopments()
+      fetchProjects()
+    }
+  }, [open])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[70vw] lg:w-[50vw] overflow-y-auto">
@@ -86,26 +320,189 @@ const handleRangeInputChange = (
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
             <Label htmlFor="masterDevelopment">Master Development</Label>
-            <Input
-              id="masterDevelopment"
-              placeholder="Enter master development"
-              value={filter.masterDevelopment || ""}
-              onChange={handleInputChange}
-            />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="masterDevelopmentSearch"
+                  placeholder="Search master development..."
+                  value={masterDevSearchTerm}
+                  onChange={(e) => handleMasterDevSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingMasterDev && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select
+                value={selectedMasterDev?._id || ""}
+                onValueChange={handleSelectMasterDev}
+                disabled={isSearchingMasterDev}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select master development" />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterDevResults.length > 0 ? (
+                    masterDevResults.map((dev) => (
+                      <SelectItem key={dev._id} value={dev._id}>
+                        {dev.developmentName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingMasterDev ? "Searching..." : "No master developments found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedMasterDev && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedMasterDev.developmentName}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMasterDev(null)
+                      setMasterDevSearchTerm("")
+                      dispatch(updateFilter({ masterDevelopment: "" }))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="subDevelopment">Sub Development</Label>
-            <Input
-              id="subDevelopment"
-              placeholder="Enter sub development"
-              value={filter.subDevelopment || ""}
-              onChange={handleInputChange}
-            />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="subDevelopmentSearch"
+                  placeholder="Search sub development..."
+                  value={subDevSearchTerm}
+                  onChange={(e) => handleSubDevSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingSubDev && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select value={selectedSubDev?._id || ""} onValueChange={handleSelectSubDev} disabled={isSearchingSubDev}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select sub development" />
+                </SelectTrigger>
+                <SelectContent>
+                  {subDevResults.length > 0 ? (
+                    subDevResults.map((dev) => (
+                      <SelectItem key={dev._id} value={dev._id}>
+                        {dev.subDevelopment}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingSubDev ? "Searching..." : "No sub developments found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedSubDev && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedSubDev.subDevelopment}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedSubDev(null)
+                      setSubDevSearchTerm("")
+                      dispatch(updateFilter({ subDevelopment: "" }))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="project">Project</Label>
-            <Input id="project" placeholder="Enter project" value={filter.project || ""} onChange={handleInputChange} />
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="projectSearch"
+                  placeholder="Search project..."
+                  value={projectSearchTerm}
+                  onChange={(e) => handleProjectSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingProject && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select
+                value={selectedProject?._id || ""}
+                onValueChange={handleSelectProject}
+                disabled={isSearchingProject}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectResults.length > 0 ? (
+                    projectResults.map((proj) => (
+                      <SelectItem key={proj._id} value={proj._id}>
+                        {proj.projectName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingProject ? "Searching..." : "No projects found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedProject && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedProject.projectName}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedProject(null)
+                      setProjectSearchTerm("")
+                      dispatch(updateFilter({ project: "" }))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="unitNumber">Unit Number</Label>
             <Input
@@ -284,7 +681,6 @@ const handleRangeInputChange = (
             <Input id="listingDate" type="date" value={filter.listingDate || ""} onChange={handleInputChange} />
           </div>
 
-        
           <div className="space-y-2">
             <Label htmlFor="rentedAt">Rented At</Label>
             <Input id="rentedAt" type="date" value={filter.rentedAt || ""} onChange={handleInputChange} />
