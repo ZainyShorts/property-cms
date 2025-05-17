@@ -12,7 +12,8 @@ import {
   ChevronRight,
   Trash2,
   Edit,
-  Info,
+  Info, 
+  Eye,
   Upload,
   Copy,
   Check,
@@ -97,7 +98,8 @@ const tableHeaders = [
   { key: "uponCompletion", label: "UPON COMPLETION" },
   { key: "postHandOver", label: "POST HANDOVER" },
   { key: "plot", label: "PLOT DETAILS" },
-  { key: "attachDocument", label: "DOCUMENT" },
+  { key: "attachDocument", label: "DOCUMENT" }, 
+  { key: "view", label: "VIEW" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
@@ -938,7 +940,20 @@ export default function MasterDevelopmentPage() {
             <Upload className="h-4 w-4 mr-1" />
             Attach
           </Button>
-        )
+        ) 
+             case "view":
+                          return (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+          onClick={() => window.open(`/dashboard/properties/project-details/${record._id}`, '_blank')}
+                              disabled={isAttachingDocument}
+                            >
+                              <Eye  className="h-4 w-4 mr-1" />
+                              View
+                            </Button> 
+                          )
       case "edit":
         return (
           <Button
@@ -1551,7 +1566,8 @@ export default function MasterDevelopmentPage() {
                             header.key === "totalAreaSqFt" && "w-[150px]",
                             header.key === "facilityCategories" && "w-[120px]",
                             header.key === "amenitiesCategories" && "w-[120px]",
-                            header.key === "attachDocument" && "w-[120px]",
+                            header.key === "attachDocument" && "w-[120px]", 
+                            header.key === "view" && "w-[100px]",
                             header.key === "edit" && "w-[100px]",
                             header.key === "delete" && "w-[100px]",
                           )}
