@@ -11,13 +11,20 @@ import {
   ChevronRight,
   MousePointerIcon as MousePointerSquare,
   X,
-  ClipboardCheck,
+  ClipboardCheck, 
+  Upload, 
+  Eye,
   Info,
   ArrowLeft,
   Edit,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge"  
+import { toast } from "react-toastify" 
+import { useRouter } from "next/navigation"
+import "react-toastify/dist/ReactToastify.css"
+import axios from "axios" 
+import DocumentModal from "./DocumentModal"
 import { Switch } from "@/components/ui/switch"
 import { DeleteConfirmationModal } from "@/app/dashboard/properties/projects/delete-confirmation-modal"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
@@ -35,7 +42,7 @@ const unitDetails = [
   "unitExternalDesign",
   "plotSizeSqFt",
   "BuaSqFt",
-  "unitType",
+  "noOfBedRooms",
   "unitView",
 ]
 
@@ -45,7 +52,7 @@ const unitTenancyDetails = ["rentedAt", "rentedTill", "vacantOn"]
 
 const paymentDetails = ["originalPrice", "paidTODevelopers", "payableTODevelopers", "premiumAndLoss"]
 
-const actions = ["edit", "delete"]
+const actions = ["edit", "delete", "attachments", "view"]
 
 interface PropertyDataTableProps {
   data?: any[]
@@ -54,7 +61,8 @@ interface PropertyDataTableProps {
   Count: number
   onDelete?: (id: string) => void
   onShare?: (data: any) => void
-  onEdit?: (row: any) => void
+  onEdit?: (row: any) => void 
+  totalPages?: any 
   onAttachDocument?: (id: string) => void
   loading?: boolean
   selectedRows?: string[]
@@ -76,7 +84,8 @@ function PropertyDataTable({
   page = 1,
   setPage,
   Count,
-  onDelete,
+  onDelete, 
+  totalPages,
   onShare,
   selectedRows = [],
   setSelectedColumns = () => {},
@@ -96,7 +105,8 @@ function PropertyDataTable({
 }: PropertyDataTableProps) {
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [checkState, setCheckState] = useState<string>("all")
-  const [isAttachingDocument, setIsAttachingDocument] = useState(false)
+  const [isAttachingDocument, setIsAttachingDocument] = useState(false) 
+  const router = useRouter();
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [recordDelete, setRecordToDelete] = useState<any>("")
 
@@ -118,7 +128,7 @@ function PropertyDataTable({
     { key: "unitExternalDesign", label: "EXTERNAL DESIGN" },
     { key: "plotSizeSqFt", label: "PLOT SIZE (SQ. FT)" },
     { key: "BuaSqFt", label: "BUA (SQ. FT)" },
-    { key: "unitType", label: "UNIT TYPE" },
+    { key: "noOfBedRooms", label: "BED ROOMS" },
     { key: "unitView", label: "UNIT VIEW" },
 
     // Availability
@@ -139,15 +149,38 @@ function PropertyDataTable({
     { key: "payableTODevelopers", label: "PAYABLE TO DEVELOPERS" },
     { key: "premiumAndLoss", label: "PREMIUM / LOSS" },
 
-    // Actions
+    // Actions 
+    { key: "attachDocument", label: "DOCUMENT" }, 
+    { key: "view", label: "VIEW" },
     { key: "edit", label: "EDIT" },
     { key: "delete", label: "DELETE" },
   ]
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
-  )
-
+  ) 
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
+    const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+  const handleDocumentSave = async (documentData: any) => {
+     setIsAttachingDocument(true)
+ 
+     try {
+       console.log("Document data to save:", documentData)
+ 
+       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
+       console.log(response)
+       toast.success("Document attached successfully")
+ 
+       setIsDocumentModalOpen(false)
+       setSelectedRowId(null)
+     } catch (error) {
+       console.error("Error attaching document:", error)
+       toast.error("Failed to attach document. Please try again.")
+     } finally {
+       setIsAttachingDocument(false)
+     }
+   }
+ 
   const handleCopyId = useCallback(
     (id: string) => {
       navigator.clipboard.writeText(id)
@@ -159,17 +192,13 @@ function PropertyDataTable({
     [copiedIds],
   )
 
-  const handleAttachDocument = useCallback(
-    (id: string) => {
-      setIsAttachingDocument(true)
-      onAttachDocument?.(id)
-      setTimeout(() => setIsAttachingDocument(false), 1000)
-    },
-    [onAttachDocument],
-  )
-
-  const handleEditRecord = useCallback(
-    (record: any) => {
+  const handleAttachDocument = (recordId: string) => {
+   setSelectedRowId(recordId)
+    setIsDocumentModalOpen(true)
+  }
+  
+  const handleEditRecord = useCallback( 
+    (record: any) => { 
       onEdit?.(record)
     },
     [onEdit],
@@ -253,7 +282,6 @@ function PropertyDataTable({
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap, setSelectedRows])
 
-  const totalPages = Math.ceil(Count / itemsPerPage) || 1
 
   const goToPage = useCallback(
     (pageNumber: number) => {
@@ -335,12 +363,38 @@ function PropertyDataTable({
         case "BuaSqFt":
         case "originalPrice":
         case "rentalPrice":
-        case "salePrice":
+        case "salePrice": 
         case "unitNumber":
         case "paidTODevelopers":
         case "payableTODevelopers":
         case "premiumAndLoss":
-          return record[key] ? record[key].toLocaleString() : "-"
+          return record[key] ? record[key].toLocaleString() : "-" 
+          case "attachDocument":
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                      onClick={() => handleAttachDocument(record._id)}
+                      disabled={isAttachingDocument}
+                    >
+                      <Upload className="h-4 w-4 mr-1" />
+                      Attach
+                    </Button>
+                  )  
+                    case "view":
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+  onClick={() => window.open(`/dashboard/properties/inventory-details/${record._id}`, '_blank')}
+                      disabled={isAttachingDocument}
+                    >
+                      <Eye  className="h-4 w-4 mr-1" />
+                      View
+                    </Button>
+                  ) 
         case "unitView":
           if (Array.isArray(record[key])) {
             return (
@@ -711,7 +765,7 @@ function PropertyDataTable({
                           header.key === "unitExternalDesign" && "w-[150px]",
                           header.key === "plotSizeSqFt" && "w-[120px]",
                           header.key === "BuaSqFt" && "w-[120px]",
-                          header.key === "unitType" && "w-[120px]",
+                          header.key === "noOfBedRooms" && "w-[120px]",
                           header.key === "unitView" && "w-[100px]",
                           header.key === "unitPurpose" && "w-[100px]",
                           header.key === "listingDate" && "w-[120px]",
@@ -921,7 +975,13 @@ function PropertyDataTable({
           setRecordToDelete("")
         }}
         onConfirm={confirmDelete}
-      />
+      /> 
+        <DocumentModal
+              isOpen={isDocumentModalOpen}
+              onClose={() => setIsDocumentModalOpen(false)}
+              rowId={selectedRowId}
+              onDocumentSave={handleDocumentSave}
+            />
     </>
   )
 }

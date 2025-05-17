@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { File, Plus, Minus, X, Search } from "lucide-react"
+import { File, Plus, Minus, X, Search, Loader2 } from "lucide-react"
 import axios from "axios"
 import { useUser } from "@clerk/nextjs"
 import { toast } from "react-toastify"
@@ -17,7 +17,8 @@ import "react-toastify/dist/ReactToastify.css"
 interface AddPropertyModalProps {
   isOpen: boolean
   onClose: () => void
-  propertyToEdit?: any
+  propertyToEdit?: any 
+  fetchRecords?:() => void
 }
 
 const propertyTypes = {
@@ -82,7 +83,7 @@ const propertySections = {
   },
 }
 
-export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
+export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
   const { isSignedIn, user, isLoaded } = useUser()
 
   const [dataForm, setDataForm] = useState<Record<string, any>>({})
@@ -93,7 +94,8 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
   const [isEditing, setIsEditing] = useState(false)
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [projects, setProjects] = useState<any[]>([])
-  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [selectedProject, setSelectedProject] = useState<any>(null) 
+  const [loading , setLoading] = useState<boolean>(false);
   const [projectSearchTerm, setProjectSearchTerm] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -110,33 +112,38 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
 
       // Fetch specific project details when in edit mode
       const fetchProjectDetails = async () => {
-        if (propertyToEdit.project) {
+        if (propertyToEdit.project && propertyToEdit.project._id) {
           try {
             const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${propertyToEdit.project}?populate=subDevelopment,masterDevelopment`,
+              `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${propertyToEdit.project._id}?populate=subDevelopment,masterDevelopment`,
             )
             if (response.data && response.data.data) {
               setSelectedProject(response.data.data)
+            } else {
+              // If API call fails, still set the project from the propertyToEdit data
+              setSelectedProject(propertyToEdit.project)
             }
           } catch (error) {
             console.error("Error fetching project details:", error)
-            toast.error("Failed to load project details")
+            // If API call fails, still set the project from the propertyToEdit data
+            setSelectedProject(propertyToEdit.project)
+            toast.error("Failed to load project details, using available data")
           }
         }
       }
-
       fetchProjectDetails()
 
-      // Convert string numbers to actual numbers
       setDataForm({
-        project: propertyToEdit.project || "",
+        project: propertyToEdit.project?._id || "",
+        subDevelopment: propertyToEdit?.project?.subDevelopment?.subDevelopment || "",
+        masterDevelopment: propertyToEdit?.project?.masterDevelopment?.developmentName || "",
         unitNumber: propertyToEdit.unitNumber || "",
         unitHeight: typeof propertyToEdit.unitHeight === "number" ? propertyToEdit.unitHeight : 0,
         unitInternalDesign: propertyToEdit.unitInternalDesign || "",
         unitExternalDesign: propertyToEdit.unitExternalDesign || "",
         plotSizeSqFt: typeof propertyToEdit.plotSizeSqFt === "number" ? propertyToEdit.plotSizeSqFt : 0,
         BuaSqFt: typeof propertyToEdit.BuaSqFt === "number" ? propertyToEdit.BuaSqFt : 0,
-        unitType: propertyToEdit.unitType || "",
+        BedRoom: propertyToEdit.noOfBedRooms || "",
         unitView: propertyToEdit.unitView || [],
         unitPurpose: propertyToEdit.unitPurpose || "",
         listingDate: propertyToEdit.listingDate || "",
@@ -177,10 +184,8 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     if (selectedProject) {
       setDataForm((prev) => ({
         ...prev,
-        masterDevelopment: selectedProject.masterDevelopment?._id || "",
-        masterDevelopmentName: selectedProject.masterDevelopment?.developmentName || "",
-        subDevelopment: selectedProject.subDevelopment?._id || "",
-        subDevelopmentName: selectedProject.subDevelopment?.subDevelopment || "",
+        masterDevelopment: selectedProject.masterDevelopment?.developmentName || "",
+        subDevelopment: selectedProject.subDevelopment?.subDevelopment || "",
       }))
     }
   }, [selectedProject])
@@ -325,7 +330,6 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
 
     if (!dataForm.project) newErrors.project = true
     if (!dataForm.unitNumber) newErrors.unitNumber = true
-    if (!dataForm.unitType) newErrors.unitType = true
     if (!dataForm.unitPurpose) newErrors.unitPurpose = true
 
     setErrors(newErrors)
@@ -348,7 +352,8 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
     if (!validateForm()) {
       // Don't show toast, just scroll to the first error
       return
-    }
+    } 
+    setLoading(true);
 
     const finalData = {
       project: dataForm.project || "",
@@ -358,7 +363,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
       unitExternalDesign: dataForm.unitExternalDesign || "",
       plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
       BuaSqFt: dataForm.BuaSqFt ? Number(dataForm.BuaSqFt) : 0,
-      unitType: dataForm.unitType || "",
+      noOfBedRooms: dataForm.noOfBedRooms || "",
       unitView: dataForm.unitView || [],
       pictures: selectedImages,
       unitPurpose: dataForm.unitPurpose || "",
@@ -395,9 +400,13 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
         console.log("Adding property:", finalData)
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData)
       }
-      console.log(response)
+      console.log(response) 
+          setLoading(false);
       if (response.data) {
-        toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")
+        toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")   
+        if (fetchRecords) {
+        fetchRecords() 
+        }
         onClose()
         resetForm()
       }
@@ -650,7 +659,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
                   <Label htmlFor="masterDevelopment">Master Development</Label>
                   <Input
                     id="masterDevelopment"
-                    value={selectedProject?.masterDevelopment?.developmentName || ""}
+                    value={selectedProject?.masterDevelopment?.developmentName || dataForm.masterDevelopment || ""}
                     disabled
                     className="bg-input border-input opacity-70"
                   />
@@ -660,7 +669,7 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
                   <Label htmlFor="subDevelopment">Sub Development</Label>
                   <Input
                     id="subDevelopment"
-                    value={selectedProject?.subDevelopment?.subDevelopment || ""}
+                    value={selectedProject?.subDevelopment?.subDevelopment || dataForm.subDevelopment || ""}
                     disabled
                     className="bg-input border-input opacity-70"
                   />
@@ -749,36 +758,17 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unitType">Unit Type</Label>
-                  <Select
-                    value={dataForm.unitType || ""}
-                    onValueChange={(value) => handleSelectChange(value, "unitType")}
-                  >
-                    <SelectTrigger
-                      id="unitType"
-                      className={`bg-input border-input ${errors.unitType ? "border-destructive" : ""}`}
-                    >
-                      <SelectValue placeholder="Select unit type..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {Object.entries({
-                        Studio: "Studio",
-                        "1 BR": "1 BR",
-                        "2 BR": "2 BR",
-                        "3 BR": "3 BR",
-                        "4 BR": "4 BR",
-                        "5 BR": "5 BR",
-                        "6 BR": "6 BR",
-                        "7 BR": "7 BR",
-                        "8 BR": "8 BR",
-                      }).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.unitType && <p className="text-sm text-destructive">Unit type is required</p>}
+                  <Label htmlFor="noOfBedRooms">Bed Room</Label>
+                  <Input
+                    id="noOfBedRooms"
+                    name="noOfBedRooms"
+                    value={dataForm.noOfBedRooms || ""}
+                    onChange={(e) => handleChange(e, "noOfBedRooms", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="e.g., 1 BR"
+                  />
+                  {errors.noOfBedRooms && <p className="text-sm text-destructive">Bed Room is required</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -1043,13 +1033,15 @@ export function AddPropertyModal({ isOpen, onClose, propertyToEdit }: AddPropert
               <Label htmlFor="listed">Is property listed?</Label>
             </div> */}
 
-            <Button
-              onClick={handleSubmit}
-              type="submit"
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {isEditing ? "Update Property" : "Add Property"}
-            </Button>
+           <Button
+  onClick={handleSubmit}
+  type="submit"
+  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
+  disabled={loading}
+>
+  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+  {isEditing ? "Update Property" : "Add Property"}
+</Button>
           </div>
         </ScrollArea>
       </DialogContent>

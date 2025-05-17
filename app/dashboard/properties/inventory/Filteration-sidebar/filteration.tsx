@@ -22,6 +22,7 @@ interface PropertyFilterSidebarProps {
 interface MasterDevelopment {
   _id: string
   developmentName: string
+  roadLocation?: string
 }
 
 interface SubDevelopment {
@@ -32,6 +33,11 @@ interface SubDevelopment {
 interface Project {
   _id: string
   projectName: string
+}
+
+interface RoadLocation {
+  _id: string
+  name: string
 }
 
 export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSidebarProps) {
@@ -60,6 +66,13 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const projectSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Search states for road location
+  const [roadLocationSearchTerm, setRoadLocationSearchTerm] = useState("")
+  const [isSearchingRoadLocation, setIsSearchingRoadLocation] = useState(false)
+  const [roadLocationResults, setRoadLocationResults] = useState<RoadLocation[]>([])
+  const [selectedRoadLocation, setSelectedRoadLocation] = useState<RoadLocation | null>(null)
+  const roadLocationSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target
     dispatch(updateFilter({ [id]: value }))
@@ -76,14 +89,28 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     const numValue = value ? Number(value) : undefined
 
     const currentRange = filter[field] || { min: undefined, max: undefined }
-    dispatch(
-      updateFilter({
-        [field]: {
-          ...currentRange,
-          [minOrMax]: numValue,
-        },
-      }),
-    )
+
+    // Only update the filter if there's at least one valid value in the range
+    const updatedRange = {
+      ...currentRange,
+      [minOrMax]: numValue,
+    }
+
+    // Only dispatch if at least one of min or max has a value
+    if (updatedRange.min !== undefined || updatedRange.max !== undefined) {
+      dispatch(
+        updateFilter({
+          [field]: updatedRange,
+        }),
+      )
+    } else {
+      // If both min and max are undefined, remove the range filter completely
+      dispatch(
+        updateFilter({
+          [field]: undefined,
+        }),
+      )
+    }
   }
 
   const handleAddUnitViewTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -111,27 +138,46 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
   // Fetch master developments with debouncing
   const fetchMasterDevelopments = async (searchTerm = "") => {
     setIsSearchingMasterDev(true)
+    setIsSearchingRoadLocation(true) // Also set road location as searching
     try {
       let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
 
-      // Add search parameter if provided
       if (searchTerm) {
-        url += `?developmentName=${encodeURIComponent(searchTerm)}`
+        url += `?developmentName=${encodeURIComponent(searchTerm)}&fields=roadLocation,developmentName`
       }
 
       const response = await axios.get(url)
 
       if (response.data && Array.isArray(response.data.data)) {
         setMasterDevResults(response.data.data)
+
+        // Extract unique road locations from master developments
+        const roadLocations: RoadLocation[] = []
+        const roadLocationSet = new Set<string>()
+
+        response.data.data.forEach((dev: MasterDevelopment) => {
+          if (dev.roadLocation && !roadLocationSet.has(dev.roadLocation)) {
+            roadLocationSet.add(dev.roadLocation)
+            roadLocations.push({
+              _id: dev.roadLocation, // Using the roadLocation string as ID
+              name: dev.roadLocation,
+            })
+          }
+        })
+
+        setRoadLocationResults(roadLocations)
       } else {
         setMasterDevResults([])
+        setRoadLocationResults([])
         console.error("Invalid response format for master developments:", response.data)
       }
     } catch (error) {
       console.error("Error fetching master developments:", error)
       setMasterDevResults([])
+      setRoadLocationResults([])
     } finally {
       setIsSearchingMasterDev(false)
+      setIsSearchingRoadLocation(false)
     }
   }
 
@@ -143,7 +189,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
 
       // Add search parameter if provided
       if (searchTerm) {
-        url += `?subDevelopment=${encodeURIComponent(searchTerm)}`
+        url += `?subDevelopment=${encodeURIComponent(searchTerm)}&fields=subDevelopment`
       }
 
       const response = await axios.get(url)
@@ -189,61 +235,32 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     }
   }
 
-  // Handle master development search input change with debouncing
-  const handleMasterDevSearchChange = (value: string) => {
-    setMasterDevSearchTerm(value)
-    dispatch(updateFilter({ masterDevelopment: value }))
+  // Handle road location search input change with debouncing
+  const handleRoadLocationSearchChange = (value: string) => {
+    setRoadLocationSearchTerm(value)
+    dispatch(updateFilter({ roadLocation: value }))
 
-    // Clear previous timeout
-    if (masterDevSearchTimeoutRef.current) {
-      clearTimeout(masterDevSearchTimeoutRef.current)
+    // Filter the existing roadLocationResults based on the search term
+    if (value.trim() === "") {
+      // If search term is empty, show all road locations from master developments
+      fetchMasterDevelopments("")
+    } else {
+      // Filter the existing road locations based on the search term
+      setIsSearchingRoadLocation(true)
+
+      // Clear previous timeout
+      if (roadLocationSearchTimeoutRef.current) {
+        clearTimeout(roadLocationSearchTimeoutRef.current)
+      }
+
+      roadLocationSearchTimeoutRef.current = setTimeout(() => {
+        const filteredResults = roadLocationResults.filter((loc) =>
+          loc.name.toLowerCase().includes(value.toLowerCase()),
+        )
+        setRoadLocationResults(filteredResults)
+        setIsSearchingRoadLocation(false)
+      }, 300)
     }
-
-    // Set searching state
-    setIsSearchingMasterDev(true)
-
-    // Set a new timeout for debouncing
-    masterDevSearchTimeoutRef.current = setTimeout(() => {
-      fetchMasterDevelopments(value)
-    }, 300) // 300ms debounce time
-  }
-
-  // Handle sub development search input change with debouncing
-  const handleSubDevSearchChange = (value: string) => {
-    setSubDevSearchTerm(value)
-    dispatch(updateFilter({ subDevelopment: value }))
-
-    // Clear previous timeout
-    if (subDevSearchTimeoutRef.current) {
-      clearTimeout(subDevSearchTimeoutRef.current)
-    }
-
-    // Set searching state
-    setIsSearchingSubDev(true)
-
-    // Set a new timeout for debouncing
-    subDevSearchTimeoutRef.current = setTimeout(() => {
-      fetchSubDevelopments(value)
-    }, 300) // 300ms debounce time
-  }
-
-  // Handle project search input change with debouncing
-  const handleProjectSearchChange = (value: string) => {
-    setProjectSearchTerm(value)
-    dispatch(updateFilter({ project: value }))
-
-    // Clear previous timeout
-    if (projectSearchTimeoutRef.current) {
-      clearTimeout(projectSearchTimeoutRef.current)
-    }
-
-    // Set searching state
-    setIsSearchingProject(true)
-
-    // Set a new timeout for debouncing
-    projectSearchTimeoutRef.current = setTimeout(() => {
-      fetchProjects(value)
-    }, 300) // 300ms debounce time
   }
 
   // Select master development from dropdown
@@ -276,6 +293,58 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     }
   }
 
+  // Select road location from dropdown
+  const handleSelectRoadLocation = (id: string) => {
+    const selected = roadLocationResults.find((loc) => loc._id === id)
+    if (selected) {
+      setSelectedRoadLocation(selected)
+      setRoadLocationSearchTerm(selected.name)
+      dispatch(updateFilter({ roadLocation: selected.name }))
+    }
+  }
+
+  // Handle master development search input change with debouncing
+  const handleMasterDevSearchChange = (value: string) => {
+    setMasterDevSearchTerm(value)
+
+    // Clear previous timeout
+    if (masterDevSearchTimeoutRef.current) {
+      clearTimeout(masterDevSearchTimeoutRef.current)
+    }
+
+    masterDevSearchTimeoutRef.current = setTimeout(() => {
+      fetchMasterDevelopments(value)
+    }, 300)
+  }
+
+  // Handle sub development search input change with debouncing
+  const handleSubDevSearchChange = (value: string) => {
+    setSubDevSearchTerm(value)
+
+    // Clear previous timeout
+    if (subDevSearchTimeoutRef.current) {
+      clearTimeout(subDevSearchTimeoutRef.current)
+    }
+
+    subDevSearchTimeoutRef.current = setTimeout(() => {
+      fetchSubDevelopments(value)
+    }, 300)
+  }
+
+  // Handle project search input change with debouncing
+  const handleProjectSearchChange = (value: string) => {
+    setProjectSearchTerm(value)
+
+    // Clear previous timeout
+    if (projectSearchTimeoutRef.current) {
+      clearTimeout(projectSearchTimeoutRef.current)
+    }
+
+    projectSearchTimeoutRef.current = setTimeout(() => {
+      fetchProjects(value)
+    }, 300)
+  }
+
   // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
@@ -288,6 +357,9 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
       if (projectSearchTimeoutRef.current) {
         clearTimeout(projectSearchTimeoutRef.current)
       }
+      if (roadLocationSearchTimeoutRef.current) {
+        clearTimeout(roadLocationSearchTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -297,8 +369,9 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
       setMasterDevSearchTerm(filter.masterDevelopment || "")
       setSubDevSearchTerm(filter.subDevelopment || "")
       setProjectSearchTerm(filter.project || "")
+      setRoadLocationSearchTerm(filter.roadLocation || "")
     }
-  }, [open, filter.masterDevelopment, filter.subDevelopment, filter.project])
+  }, [open, filter.masterDevelopment, filter.subDevelopment, filter.project, filter.roadLocation])
 
   // Fetch initial data when sidebar opens
   useEffect(() => {
@@ -307,6 +380,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
       fetchMasterDevelopments()
       fetchSubDevelopments()
       fetchProjects()
+      // Road locations are now fetched as part of fetchMasterDevelopments
     }
   }, [open])
 
@@ -504,6 +578,69 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="roadLocation">Road Location</Label>
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="roadLocationSearch"
+                  placeholder="Search road location..."
+                  value={roadLocationSearchTerm}
+                  onChange={(e) => handleRoadLocationSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingRoadLocation && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select
+                value={selectedRoadLocation?._id || ""}
+                onValueChange={handleSelectRoadLocation}
+                disabled={isSearchingRoadLocation}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select road location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roadLocationResults.length > 0 ? (
+                    roadLocationResults.map((loc) => (
+                      <SelectItem key={loc._id} value={loc._id}>
+                        {loc.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingRoadLocation ? "Searching..." : "No road locations found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedRoadLocation && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedRoadLocation.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedRoadLocation(null)
+                      setRoadLocationSearchTerm("")
+                      dispatch(updateFilter({ roadLocation: "" }))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="unitNumber">Unit Number</Label>
             <Input
               id="unitNumber"
@@ -561,11 +698,12 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="unitType">Unit Type</Label>
+            <Label htmlFor="noOfBedRooms">Bed Rooms</Label>
             <Input
-              id="unitType"
-              placeholder="Enter unit type"
-              value={filter.unitType || ""}
+              id="noOfBedRooms"
+              type="number"
+              placeholder="Enter Bed Rooms"
+              value={filter.noOfBedRooms || ""}
               onChange={handleInputChange}
             />
           </div>

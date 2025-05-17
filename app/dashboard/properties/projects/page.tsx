@@ -499,8 +499,8 @@ export default function MasterDevelopmentPage() {
     setIsDeleteModalOpen(true)
   }
 
-  const handleAttachDocument = (recordId: string) => {
-    setSelectedRowId(recordId)
+   const handleAttachDocument = (recordId: string) => {
+   setSelectedRowId(recordId)
     setIsDocumentModalOpen(true)
   }
 

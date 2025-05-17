@@ -32,7 +32,8 @@ export const projectDetails = [
   ];
   
   export const all = [
-    "attachDocument",
+    "attachDocument", 
+    "view", 
     "edit",
     "delete",
   ];

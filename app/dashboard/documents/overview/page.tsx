@@ -66,7 +66,8 @@ export default function DocumentsPage() {
         throw new Error("Failed to fetch documents")
       }
 
-      const data: ApiResponse = await response.json()
+      const data: ApiResponse = await response.json() 
+      console.log('Data',data.data);
       setDocuments(data.data)
 
       if (data.data.length === 0) {

@@ -28,33 +28,31 @@ interface CellStyle {
 
 export function exportToExcel(data: any[], fileName = "properties-export") {
   // Process the data to handle arrays and maintain structure
-  const processedData = data.map((property) => ({
-    ID: property._id || "N/A",
-    "Road Location": property.roadLocation || "N/A",
-    "Development Name": property.developmentName || "N/A",
-    "Sub Development": property.subDevelopmentName || "N/A",
-    "Project Name": property.projectName || "N/A",
-    "Property Type": property.propertyType || "N/A",
-    "Property Height": property.propertyHeight || "N/A",
-    "Project Location": property.projectLocation || "N/A",
-    "Unit Number": property.unitNumber || "N/A",
-    "Bed Room": property.bedrooms || "N/A",
-    "Unit Land Size": property.unitLandSize || "N/A",
-    "Unit BUA": property.unitBua || "N/A",
-    "Unit View": Array.isArray(property.unitView) ? property.unitView.join(", ") : property.unitView || "N/A",
-    "Unit Location": property.unitLocation || "N/A",
-    Purpose: property.Purpose || "N/A",
-    "Vacancy Status": property.vacancyStatus || "N/A",
-    "Primary Price": property.primaryPrice || "N/A",
-    "Resale Price": property.resalePrice || "N/A",
-    "Premium & Loss":
-      property.resalePrice && property.primaryPrice ? property.resalePrice - property.primaryPrice : "N/A",
-    Rent: property.rent || "N/A",
-    "No of Cheques": property.noOfCheques || "N/A",
-    Listed: property.listed ? "YES" : "NO",
-    "Created At": property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
-  }))
-
+const processedData = data.map((property) => ({
+  ID: property._id || "N/A",
+  "Road Location": property.project?.masterDevelopment?.roadLocation || "N/A",
+  "Development Name": property.project?.masterDevelopment?.developmentName || "N/A",
+  "Sub Development": property.project?.subDevelopment?.subDevelopment || "N/A",
+  "Project Name": property.project?.projectName || "N/A",
+  "Property Type": "N/A", // Not in original data
+  "Property Height": property.unitHeight || "N/A",
+  "Project Location": "N/A", // Not explicitly in original data
+  "Unit Number": property.unitNumber || "N/A",
+  "Bed Room": property.noOfBedRooms || "N/A",
+  "Unit Land Size": property.plotSizeSqFt || "N/A",
+  "Unit BUA": property.BuaSqFt || "N/A",
+  "Unit View": Array.isArray(property.unitView) ? property.unitView.join(", ") : "N/A",
+  "Unit Location": "N/A", // Not in original data
+  Purpose: property.unitPurpose || "N/A",
+  "Vacancy Status": property.vacantOn ? "Vacant" : "Occupied", // Derived from vacantOn
+  "Primary Price": property.originalPrice || "N/A",
+  "Resale Price": property.salePrice || "N/A",
+  "Premium & Loss": property.premiumAndLoss || "N/A",
+  Rent: property.rentalPrice || "N/A",
+  "No of Cheques": "N/A", // Not in original data
+  Listed: property.listingDate ? "YES" : "NO",
+  "Created At": property.createdAt ? new Date(property.createdAt).toLocaleString() : "N/A",
+}));
   // Create worksheet
   const worksheet = XLSX.utils.json_to_sheet(processedData)
 

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useEffect, useState, useRef , useCallback} from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useSelector } from "react-redux"
 import PropertyDataTable from "@/components/overview/Data-Table/DataTable"
 import { FilterBar } from "@/components/overview/Filter-Bar/FilterBar"
@@ -13,7 +13,7 @@ import { PropertyFilterSidebar } from "./Filteration-sidebar/filteration"
 import { toast } from "react-toastify"
 import axios from "axios"
 import type { RootState } from "@/lib/store/store"
-import { Loader2 } from 'lucide-react'
+import { Loader2 } from "lucide-react"
 import { useDispatch } from "react-redux"
 import { clearAllFilters } from "@/lib/store/slices/filterSlice"
 import { resetRangess } from "@/lib/store/slices/rangeSlice"
@@ -45,9 +45,9 @@ const tableHeaders = [
   "unitInternalDesign",
   "unitExternalDesign",
   "plotSizeSqFt",
-  "BuaSqFt", 
+  "BuaSqFt",
   "unitNumber",
-  "unitType",
+  "noOfBedRooms",
   "unitView",
   "unitPurpose",
   "listingDate",
@@ -68,6 +68,7 @@ export default function PropertiesPage() {
   const [addPropertyModalOpen, setAddPropertyModalOpen] = useState(false)
   const [fileUploadModalOpen, setFileUploadModalOpen] = useState(false)
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false)
+  const [totalPages, setPages] = useState<any>(null)
   const [propertyToEdit, setPropertyToEdit] = useState(null)
   const [currentPage, setCurrentPage] = useState<number>(1)
   const [searchFilter, setSearchFilter] = useState({})
@@ -96,39 +97,45 @@ export default function PropertiesPage() {
   const sidebarFilters = useSelector((state: RootState) => state.filter)
   const rangeFilters = useSelector((state: any) => state.range)
 
-   const fetchProperties = useCallback(
+  const fetchProperties = useCallback(
     async (params: any = {}) => {
-      setLoading(true);
+      setLoading(true)
       try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
-          params: {
-            ...params,
-            limit: 10,
-            page: currentPage,
-          },
-        });
+        // Remove the filter object and spread its contents directly into params
+        const { filter: filterObj, ...restParams } = params;
+        const finalParams = {
+          ...filterObj, // Spread the filter object contents
+          ...restParams, // Include other params
+          limit: 3,
+          page: currentPage,
+        };
 
-        console.log(response.data);
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
+          {
+            params: finalParams,
+          },
+        )
+
         if (response.data) {
-          setProperties(response.data.data || []);
-          setCount(response.data.totalCount || 0);
+          setProperties(response.data.data || [])
+          setCount(response.data.totalCount || 0)
+          setPages(response.data.totalPages || 0)
         }
-        setError(null);
+        setError(null)
       } catch (err) {
-        console.error("Error fetching properties:", err);
-        setError("Failed to load properties. Please try again.");
-        toast.error("Failed to load properties");
+        console.error("Error fetching properties:", err)
+        setError("Failed to load properties. Please try again.")
+        toast.error("Failed to load properties")
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     },
-    [] 
-  );
-
+    [currentPage],
+  )
 
   useEffect(() => {
     fetchProperties({
-      filter: searchFilter,
       sortBy: "createdAt",
       sortOrder: sortOrder,
     })
@@ -136,17 +143,17 @@ export default function PropertiesPage() {
 
   const transformedData = properties.map((property: any) => ({
     _id: property._id || "N/A",
-    roadLocation: property.roadLocation || "N/A",
-    developmentName: property.developmentName || "N/A",
-    subDevelopmentName: property.subDevelopmentName || "N/A",
-    projectName: property.projectName || "N/A",
+    roadLocation: property.project?.masterDevelopment?.roadLocation || "N/A",
+    developmentName: property.project?.masterDevelopment?.developmentName || "N/A",
+    subDevelopmentName: property.project?.subDevelopment?.subDevelopment || "N/A",
+    projectName: property.project?.projectName || "N/A",
     unitHeight: property.unitHeight || "N/A",
     unitInternalDesign: property.unitInternalDesign || "N/A",
     unitExternalDesign: property.unitExternalDesign || "N/A",
     plotSizeSqFt: property.plotSizeSqFt || "N/A",
-    BuaSqFt: property.BuaSqFt || "N/A", 
+    BuaSqFt: property.BuaSqFt || "N/A",
     unitNumber: property.unitNumber || "N/A",
-    unitType: property.unitType || "N/A",
+    noOfBedRooms: property.noOfBedRooms || "N/A",
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
     unitPurpose: property.unitPurpose || "N/A",
     listingDate: property.listingDate || "N/A",
@@ -164,13 +171,11 @@ export default function PropertiesPage() {
       (property.salePrice && property.originalPrice ? property.salePrice - property.originalPrice : "N/A"),
   }))
 
-  // Update the toggleRow function to properly maintain the selection state
   const toggleRow = (id: string) => {
     setSelectedRowsMap((prev) => {
       const newMap = { ...prev }
       newMap[id] = !prev[id]
 
-      // If we're selecting a row, add it to the cache
       if (newMap[id]) {
         const record = transformedData.find((r) => r._id === id)
         if (record) {
@@ -191,7 +196,7 @@ export default function PropertiesPage() {
     )
   }
 
-  useEffect(() => { 
+  useEffect(() => {
     const selected = Object.entries(selectedRowsMap)
       .filter(([_, isSelected]) => isSelected)
       .map(([id]) => id)
@@ -243,24 +248,17 @@ export default function PropertiesPage() {
       return false
     }
 
-    const isDefaultRange = (range: any, defaultMin: number, defaultMax: number) => {
-      return range.min === defaultMin && range.max === defaultMax
+    const hasValidRange = (range: any) => {
+      if (!range || typeof range !== "object") return false
+      return range.min !== undefined || range.max !== undefined
     }
 
     Object.entries(filters).forEach(([key, value]) => {
       if (isEmpty(value)) return
 
       if (typeof value === "object" && "min" in value && "max" in value) {
-        switch (key) {
-         
-          case "salePriceRange":
-          case "rentalPriceRange": 
-          case "originalPriceRange":
-          case "premiumAndLossRange":
-
-            if (!isDefaultRange(value, 0, 10000000)) cleaned[key] = value
-            break
-  
+        if (hasValidRange(value)) {
+          cleaned[key] = value
         }
         return
       }
@@ -282,7 +280,7 @@ export default function PropertiesPage() {
     return cleaned
   }
 
-  const handleApplyFilters = () => { 
+  const handleApplyFilters = () => {
     const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
     const dateFilters = {
@@ -291,50 +289,40 @@ export default function PropertiesPage() {
     }
 
     const propertyTypeFilter = propertyType ? { propertyType } : {}
-    const cleanedSidebarFilters = cleanFilters(sidebarFilters) 
-    const newFilters = {
+    const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+    
+    // Create query params object without wrapping in a filter object
+    const queryParams = {
       ...cleanedSidebarFilters,
       ...searchFilterObj,
       ...dateFilters,
       ...propertyTypeFilter,
       ...(rangeFilters.minBed &&
         rangeFilters.maxBed && {
-          bedrooms: {
-            min: Number.parseInt(rangeFilters.minBed),
-            max: Number.parseInt(rangeFilters.maxBed),
-          },
+          bedroomsMin: Number.parseInt(rangeFilters.minBed),
+          bedroomsMax: Number.parseInt(rangeFilters.maxBed),
         }),
       ...(rangeFilters.minPrimaryPrice &&
         rangeFilters.maxPrimaryPrice && {
-          primaryPriceRange: {
-            min: Number.parseInt(rangeFilters.minPrimaryPrice),
-            max: Number.parseInt(rangeFilters.maxPrimaryPrice),
-          },
+          primaryPriceMin: Number.parseInt(rangeFilters.minPrimaryPrice),
+          primaryPriceMax: Number.parseInt(rangeFilters.maxPrimaryPrice),
         }),
       ...(rangeFilters.minRent &&
         rangeFilters.maxRent && {
-          rentRange: {
-            min: Number.parseInt(rangeFilters.minRent),
-            max: Number.parseInt(rangeFilters.maxRent),
-          },
+          rentMin: Number.parseInt(rangeFilters.minRent),
+          rentMax: Number.parseInt(rangeFilters.maxRent),
         }),
       ...(rangeFilters.minResalePrice &&
         rangeFilters.maxResalePrice && {
-          resalePriceRange: {
-            min: Number.parseInt(rangeFilters.minResalePrice),
-            max: Number.parseInt(rangeFilters.maxResalePrice),
-          },
+          resalePriceMin: Number.parseInt(rangeFilters.minResalePrice),
+          resalePriceMax: Number.parseInt(rangeFilters.maxResalePrice),
         }),
-    }
-
-    console.log("new", newFilters)
-    setSearchFilter(newFilters)
-
-    fetchProperties({
-      filter: Object.keys(newFilters).length > 0 ? newFilters : {},
       sortBy: "createdAt",
       sortOrder: sortOrder,
-    })
+    }
+
+    setSearchFilter(queryParams)
+    fetchProperties(queryParams)
   }
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -345,9 +333,8 @@ export default function PropertiesPage() {
   const handleAdd = () => setSelectionModalOpen(true)
 
   const handleManualSelect = () => {
-    // setSelectionModalOpen(false)
     setAddPropertyModalOpen(true)
-    setDataChanged(false) // Reset data changed flag when opening modal for adding
+    setDataChanged(false)
   }
 
   const handleFileSelect = () => {
@@ -361,19 +348,14 @@ export default function PropertiesPage() {
 
   const handleDelete = async (_id: string) => {
     try {
-      const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
-        params: { _id: _id },
-      })
-      console.log("id", _id)
-      console.log("Property deleted successfully:", response)
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${_id}`)
       if (response) {
         toast.success("Property Deleted successfully!")
-        setDataChanged(true) // Set data changed flag when deleting
+        setDataChanged(true)
       }
 
-      // Refresh the data after deletion
       fetchProperties({
-        filter: searchFilter,
+        ...searchFilter,
         sortBy: "createdAt",
         sortOrder: sortOrder,
       })
@@ -386,13 +368,10 @@ export default function PropertiesPage() {
   }
 
   const handleUpdate = (property: any) => {
-    console.log("property", property)
-    // Find the original property data from the API response instead of using the transformed data
     const originalProperty = properties.find((p) => p._id === property._id)
-    // Pass the original property data to the edit modal
     setPropertyToEdit(originalProperty || property)
     setAddPropertyModalOpen(true)
-    setDataChanged(false) // Reset data changed flag when opening modal for editing
+    setDataChanged(false)
   }
 
   const handleExport = () => {
@@ -404,12 +383,10 @@ export default function PropertiesPage() {
     setPropertyToEdit(null)
   }
 
-  // Function to handle property changes from the modal
   const handlePropertyChange = (changed: boolean) => {
     setDataChanged(changed)
   }
 
-  // Improved getSelectedData function to use both cache and current data
   const getSelectedData = () => {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
       return []
@@ -417,13 +394,8 @@ export default function PropertiesPage() {
 
     return selectedRows
       .map((id) => {
-        // First check the selectedRecordsCache, then allDataCache, then current page data
         const record = selectedRecordsCache[id] || allDataCache.current[id] || transformedData.find((r) => r._id === id)
-
-        if (!record) {
-          console.warn(`Record with ID ${id} not found in any cache or current data`)
-          return null
-        }
+        if (!record) return null
 
         const selectedData: Record<string, any> = {}
         selectedColumns.forEach((col) => {
@@ -438,7 +410,6 @@ export default function PropertiesPage() {
     return !!selectedRowsMap[id]
   }
 
-  // Improved exportSelectedData function
   const exportSelectedData = () => {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
       toast.error("Please select at least one row and one column to export")
@@ -446,14 +417,12 @@ export default function PropertiesPage() {
     }
 
     const selectedData = getSelectedData()
-
     if (selectedData.length === 0) {
       toast.error("No data found for the selected rows")
       return
     }
 
     let csvContent = selectedColumns.join(",") + "\n"
-
     selectedData.forEach((item) => {
       const row = selectedColumns.map((col) => {
         const value = item[col]
@@ -465,7 +434,6 @@ export default function PropertiesPage() {
       csvContent += row.join(",") + "\n"
     })
 
-    // Create and download the file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -486,19 +454,19 @@ export default function PropertiesPage() {
       setLoading(false)
       return
     }
-    console.log(`Exporting with option: ${exportOption}`)
-
-    const dataToExport = null
 
     if (exportOption === "false" || exportOption === false) {
       try {
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
-          params: {
-            sortBy: "createdAt",
-            sortOrder: "asc",
-            limit: count.toString(),
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
+          {
+            params: {
+              sortBy: "createdAt",
+              sortOrder: "asc",
+              limit: count.toString(),
+            },
           },
-        })
+        )
 
         if (response.data?.data) {
           exportToExcel(response.data.data)
@@ -520,51 +488,42 @@ export default function PropertiesPage() {
         const propertyTypeFilter = propertyType ? { propertyType } : {}
         const cleanedSidebarFilters = cleanFilters(sidebarFilters)
 
-        const newFilters = {
+        const queryParams = {
           ...cleanedSidebarFilters,
           ...searchFilterObj,
           ...dateFilters,
           ...propertyTypeFilter,
           ...(rangeFilters.minBed &&
             rangeFilters.maxBed && {
-              bedrooms: {
-                min: Number.parseInt(rangeFilters.minBed),
-                max: Number.parseInt(rangeFilters.maxBed),
-              },
+              bedroomsMin: Number.parseInt(rangeFilters.minBed),
+              bedroomsMax: Number.parseInt(rangeFilters.maxBed),
             }),
           ...(rangeFilters.minPrimaryPrice &&
             rangeFilters.maxPrimaryPrice && {
-              primaryPriceRange: {
-                min: Number.parseInt(rangeFilters.minPrimaryPrice),
-                max: Number.parseInt(rangeFilters.maxPrimaryPrice),
-              },
+              primaryPriceMin: Number.parseInt(rangeFilters.minPrimaryPrice),
+              primaryPriceMax: Number.parseInt(rangeFilters.maxPrimaryPrice),
             }),
           ...(rangeFilters.minRent &&
             rangeFilters.maxRent && {
-              rentRange: {
-                min: Number.parseInt(rangeFilters.minRent),
-                max: Number.parseInt(rangeFilters.maxRent),
-              },
+              rentMin: Number.parseInt(rangeFilters.minRent),
+              rentMax: Number.parseInt(rangeFilters.maxRent),
             }),
           ...(rangeFilters.minResalePrice &&
             rangeFilters.maxResalePrice && {
-              resalePriceRange: {
-                min: Number.parseInt(rangeFilters.minResalePrice),
-                max: Number.parseInt(rangeFilters.maxResalePrice),
-              },
+              resalePriceMin: Number.parseInt(rangeFilters.minResalePrice),
+              resalePriceMax: Number.parseInt(rangeFilters.maxResalePrice),
             }),
+          sortBy: "createdAt",
+          sortOrder: "asc",
+          limit: count.toString(),
         }
 
-        console.log("Applying filters:", newFilters)
-
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, {
-          params: {
-            filter: newFilters,
-            sortBy: "createdAt",
-            sortOrder: "asc",
-            limit: count.toString(),
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
+          {
+            params: queryParams,
           },
-        })
+        )
 
         if (response.data?.data) {
           exportToExcel(response.data.data)
@@ -639,7 +598,7 @@ export default function PropertiesPage() {
         setIsSelectionMode={setIsSelectionMode}
         fetchRecords={() =>
           fetchProperties({
-            filter: searchFilter,
+            ...searchFilter,
             sortBy: "createdAt",
             sortOrder: sortOrder,
           })
@@ -665,6 +624,7 @@ export default function PropertiesPage() {
             page={currentPage}
             setPage={setCurrentPage}
             toggleRow={toggleRow}
+            totalPages={totalPages}
             toggleColumns={toggleColumns}
             Count={totalCount}
             setSelectedRowsMap={setSelectedRowsMap}
@@ -704,17 +664,22 @@ export default function PropertiesPage() {
         onClose={() => {
           setAddPropertyModalOpen(false)
           setPropertyToEdit(null)
-          
-          // Only refresh data when changes were made
           if (dataChanged) {
             fetchProperties({
-              filter: searchFilter,
+              ...searchFilter,
               sortBy: "createdAt",
               sortOrder: sortOrder,
             })
           }
         }}
         propertyToEdit={propertyToEdit}
+        fetchRecords={() =>
+          fetchProperties({
+            ...searchFilter,
+            sortBy: "createdAt",
+            sortOrder: sortOrder,
+          })
+        }
         onPropertyChange={handlePropertyChange}
       />
 
@@ -722,9 +687,8 @@ export default function PropertiesPage() {
         isOpen={fileUploadModalOpen}
         onClose={() => {
           setFileUploadModalOpen(false)
-          // Refresh data when modal is closed
           fetchProperties({
-            filter: searchFilter,
+            ...searchFilter,
             sortBy: "createdAt",
             sortOrder: sortOrder,
           })
@@ -745,4 +709,3 @@ export default function PropertiesPage() {
     </div>
   )
 }
-

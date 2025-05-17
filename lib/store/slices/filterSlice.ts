@@ -11,12 +11,13 @@ interface FilterState {
   subDevelopment?: string
   project?: string
   unitNumber?: string
-  unitHeight?: number
+  unitHeight?: number 
+  roadLocation?:string
   unitInternalDesign?: string
   unitExternalDesign?: string
   plotSizeSqFt?: number
   buaSqFt?: number
-  unitType?: string
+  noOfBedRooms?: string
   unitView?: string[]
   pictures?: string[]
   unitPurpose?: string
@@ -39,13 +40,14 @@ const initialState: FilterState = {
   masterDevelopment: undefined,
   subDevelopment: undefined,
   project: undefined,
-  unitNumber: undefined,
+  unitNumber: undefined, 
+  roadLocation: "",
   unitHeight: undefined,
   unitInternalDesign: undefined,
   unitExternalDesign: undefined,
   plotSizeSqFt: undefined,
   buaSqFt: undefined,
-  unitType: undefined,
+  noOfBedRooms: undefined,
   unitView: [],
   pictures: [],
   unitPurpose: undefined,

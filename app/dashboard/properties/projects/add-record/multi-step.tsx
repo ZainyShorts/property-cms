@@ -155,7 +155,7 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   const fetchMasterDevelopments = async () => {
     setLoading(true)
     try {
-      const response = await axios.get("http://213.210.37.77:3013/masterDevelopment")
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`)
       setMasterDevelopments(response.data.data)
     } catch (error) {
       console.error("Error fetching master developments:", error)
