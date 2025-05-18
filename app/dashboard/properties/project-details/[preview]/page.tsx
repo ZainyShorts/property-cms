@@ -29,6 +29,7 @@ import {
   Play,
   Pause,
   ArrowRight,
+  Bed,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -67,30 +68,8 @@ interface PropertyData {
   pictures: string[]
   createdAt: string
   updatedAt: string
-  masterDevelopment: string
-  subDevelopment: string
-  __v: number
-}
-
-interface MasterDevelopment {
-  _id: string
-  roadLocation: string
-  developmentName: string
-}
-
-interface SubDevelopment {
-  _id: string
-  subDevelopment: string
-}
-
-interface Document {
-  _id: string
-  title: string
-  type: string
-  documentUrl: string
-  refId: string
-  createdAt: string
-  updatedAt: string
+  masterDevelopment: any
+  subDevelopment: any
   __v: number
 }
 
@@ -103,9 +82,7 @@ interface MediaItem {
 export default function PropertyDetail({ params }: Props) {
   const [currentMediaIndex, setCurrentMediaIndex] = useState<number>(0)
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null)
-  const [masterDevelopment, setMasterDevelopment] = useState<MasterDevelopment | null>(null)
-  const [subDevelopment, setSubDevelopment] = useState<SubDevelopment | null>(null)
-  const [documents, setDocuments] = useState<Document[]>([])
+  const [documents, setDocuments] = useState<any[]>([])
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
   const [isSliding, setIsSliding] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -115,6 +92,7 @@ export default function PropertyDetail({ params }: Props) {
   const touchStartX = useRef<number>(0)
   const touchEndX = useRef<number>(0)
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [unitDetails, setUnitDetails] = useState<any[]>([])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -123,40 +101,25 @@ export default function PropertyDetail({ params }: Props) {
       try {
         setLoading(true)
 
-        // Fetch property data, documents, master development and sub development in parallel
-        const [propertyResponse, documentsResponse] = await Promise.all([
-          axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${params.preview}`),
+        // Fetch property data with populated fields, documents, and unit details in parallel
+        const [propertyResponse, documentsResponse, unitResponse] = await Promise.all([
+          axios.get(
+            `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${params.preview}?populate=subDevelopment,masterDevelopment`,
+          ),
           axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/byRefId/${params.preview}`),
+          axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?projectID=${params.preview}`),
         ])
 
         console.log("Property API response:", propertyResponse.data)
         console.log("Documents API response:", documentsResponse.data)
+        console.log("Unit details API response:", unitResponse.data)
 
         const property = propertyResponse.data
         setPropertyData(property)
 
-        // Fetch master development if available
-        if (property.masterDevelopment) {
-          try {
-            const masterDevResponse = await axios.get(
-              `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${property.masterDevelopment}`,
-            )
-            setMasterDevelopment(masterDevResponse.data)
-          } catch (err) {
-            console.error("Error fetching master development:", err)
-          }
-        }
-
-        // Fetch sub development if available
-        if (property.subDevelopment) {
-          try {
-            const subDevResponse = await axios.get(
-              `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/${property.subDevelopment}`,
-            )
-            setSubDevelopment(subDevResponse.data)
-          } catch (err) {
-            console.error("Error fetching sub development:", err)
-          }
+        // Set unit details
+        if (unitResponse.data && unitResponse.data.data) {
+          setUnitDetails(unitResponse.data.data)
         }
 
         setDocuments(documentsResponse.data.data || [])
@@ -335,6 +298,9 @@ export default function PropertyDetail({ params }: Props) {
     title: "Default Property Image",
   }
 
+  const masterDevelopment = propertyData.masterDevelopment || {}
+  const subDevelopment = propertyData.subDevelopment || {}
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
@@ -342,7 +308,7 @@ export default function PropertyDetail({ params }: Props) {
         <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-background">
           <div
             ref={sliderRef}
-            className={`relative h-[60vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
+            className={`relative h-[40vh] sm:h-[50vh] md:h-[60vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -370,8 +336,8 @@ export default function PropertyDetail({ params }: Props) {
             </div>
 
             {/* Property Title Overlay */}
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-6 text-white">
-              <div className="flex items-center gap-2 mb-1">
+            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 sm:p-6 text-white">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
                 <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
                   {propertyData.salesStatus}
                 </Badge>
@@ -379,7 +345,7 @@ export default function PropertyDetail({ params }: Props) {
                   {propertyData.propertyType}
                 </Badge>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{propertyData.projectName}</h1>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">{propertyData.projectName}</h1>
               <div className="flex items-center gap-2 text-sm">
                 <MapPin className="h-4 w-4" />
                 <span>
@@ -477,34 +443,34 @@ export default function PropertyDetail({ params }: Props) {
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Key Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <StatsCard
-                icon={<Building className="h-6 w-6 text-primary" />}
-                value={propertyData.propertyType}
-                label="Property Type"
-              />
-              <StatsCard
-                icon={<Tag className="h-6 w-6 text-primary" />}
-                value={propertyData.salesStatus}
-                label="Sales Status"
-              />
-              <StatsCard
-                icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
-                value={propertyData.projectQuality}
-                label="Project Quality"
-              />
-              <StatsCard
-                icon={<Hourglass className="h-6 w-6 text-primary" />}
-                value={`${propertyData.percentOfConstruction}%`}
-                label="Construction"
-              />
-            </div>
+        {/* Property Overview Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
+          <StatsCard
+            icon={<Building className="h-6 w-6 text-primary" />}
+            value={propertyData.propertyType}
+            label="Property Type"
+          />
+          <StatsCard
+            icon={<Tag className="h-6 w-6 text-primary" />}
+            value={propertyData.salesStatus}
+            label="Sales Status"
+          />
+          <StatsCard
+            icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
+            value={propertyData.projectQuality}
+            label="Project Quality"
+          />
+          <StatsCard
+            icon={<Hourglass className="h-6 w-6 text-primary" />}
+            value={`${propertyData.percentOfConstruction}%`}
+            label="Construction"
+          />
+        </div>
 
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
             {/* Project Information */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
               <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
@@ -513,22 +479,12 @@ export default function PropertyDetail({ params }: Props) {
                   Project Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <InfoCard
                     icon={<Home className="h-5 w-5 text-primary" />}
                     label="Project Name"
                     value={propertyData.projectName}
-                  />
-                  <InfoCard
-                    icon={<Building className="h-5 w-5 text-primary" />}
-                    label="Property Type"
-                    value={propertyData.propertyType}
-                  />
-                  <InfoCard
-                    icon={<Landmark className="h-5 w-5 text-primary" />}
-                    label="Master Development"
-                    value={masterDevelopment?.developmentName || "N/A"}
                   />
                   <InfoCard
                     icon={<MapPin className="h-5 w-5 text-primary" />}
@@ -537,13 +493,13 @@ export default function PropertyDetail({ params }: Props) {
                   />
                   <InfoCard
                     icon={<Landmark className="h-5 w-5 text-primary" />}
-                    label="Sub Development"
-                    value={subDevelopment?.subDevelopment || "N/A"}
+                    label="Master Development"
+                    value={masterDevelopment?.developmentName || "N/A"}
                   />
                   <InfoCard
-                    icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
-                    label="Project Quality"
-                    value={propertyData.projectQuality}
+                    icon={<Landmark className="h-5 w-5 text-primary" />}
+                    label="Sub Development"
+                    value={subDevelopment?.subDevelopment || "N/A"}
                   />
                 </div>
               </CardContent>
@@ -557,42 +513,21 @@ export default function PropertyDetail({ params }: Props) {
                   Payment Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/10">
-                      <div className="flex items-center gap-3">
-                        <Banknote className="h-6 w-6 text-primary" />
-                        <span className="font-medium">Down Payment</span>
-                      </div>
-                      <span className="text-xl font-bold">{propertyData.downPayment}%</span>
+              <CardContent className="p-4 sm:p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/10">
+                    <div className="flex items-center gap-3">
+                      <Banknote className="h-6 w-6 text-primary" />
+                      <span className="font-medium">Down Payment</span>
                     </div>
-
-                    <h3 className="font-semibold text-lg mt-6">Payment Timeline</h3>
-                    <div className="space-y-3">
-                      <TimelineItem date={formatDate(propertyData.installmentDate)} label="Installment Date" />
-                      <TimelineItem date={formatDate(propertyData.uponCompletion)} label="Upon Completion" />
-                      <TimelineItem date={formatDate(propertyData.postHandOver)} label="Post Handover" />
-                    </div>
+                    <span className="text-xl font-bold">{propertyData.downPayment}%</span>
                   </div>
 
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="font-semibold text-lg mb-4">Construction Progress</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Progress</span>
-                          <span className="font-medium">{propertyData.percentOfConstruction}%</span>
-                        </div>
-                        <Progress value={propertyData.percentOfConstruction} className="h-3" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 mt-4">
-                      <h3 className="font-semibold text-lg">Important Dates</h3>
-                      <TimelineItem date={formatDate(propertyData.launchDate)} label="Launch Date" />
-                      <TimelineItem date={formatDate(propertyData.completionDate)} label="Completion Date" />
-                    </div>
+                  <h3 className="font-semibold text-lg mt-6">Payment Timeline</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <TimelineItem date={formatDate(propertyData.installmentDate)} label="Installment Date" />
+                    <TimelineItem date={formatDate(propertyData.uponCompletion)} label="Upon Completion" />
+                    <TimelineItem date={formatDate(propertyData.postHandOver)} label="Post Handover" />
                   </div>
                 </div>
               </CardContent>
@@ -606,7 +541,7 @@ export default function PropertyDetail({ params }: Props) {
                   Features & Amenities
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <h3 className="font-semibold text-lg">Amenities</h3>
@@ -640,6 +575,50 @@ export default function PropertyDetail({ params }: Props) {
               </CardContent>
             </Card>
 
+            {/* Unit Details Section */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Home className="h-5 w-5 text-primary" />
+                  Available Units
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                {unitDetails.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Unit Number</th>
+                          <th className="text-left p-2">Type</th>
+                          <th className="text-left p-2">Bedrooms</th>
+                          <th className="text-left p-2">Size (sq ft)</th>
+                          <th className="text-left p-2">Purpose</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {unitDetails.map((unit) => (
+                          <tr key={unit._id} className="border-b hover:bg-gray-50 dark:hover:bg-black/80">
+                            <td className="p-2 font-medium">{unit.unitNumber}</td>
+                            <td className="p-2">{unit.unitType || "N/A"}</td>
+                            <td className="p-2">{unit.noOfBedRooms || "N/A"}</td>
+                            <td className="p-2">{unit.BuaSqFt > 0 ? `${unit.BuaSqFt}` : "N/A"}</td>
+                            <td className="p-2">{unit.unitPurpose}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
+                    <Home className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p className="font-medium">No units available for this property</p>
+                    <p className="text-sm mt-1">Contact the agent for more information</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Documents Section */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
               <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
@@ -648,7 +627,7 @@ export default function PropertyDetail({ params }: Props) {
                   Documents
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 {documents && documents.length > 0 ? (
                   <div className="grid grid-cols-1 gap-4">
                     {documents.map((doc) => (
@@ -684,9 +663,10 @@ export default function PropertyDetail({ params }: Props) {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
                     <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p>No documents available for this property</p>
+                    <p className="font-medium">No documents available for this property</p>
+                    <p className="text-sm mt-1">Contact the agent for more information</p>
                   </div>
                 )}
               </CardContent>
@@ -694,13 +674,13 @@ export default function PropertyDetail({ params }: Props) {
           </div>
 
           {/* Right Column - Sidebar */}
-          <div className="space-y-6">
+          <div className="space-y-6 lg:space-y-8">
             {/* Construction Status Card */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
               <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
                 <CardTitle className="text-xl">Construction Status</CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
@@ -711,11 +691,6 @@ export default function PropertyDetail({ params }: Props) {
                   </div>
                   <div className="text-center font-medium text-lg mt-2">
                     {propertyData.percentOfConstruction}% Complete
-                  </div>
-
-                  <div className="flex justify-between items-center mt-4">
-                    <div className="text-sm text-muted-foreground">Construction Status</div>
-                    <div className="text-md font-medium">{propertyData.constructionStatus}</div>
                   </div>
 
                   <Separator className="my-4" />
@@ -730,25 +705,72 @@ export default function PropertyDetail({ params }: Props) {
               </CardContent>
             </Card>
 
-            {/* Important Dates */}
+            {/* Project Timeline */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
               <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="text-xl">Important Dates</CardTitle>
+                <CardTitle className="text-xl">Project Timeline</CardTitle>
               </CardHeader>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-4">
                   <DateItem label="Launch Date" date={formatDate(propertyData.launchDate)} />
                   <DateItem label="Completion Date" date={formatDate(propertyData.completionDate)} />
-                  <DateItem label="Installment Date" date={formatDate(propertyData.installmentDate)} />
-                  <DateItem label="Upon Completion" date={formatDate(propertyData.uponCompletion)} />
-                  <DateItem label="Post Handover" date={formatDate(propertyData.postHandOver)} />
                 </div>
               </CardContent>
             </Card>
 
+            {/* Unit Summary */}
+            {unitDetails.length > 0 ? (
+              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+                <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                  <CardTitle className="text-xl">Unit Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-muted-foreground">Total Units</div>
+                      <div className="text-md font-medium">{unitDetails.length}</div>
+                    </div>
+
+                    {unitDetails.some((unit) => unit.noOfBedRooms) && (
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-muted-foreground">Bedroom Options</div>
+                        <div className="text-md font-medium">
+                          {Array.from(new Set(unitDetails.map((unit) => unit.noOfBedRooms).filter(Boolean)))
+                            .sort()
+                            .join(", ")}
+                        </div>
+                      </div>
+                    )}
+
+                    {unitDetails.some((unit) => unit.BuaSqFt > 0) && (
+                      <div className="flex justify-between items-center">
+                        <div className="text-sm text-muted-foreground">Size Range</div>
+                        <div className="text-md font-medium">
+                          {Math.min(...unitDetails.map((unit) => unit.BuaSqFt || 0).filter(Boolean))} -
+                          {Math.max(...unitDetails.map((unit) => unit.BuaSqFt || 0))} sq ft
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+                <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                  <CardTitle className="text-xl">Unit Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-center py-4 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
+                    <Bed className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                    <p className="font-medium">No units available</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Contact Agent */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Contact Agent</h3>
                   <div className="flex items-center space-x-3">
@@ -778,7 +800,7 @@ export default function PropertyDetail({ params }: Props) {
 
         {/* Schedule Viewing */}
         <Card className="mt-8 border-none shadow-md bg-gradient-to-r from-primary/10 to-primary/5">
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="space-y-2">
                 <h3 className="text-xl font-semibold">Schedule a Viewing</h3>
@@ -802,9 +824,9 @@ export default function PropertyDetail({ params }: Props) {
 // Helper Components
 const StatsCard = ({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) => (
   <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-    <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-2">
+    <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
       {icon}
-      <span className="text-lg font-semibold">{value}</span>
+      <span className="text-base sm:text-lg font-semibold">{value}</span>
       <span className="text-xs text-muted-foreground">{label}</span>
     </CardContent>
   </Card>
@@ -840,24 +862,27 @@ const TimelineItem = ({ date, label }: { date: string; label: string }) => (
 // Loading Skeleton
 const PropertyDetailSkeleton = () => (
   <div className="container mx-auto px-4 py-8 space-y-8">
-    <Skeleton className="h-[60vh] w-full rounded-xl" />
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2 space-y-8">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-lg" />
-          ))}
-        </div>
+    <Skeleton className="h-[40vh] sm:h-[50vh] md:h-[60vh] w-full rounded-xl" />
+
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+      {[...Array(4)].map((_, i) => (
+        <Skeleton key={i} className="h-24 w-full rounded-lg" />
+      ))}
+    </div>
+
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+      <div className="lg:col-span-2 space-y-6 lg:space-y-8">
         {[...Array(4)].map((_, i) => (
           <Skeleton key={i} className="h-64 w-full rounded-lg" />
         ))}
       </div>
-      <div className="space-y-6">
+      <div className="space-y-6 lg:space-y-8">
         {[...Array(3)].map((_, i) => (
           <Skeleton key={i} className="h-64 w-full rounded-lg" />
         ))}
       </div>
     </div>
+
     <Skeleton className="h-32 w-full rounded-lg mt-8" />
   </div>
 )
