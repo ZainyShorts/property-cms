@@ -28,14 +28,15 @@ import {
   Clock,
   Play,
   Pause,
+  ArrowRight,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Progress } from "@/components/ui/progress"
 import { formatDate } from "@/lib/utils"
 
 const DEFAULT_IMAGE =
@@ -265,7 +266,7 @@ export default function PropertyDetail({ params }: Props) {
     )
   }
 
-  if (loading) return <Skeleton />
+  if (loading) return <PropertyDetailSkeleton />
 
   if (error) return <div className="container mx-auto p-8 text-center text-red-500">Error: {error}</div>
 
@@ -469,404 +470,314 @@ export default function PropertyDetail({ params }: Props) {
                 </>
               ) : (
                 <>
-                  <Image className="h-4 w-4" /> Image
+                  <Eye className="h-4 w-4" /> Image
                 </>
               )}
             </div>
           </div>
         </div>
 
-        {/* Property Details Tabs */}
-        <Tabs defaultValue="overview">
-          <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="payment">Payment</TabsTrigger>
-          </TabsList>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column - Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Key Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <StatsCard
+                icon={<Building className="h-6 w-6 text-primary" />}
+                value={propertyData.propertyType}
+                label="Property Type"
+              />
+              <StatsCard
+                icon={<Tag className="h-6 w-6 text-primary" />}
+                value={propertyData.salesStatus}
+                label="Sales Status"
+              />
+              <StatsCard
+                icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
+                value={propertyData.projectQuality}
+                label="Project Quality"
+              />
+              <StatsCard
+                icon={<Hourglass className="h-6 w-6 text-primary" />}
+                value={`${propertyData.percentOfConstruction}%`}
+                label="Construction"
+              />
+            </div>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="mt-6">
-            <div className="grid gap-8 md:grid-cols-3">
-              {/* Left Column - Key Details */}
-              <div className="md:col-span-2 space-y-8">
-                {/* Key Stats */}
-                <Card className="overflow-hidden border dark:border-border">
-                  <CardContent className="p-0">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 bg-transparent">
-                      <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-r border-b dark:border-border">
-                        <Building className="h-6 w-6 text-primary" />
-                        <span className="text-lg font-semibold">{propertyData.propertyType}</span>
-                        <span className="text-xs text-muted-foreground">Property Type</span>
+            {/* Project Information */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Building className="h-5 w-5 text-primary" />
+                  Project Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <InfoCard
+                    icon={<Home className="h-5 w-5 text-primary" />}
+                    label="Project Name"
+                    value={propertyData.projectName}
+                  />
+                  <InfoCard
+                    icon={<Building className="h-5 w-5 text-primary" />}
+                    label="Property Type"
+                    value={propertyData.propertyType}
+                  />
+                  <InfoCard
+                    icon={<Landmark className="h-5 w-5 text-primary" />}
+                    label="Master Development"
+                    value={masterDevelopment?.developmentName || "N/A"}
+                  />
+                  <InfoCard
+                    icon={<MapPin className="h-5 w-5 text-primary" />}
+                    label="Road Location"
+                    value={masterDevelopment?.roadLocation || "N/A"}
+                  />
+                  <InfoCard
+                    icon={<Landmark className="h-5 w-5 text-primary" />}
+                    label="Sub Development"
+                    value={subDevelopment?.subDevelopment || "N/A"}
+                  />
+                  <InfoCard
+                    icon={<CheckCircle2 className="h-5 w-5 text-primary" />}
+                    label="Project Quality"
+                    value={propertyData.projectQuality}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment Information */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Banknote className="h-5 w-5 text-primary" />
+                  Payment Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/10">
+                      <div className="flex items-center gap-3">
+                        <Banknote className="h-6 w-6 text-primary" />
+                        <span className="font-medium">Down Payment</span>
                       </div>
-                      <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-b sm:border-r dark:border-border">
-                        <Tag className="h-6 w-6 text-primary" />
-                        <span className="text-lg font-semibold">{propertyData.salesStatus}</span>
-                        <span className="text-xs text-muted-foreground">Sales Status</span>
-                      </div>
-                      <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-r dark:border-border">
-                        <CheckCircle2 className="h-6 w-6 text-primary" />
-                        <span className="text-lg font-semibold">{propertyData.projectQuality}</span>
-                        <span className="text-xs text-muted-foreground">Project Quality</span>
-                      </div>
-                      <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6">
-                        <Hourglass className="h-6 w-6 text-primary" />
-                        <span className="text-lg font-semibold">{propertyData.percentOfConstruction}%</span>
-                        <span className="text-xs text-muted-foreground">Construction</span>
+                      <span className="text-xl font-bold">{propertyData.downPayment}%</span>
+                    </div>
+
+                    <h3 className="font-semibold text-lg mt-6">Payment Timeline</h3>
+                    <div className="space-y-3">
+                      <TimelineItem date={formatDate(propertyData.installmentDate)} label="Installment Date" />
+                      <TimelineItem date={formatDate(propertyData.uponCompletion)} label="Upon Completion" />
+                      <TimelineItem date={formatDate(propertyData.postHandOver)} label="Post Handover" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="font-semibold text-lg mb-4">Construction Progress</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress</span>
+                          <span className="font-medium">{propertyData.percentOfConstruction}%</span>
+                        </div>
+                        <Progress value={propertyData.percentOfConstruction} className="h-3" />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Project Information */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Building className="h-5 w-5 text-primary" />
-                      Project Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Home className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Project Name</span>
-                          <span className="font-medium">{propertyData.projectName}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Building className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Property Type</span>
-                          <span className="font-medium">{propertyData.propertyType}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Landmark className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Master Development</span>
-                          <span className="font-medium">{masterDevelopment?.developmentName || "N/A"}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <MapPin className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Road Location</span>
-                          <span className="font-medium">{masterDevelopment?.roadLocation || "N/A"}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Landmark className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Sub Development</span>
-                          <span className="font-medium">{subDevelopment?.subDevelopment || "N/A"}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Project Quality</span>
-                          <span className="font-medium">{propertyData.projectQuality}</span>
-                        </div>
-                      </div>
+                    <div className="space-y-3 mt-4">
+                      <h3 className="font-semibold text-lg">Important Dates</h3>
+                      <TimelineItem date={formatDate(propertyData.launchDate)} label="Launch Date" />
+                      <TimelineItem date={formatDate(propertyData.completionDate)} label="Completion Date" />
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Features & Amenities */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Tag className="h-5 w-5 text-primary" />
-                      Features & Amenities
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <h3 className="font-semibold">Amenities</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {propertyData.amenitiesCategories && propertyData.amenitiesCategories.length > 0 ? (
-                            propertyData.amenitiesCategories.map((amenity, index) => (
-                              <Badge key={index} variant="secondary" className="px-3 py-1 text-sm capitalize">
-                                {amenity}
-                              </Badge>
-                            ))
-                          ) : (
-                            <p className="text-muted-foreground">No amenities listed</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <h3 className="font-semibold">Facilities</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {propertyData.facilityCategories && propertyData.facilityCategories.length > 0 ? (
-                            propertyData.facilityCategories.map((facility, index) => (
-                              <Badge key={index} variant="secondary" className="px-3 py-1 text-sm capitalize">
-                                {facility}
-                              </Badge>
-                            ))
-                          ) : (
-                            <p className="text-muted-foreground">No facilities listed</p>
-                          )}
-                        </div>
-                      </div>
+            {/* Features & Amenities */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Tag className="h-5 w-5 text-primary" />
+                  Features & Amenities
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-lg">Amenities</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {propertyData.amenitiesCategories && propertyData.amenitiesCategories.length > 0 ? (
+                        propertyData.amenitiesCategories.map((amenity, index) => (
+                          <Badge key={index} variant="secondary" className="px-3 py-1.5 text-sm capitalize">
+                            {amenity}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No amenities listed</p>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-lg">Facilities</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {propertyData.facilityCategories && propertyData.facilityCategories.length > 0 ? (
+                        propertyData.facilityCategories.map((facility, index) => (
+                          <Badge key={index} variant="secondary" className="px-3 py-1.5 text-sm capitalize">
+                            {facility}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-muted-foreground">No facilities listed</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                {/* Documents Section - Keep as is */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <FileText className="h-5 w-5 text-primary" />
-                      Documents
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {documents && documents.length > 0 ? (
-                      <div className="grid grid-cols-1 gap-4">
-                        {documents.map((doc) => (
-                          <div
-                            key={doc._id}
-                            className="flex items-center justify-between p-4 border rounded-lg dark:border-border"
-                          >
-                            <div className="flex items-center gap-3">
-                              {getDocumentIcon(doc.type)}
-                              <div>
-                                <h4 className="font-medium">{doc.title}</h4>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                  <div className="flex items-center">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    <span>{formatDate(doc.createdAt)}</span>
-                                  </div>
-                                </div>
+            {/* Documents Section */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <FileText className="h-5 w-5 text-primary" />
+                  Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                {documents && documents.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc._id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          {getDocumentIcon(doc.type)}
+                          <div>
+                            <h4 className="font-medium">{doc.title}</h4>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <div className="flex items-center">
+                                <Clock className="h-3 w-3 mr-1" />
+                                <span>{formatDate(doc.createdAt)}</span>
                               </div>
                             </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="icon" asChild>
-                                <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
-                                  <Eye className="h-4 w-4" />
-                                </a>
-                              </Button>
-                              <Button variant="outline" size="icon" asChild>
-                                <a href={doc.documentUrl} download={doc.title}>
-                                  <Download className="h-4 w-4" />
-                                </a>
-                              </Button>
-                            </div>
                           </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                        <p>No documents available for this property</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* Right Column - Construction & Contact */}
-            <div className="space-y-6">
-              {/* Construction Status Card */}
-              <Card className="overflow-hidden border dark:border-border bg-transparent">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">Construction Status</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <div className="space-y-4">
-                    <div className="w-full bg-muted rounded-full h-4 dark:bg-muted/30">
-                      <div
-                        className="bg-primary h-4 rounded-full"
-                        style={{ width: `${propertyData.percentOfConstruction}%` }}
-                      ></div>
-                    </div>
-                    <div className="text-center font-medium">{propertyData.percentOfConstruction}% Complete</div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Construction Status</div>
-                      <div className="text-md font-normal">{propertyData.constructionStatus}</div>
-                    </div>
-
-                    <Separator className="dark:bg-border" />
-
-                    <div className="flex justify-between">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Property ID</div>
-                        <div className="font-medium">{propertyData._id}</div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Important Dates */}
-              <Card className="border dark:border-border bg-transparent">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl">Important Dates</CardTitle>
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Launch Date</div>
-                      <div className="text-md font-normal">{formatDate(propertyData.launchDate)}</div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Completion Date</div>
-                      <div className="text-md font-normal">{formatDate(propertyData.completionDate)}</div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Installment Date</div>
-                      <div className="text-md font-normal">{formatDate(propertyData.installmentDate)}</div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Upon Completion</div>
-                      <div className="text-md font-normal">{formatDate(propertyData.uponCompletion)}</div>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Post Handover</div>
-                      <div className="text-md font-normal">{formatDate(propertyData.postHandOver)}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact Agent - Keep as is */}
-              <Card className="border dark:border-border bg-transparent">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Contact Agent</h3>
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-muted rounded-full">
-                        <UserRound className="h-6 w-6 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <div className="font-semibold">Property Specialist</div>
-                        <div className="text-sm text-muted-foreground">Agent ID: AG002</div>
-                      </div>
-                    </div>
-                    <div className="grid gap-3">
-                      <Button className="w-full">
-                        <Phone className="h-4 w-4 mr-2" />
-                        Call Agent
-                      </Button>
-                      <Button onClick={handleGmail} variant="outline" className="w-full border dark:border-border">
-                        <Mail className="h-4 w-4 mr-2" />
-                        Email Agent
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Payment Tab */}
-          <TabsContent value="payment" className="mt-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Banknote className="h-5 w-5 text-primary" />
-                    Payment Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Banknote className="h-5 w-5 text-primary" />
-                        <span>Down Payment</span>
-                      </div>
-                      <span className="font-semibold text-lg">{propertyData.downPayment}%</span>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Payment Timeline</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Installment Date</span>
-                          <span className="font-medium">{formatDate(propertyData.installmentDate)}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="icon" asChild>
+                            <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
+                              <Eye className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <Button variant="outline" size="icon" asChild>
+                            <a href={doc.documentUrl} download={doc.title}>
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Upon Completion</span>
-                          <span className="font-medium">{formatDate(propertyData.uponCompletion)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Post Handover</span>
-                          <span className="font-medium">{formatDate(propertyData.postHandOver)}</span>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                </CardContent>
-              </Card>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p>No documents available for this property</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Building className="h-5 w-5 text-primary" />
-                    Construction Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Construction Status Card */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="text-xl">Construction Status</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Progress</span>
-                      <span>{propertyData.percentOfConstruction}%</span>
+                      <span className="font-medium">{propertyData.percentOfConstruction}%</span>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-4 dark:bg-muted/30">
-                      <div
-                        className="bg-primary h-4 rounded-full"
-                        style={{ width: `${propertyData.percentOfConstruction}%` }}
-                      ></div>
-                    </div>
+                    <Progress value={propertyData.percentOfConstruction} className="h-3" />
+                  </div>
+                  <div className="text-center font-medium text-lg mt-2">
+                    {propertyData.percentOfConstruction}% Complete
                   </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                      <Building className="h-5 w-5 text-primary" />
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Construction Status</span>
-                        <span className="font-medium">{propertyData.constructionStatus}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Launch Date</span>
-                        <span className="font-medium">{formatDate(propertyData.launchDate)}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                      <Calendar className="h-5 w-5 text-primary" />
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Completion Date</span>
-                        <span className="font-medium">{formatDate(propertyData.completionDate)}</span>
-                      </div>
+                  <div className="flex justify-between items-center mt-4">
+                    <div className="text-sm text-muted-foreground">Construction Status</div>
+                    <div className="text-md font-medium">{propertyData.constructionStatus}</div>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  <div className="flex justify-between">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Property ID</div>
+                      <div className="font-medium">{propertyData._id}</div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Important Dates */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="text-xl">Important Dates</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <DateItem label="Launch Date" date={formatDate(propertyData.launchDate)} />
+                  <DateItem label="Completion Date" date={formatDate(propertyData.completionDate)} />
+                  <DateItem label="Installment Date" date={formatDate(propertyData.installmentDate)} />
+                  <DateItem label="Upon Completion" date={formatDate(propertyData.uponCompletion)} />
+                  <DateItem label="Post Handover" date={formatDate(propertyData.postHandOver)} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Contact Agent */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Contact Agent</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-primary/10 rounded-full">
+                      <UserRound className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-semibold">Property Specialist</div>
+                      <div className="text-sm text-muted-foreground">Agent ID: AG002</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3">
+                    <Button className="w-full">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Call Agent
+                    </Button>
+                    <Button onClick={handleGmail} variant="outline" className="w-full">
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email Agent
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
         {/* Schedule Viewing */}
-        <Card className="border dark:border-border bg-transparent mt-8">
+        <Card className="mt-8 border-none shadow-md bg-gradient-to-r from-primary/10 to-primary/5">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="space-y-2">
@@ -875,9 +786,10 @@ export default function PropertyDetail({ params }: Props) {
                   Interested in this property? Schedule a viewing at your convenience.
                 </p>
               </div>
-              <Button size="lg" className="md:w-auto w-full">
-                <Calendar className="h-4 w-4 mr-2" />
+              <Button size="lg" className="md:w-auto w-full group">
+                <Calendar className="h-4 w-4 mr-2 group-hover:animate-pulse" />
                 Book Appointment
+                <ArrowRight className="h-4 w-4 ml-2 opacity-70 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
           </CardContent>
@@ -886,3 +798,66 @@ export default function PropertyDetail({ params }: Props) {
     </div>
   )
 }
+
+// Helper Components
+const StatsCard = ({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) => (
+  <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+    <CardContent className="p-6 flex flex-col items-center justify-center text-center gap-2">
+      {icon}
+      <span className="text-lg font-semibold">{value}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </CardContent>
+  </Card>
+)
+
+const InfoCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
+  <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors">
+    {icon}
+    <div>
+      <span className="text-xs text-muted-foreground block">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  </div>
+)
+
+const DateItem = ({ label, date }: { label: string; date: string }) => (
+  <div className="flex justify-between items-center">
+    <div className="text-sm text-muted-foreground">{label}</div>
+    <div className="text-md font-medium">{date}</div>
+  </div>
+)
+
+const TimelineItem = ({ date, label }: { date: string; label: string }) => (
+  <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors">
+    <Calendar className="h-5 w-5 text-primary" />
+    <div>
+      <span className="text-xs text-muted-foreground block">{label}</span>
+      <span className="font-medium">{date}</span>
+    </div>
+  </div>
+)
+
+// Loading Skeleton
+const PropertyDetailSkeleton = () => (
+  <div className="container mx-auto px-4 py-8 space-y-8">
+    <Skeleton className="h-[60vh] w-full rounded-xl" />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-lg" />
+          ))}
+        </div>
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-64 w-full rounded-lg" />
+        ))}
+      </div>
+      <div className="space-y-6">
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-64 w-full rounded-lg" />
+        ))}
+      </div>
+    </div>
+    <Skeleton className="h-32 w-full rounded-lg mt-8" />
+  </div>
+)
