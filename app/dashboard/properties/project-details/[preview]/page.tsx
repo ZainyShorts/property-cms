@@ -12,8 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Tag,
-  Heart,
-  Share2,
   Calendar,
   Building,
   Home,
@@ -26,18 +24,16 @@ import {
   Download,
   Eye,
   Clock,
-  Play,
-  Pause,
   ArrowRight,
   Bed,
   LayoutGrid,
   Ruler,
   Warehouse,
+  SeparatorVerticalIcon as Separator,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
@@ -321,6 +317,28 @@ export default function PropertyDetail({ params }: Props) {
     setIsAutoPlaying(!isAutoPlaying)
   }
 
+  const countUnitPurposes = () => {
+    const purposes = {
+      Rent: 0,
+      Sell: 0,
+      Manage: 0,
+      Develop: 0,
+      Valuation: 0,
+      Hold: 0,
+      Pending: 0,
+    }
+
+    if (unitDetails && unitDetails.length > 0) {
+      unitDetails.forEach((unit) => {
+        if (unit.unitPurpose && purposes.hasOwnProperty(unit.unitPurpose)) {
+          purposes[unit.unitPurpose]++
+        }
+      })
+    }
+
+    return purposes
+  }
+
   const handleGmail = () => {
     const recipient = "agent@example.com"
     const subject = `Inquiry about ${propertyData.projectName}`
@@ -368,7 +386,7 @@ export default function PropertyDetail({ params }: Props) {
               {currentMedia.type === "image" ? (
                 <Image
                   src={currentMedia.url || "/placeholder.svg"}
-                  alt={currentMedia.title || "Property image"}
+                  alt="Property image"
                   fill
                   className="object-cover"
                   priority
@@ -385,72 +403,9 @@ export default function PropertyDetail({ params }: Props) {
               )}
             </div>
 
-            {/* Property Title Overlay */}
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4 sm:p-6 text-white">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
-                  {propertyData.salesStatus}
-                </Badge>
-                <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
-                  {propertyData.propertyType}
-                </Badge>
-              </div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">{propertyData.projectName}</h1>
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="h-4 w-4" />
-                <span>
-                  {masterDevelopment?.roadLocation || "Location"}, {masterDevelopment?.developmentName || "Development"}
-                </span>
-              </div>
-              {subDevelopment && (
-                <div className="flex items-center gap-2 text-sm mt-1">
-                  <Landmark className="h-4 w-4" />
-                  <span>{subDevelopment.subDevelopment}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Action buttons */}
-            <div className="absolute top-4 right-4 flex gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                onClick={toggleAutoPlay}
-                title={isAutoPlaying ? "Pause slideshow" : "Play slideshow"}
-              >
-                {isAutoPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
-              >
-                <Heart className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Thumbnail navigation */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-background/70 p-2 rounded-full">
-              {mediaItems.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setIsSliding(true)
-                    setCurrentMediaIndex(index)
-                    setTimeout(() => setIsSliding(false), 300)
-                  }}
-                  className={`w-2 h-2 rounded-full ${index === currentMediaIndex ? "bg-primary" : "bg-muted"}`}
-                  aria-label={`View media ${index + 1}`}
-                />
-              ))}
+            {/* Media counter */}
+            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
+              {currentMediaIndex + 1} / {mediaItems.length}
             </div>
 
             {/* Media navigation controls */}
@@ -471,24 +426,6 @@ export default function PropertyDetail({ params }: Props) {
               >
                 <ChevronRight className="h-6 w-6" />
               </Button>
-            </div>
-
-            {/* Media counter */}
-            <div className="absolute top-4 right-36 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
-              {currentMediaIndex + 1} / {mediaItems.length}
-            </div>
-
-            {/* Media type indicator */}
-            <div className="absolute bottom-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-              {currentMedia.type === "video" ? (
-                <>
-                  <Play className="h-4 w-4" /> Video
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4" /> Image
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -639,11 +576,11 @@ export default function PropertyDetail({ params }: Props) {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b">
-                          <th className="text-left p-2">Unit Number</th>
-                          <th className="text-left p-2">Unit Height</th>
-                          <th className="text-left p-2">Bedrooms</th>
-                          <th className="text-left p-2">Original Price (AED)</th>
-                          <th className="text-left p-2">Unit Purpose</th>
+                          <th className="text-center p-2">Unit Number</th>
+                          <th className="text-center p-2">Unit Height</th>
+                          <th className="text-center p-2">Bedrooms</th>
+                          <th className="text-center p-2">Original Price </th>
+                          <th className="text-center p-2">Unit Purpose</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -653,13 +590,13 @@ export default function PropertyDetail({ params }: Props) {
                             className="border-b hover:bg-gray-50 dark:hover:bg-black/80 cursor-pointer"
                             onClick={() => window.open(`/dashboard/properties/inventory-details/${unit._id}`, "_blank")}
                           >
-                            <td className="p-2 font-medium">{unit.unitNumber}</td>
-                            <td className="p-2">{unit.unitHeight || "N/A"}</td>
-                            <td className="p-2">{unit.noOfBedRooms || "N/A"}</td>
-                            <td className="p-2">
+                            <td className="p-2 font-medium text-center">{unit.unitNumber}</td>
+                            <td className="p-2 text-center">{unit.unitHeight || "N/A"}</td>
+                            <td className="p-2 text-center">{unit.noOfBedRooms || "N/A"}</td>
+                            <td className="p-2 text-center">
                               {unit.originalPrice ? `${unit.originalPrice.toLocaleString()} AED` : "N/A"}
                             </td>
-                            <td className="p-2">{unit.unitPurpose || "N/A"}</td>
+                            <td className="p-2 text-center">{unit.unitPurpose || "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -674,6 +611,169 @@ export default function PropertyDetail({ params }: Props) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Unit Summary */}
+            {unitDetails.length > 0 ? (
+              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+                <CardHeader className="bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/30 dark:to-black pb-2">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Bed className="h-5 w-5 text-primary" />
+                    Unit Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="p-4 sm:p-6 space-y-4">
+                    {/* Total Units with visual indicator */}
+                    <div className="bg-gradient-to-r from-primary/10 to-transparent p-4 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <div className="bg-primary/20 p-2 rounded-full">
+                            <Home className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <div className="text-sm text-muted-foreground">Total Units</div>
+                            <div className="text-2xl font-bold">{unitDetails.length}</div>
+                          </div>
+                        </div>
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
+                          <span className="font-bold">{unitDetails.length}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Unit Purposes Summary */}
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium flex items-center gap-2">
+                        <Tag className="h-4 w-4 text-primary" />
+                        Unit Purposes
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(countUnitPurposes())
+                          .filter(([_, count]) => count > 0)
+                          .map(([purpose, count]) => (
+                            <div
+                              key={purpose}
+                              className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-black/40 rounded-md"
+                            >
+                              <div className="w-2 h-2 rounded-full bg-primary"></div>
+                              <span className="text-xs">{purpose}</span>
+                              <span className="text-xs font-bold ml-auto">{count}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Bedroom Options */}
+                    {unitDetails.some((unit) => unit.noOfBedRooms) && (
+                      <div className="space-y-2 border-t pt-4">
+                        <h3 className="text-sm font-medium flex items-center gap-2">
+                          <Bed className="h-4 w-4 text-primary" />
+                          Bedroom Options
+                        </h3>
+                        <div className="flex flex-wrap gap-2">
+                          {Array.from(new Set(unitDetails.map((unit) => unit.noOfBedRooms).filter(Boolean)))
+                            .sort()
+                            .map((bedrooms) => (
+                              <Badge key={bedrooms} variant="outline" className="px-3 py-1.5">
+                                {bedrooms} {Number.parseInt(bedrooms) === 1 ? "Bedroom" : "Bedrooms"}
+                              </Badge>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Size Range */}
+                    {unitDetails.some((unit) => unit.BuaSqFt > 0) && (
+                      <div className="space-y-2 border-t pt-4">
+                        <h3 className="text-sm font-medium flex items-center gap-2">
+                          <Ruler className="h-4 w-4 text-primary" />
+                          Size Range
+                        </h3>
+                        <div className="bg-gray-50 dark:bg-black/40 p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Minimum</div>
+                              <div className="font-bold">
+                                {Math.min(...unitDetails.map((unit) => unit.BuaSqFt || 0).filter(Boolean))} sq ft
+                              </div>
+                            </div>
+                            <Separator orientation="vertical" className="h-8" />
+                            <div>
+                              <div className="text-xs text-muted-foreground">Maximum</div>
+                              <div className="font-bold">
+                                {Math.max(...unitDetails.map((unit) => unit.BuaSqFt || 0))} sq ft
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Price Range */}
+                    {unitDetails.some((unit) => unit.originalPrice > 0) && (
+                      <div className="space-y-2 border-t pt-4">
+                        <h3 className="text-sm font-medium flex items-center gap-2">
+                          <Banknote className="h-4 w-4 text-primary" />
+                          Price Range
+                        </h3>
+                        <div className="bg-gradient-to-r from-primary/10 to-transparent p-3 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <div className="text-xs text-muted-foreground">Starting From</div>
+                              <div className="font-bold">
+                                {Math.min(
+                                  ...unitDetails
+                                    .map((unit) => unit.originalPrice || Number.POSITIVE_INFINITY)
+                                    .filter(Boolean),
+                                ).toLocaleString()}{" "}
+                                AED
+                              </div>
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <div className="text-xs text-muted-foreground">Up To</div>
+                              <div className="font-bold">
+                                {Math.max(...unitDetails.map((unit) => unit.originalPrice || 0)).toLocaleString()} AED
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="border-t p-4">
+                    <Button variant="outline" className="w-full" size="sm">
+                      <Eye className="h-4 w-4 mr-2" />
+                      View All Units
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+                <CardHeader className="bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/30 dark:to-black pb-2">
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Bed className="h-5 w-5 text-primary" />
+                    Unit Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6">
+                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
+                    <div className="bg-primary/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Bed className="h-8 w-8 text-primary opacity-70" />
+                    </div>
+                    <p className="font-medium">No units available</p>
+                    <p className="text-sm mt-1">Contact the agent for more information</p>
+                    <Button variant="outline" size="sm" className="mt-4">
+                      <Phone className="h-4 w-4 mr-2" />
+                      Contact Agent
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Documents Section */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
@@ -839,56 +939,6 @@ export default function PropertyDetail({ params }: Props) {
               </CardContent>
             </Card>
 
-            {/* Unit Summary */}
-            {unitDetails.length > 0 ? (
-              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-                <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                  <CardTitle className="text-xl">Unit Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div className="text-sm text-muted-foreground">Total Units</div>
-                      <div className="text-md font-medium">{unitDetails.length}</div>
-                    </div>
-
-                    {unitDetails.some((unit) => unit.noOfBedRooms) && (
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">Bedroom Options</div>
-                        <div className="text-md font-medium">
-                          {Array.from(new Set(unitDetails.map((unit) => unit.noOfBedRooms).filter(Boolean)))
-                            .sort()
-                            .join(", ")}
-                        </div>
-                      </div>
-                    )}
-
-                    {unitDetails.some((unit) => unit.BuaSqFt > 0) && (
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">Size Range</div>
-                        <div className="text-md font-medium">
-                          {Math.min(...unitDetails.map((unit) => unit.BuaSqFt || 0).filter(Boolean))} -
-                          {Math.max(...unitDetails.map((unit) => unit.BuaSqFt || 0))} sq ft
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-                <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                  <CardTitle className="text-xl">Unit Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="text-center py-4 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
-                    <Bed className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="font-medium">No units available</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Contact Agent */}
             <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
               <CardContent className="p-4 sm:p-6">
@@ -977,6 +1027,15 @@ const TimelineItem = ({ date, label }: { date: string; label: string }) => (
       <span className="text-xs text-muted-foreground block">{label}</span>
       <span className="font-medium">{date}</span>
     </div>
+  </div>
+)
+
+const UnitPurposeItem = ({ purpose, count }: { purpose: string; count: number }) => (
+  <div className="flex items-center justify-between p-3 border rounded-lg">
+    <span className="text-sm font-medium">{purpose}</span>
+    <Badge variant={count > 0 ? "default" : "outline"} className={count > 0 ? "bg-primary" : "bg-muted"}>
+      {count}
+    </Badge>
   </div>
 )
 

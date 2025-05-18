@@ -101,14 +101,14 @@ export default function PropertiesPage() {
     async (params: any = {}) => {
       setLoading(true)
       try {
-        // Remove the filter object and spread its contents directly into params
         const { filter: filterObj, ...restParams } = params;
         const finalParams = {
           ...filterObj, // Spread the filter object contents
           ...restParams, // Include other params
-          limit: 3,
+          limit: 10,
           page: currentPage,
-        };
+        };  
+        console.log('finalParams',finalParams)
 
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
@@ -135,10 +135,7 @@ export default function PropertiesPage() {
   )
 
   useEffect(() => {
-    fetchProperties({
-      sortBy: "createdAt",
-      sortOrder: sortOrder,
-    })
+    handleApplyFilters();
   }, [sortOrder, currentPage])
 
   const transformedData = properties.map((property: any) => ({
@@ -280,7 +277,7 @@ export default function PropertiesPage() {
     return cleaned
   }
 
-  const handleApplyFilters = () => {
+  const handleApplyFilters = () => { 
     const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
     const dateFilters = {
@@ -289,7 +286,8 @@ export default function PropertiesPage() {
     }
 
     const propertyTypeFilter = propertyType ? { propertyType } : {}
-    const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+    const cleanedSidebarFilters = cleanFilters(sidebarFilters) 
+    console.log('filters',cleanedSidebarFilters)
     
     // Create query params object without wrapping in a filter object
     const queryParams = {

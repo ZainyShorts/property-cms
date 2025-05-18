@@ -822,6 +822,32 @@ export default function PropertyDetail({ params }: Props) {
                   </CardContent>
                 </Card>
 
+                {/* Unit View Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Eye className="h-5 w-5 text-primary" />
+                      Unit View
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">This property offers the following views:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {propertyData.unitView && propertyData.unitView.length > 0 ? (
+                          propertyData.unitView.map((view, index) => (
+                            <Badge key={index} variant="secondary" className="px-3 py-1 text-sm capitalize">
+                              {view}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground">No view information available</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Documents Section */}
                 <Card>
                   <CardHeader>

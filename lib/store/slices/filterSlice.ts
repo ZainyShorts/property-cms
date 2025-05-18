@@ -7,7 +7,7 @@ interface Range {
 }
 
 interface FilterState {
-  masterDevelopment?: string
+  developmentName?: string
   subDevelopment?: string
   project?: string
   unitNumber?: string
@@ -37,7 +37,7 @@ interface FilterState {
 }
 
 const initialState: FilterState = {
-  masterDevelopment: undefined,
+  developmentName: undefined,
   subDevelopment: undefined,
   project: undefined,
   unitNumber: undefined, 

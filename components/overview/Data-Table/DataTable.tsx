@@ -153,7 +153,7 @@ function PropertyDataTable({
     { key: "attachDocument", label: "DOCUMENT" }, 
     { key: "view", label: "VIEW" },
     { key: "edit", label: "EDIT" },
-    { key: "delete", label: "DELETE" },
+    // { key: "delete", label: "DELETE" },
   ]
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
@@ -729,7 +729,7 @@ function PropertyDataTable({
                       actions.some((key) => visibleColumns[key]) && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "actions")}
-                          colSpan={actions.filter((key) => visibleColumns[key]).length}
+                          colSpan={actions.filter((key) => visibleColumns[key]).length+1}
                           className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
                         >
                           Actions

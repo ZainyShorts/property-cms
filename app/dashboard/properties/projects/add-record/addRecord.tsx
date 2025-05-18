@@ -182,8 +182,6 @@ export function AddRecordModal({
     }
   }, [multiStepFormData, setValue])
 
-
-
   const uploadImageToAWS = async (file: File, index: number): Promise<{ awsUrl: string; key: string }> => {
     try {
       const formData = new FormData()
@@ -197,7 +195,6 @@ export function AddRecordModal({
           },
         },
       )
-
       const signedUrl = response.data.msg.url
 
       await axios.put(signedUrl, file, {
@@ -275,12 +272,13 @@ export function AddRecordModal({
     }
   }, [open, editRecord])
 
-  const hasPopulatedRef = useRef(false)
+  // Remove this line:
+  // const hasPopulatedRef = useRef(false)
 
+  // Replace the useEffect that uses hasPopulatedRef with this:
   useEffect(() => {
-    if (editRecord && Object.keys(editRecord).length > 0 && !hasPopulatedRef.current) {
-      hasPopulatedRef.current = true
-
+    if (editRecord && Object.keys(editRecord).length > 0 && open) {
+      // Reset the form with the editRecord data
       setValue(
         "masterDevelopment",
         typeof editRecord.masterDevelopment === "object" && editRecord.masterDevelopment?._id
@@ -314,8 +312,6 @@ export function AddRecordModal({
       setValue("salesStatus", editRecord.salesStatus || SalesStatus.PRIMARY)
       setValue("downPayment", editRecord.downPayment || 10)
 
-      // Unit counts
-     
       // Categories
       setValue("facilityCategories", editRecord.facilityCategories || [])
       setValue("amenitiesCategories", editRecord.amenitiesCategories || [])
@@ -335,14 +331,14 @@ export function AddRecordModal({
         setPictures(newPictures)
       }
     }
-  }, [editRecord, setValue])
+  }, [editRecord, setValue, open])
 
   // Reset the hasPopulatedRef when the modal closes
-  useEffect(() => {
-    if (!open) {
-      hasPopulatedRef.current = false
-    }
-  }, [open])
+  // useEffect(() => {
+  //   if (!open) {
+  //     hasPopulatedRef.current = false
+  //   }
+  // }, [open])
 
   useEffect(() => {
     if (editRecord?.plot) {
@@ -460,7 +456,7 @@ export function AddRecordModal({
       }
 
       // Update submitData for numeric fields
-    
+
       submitData.constructionStatus = convertEmptyToZero(data.constructionStatus)
       submitData.downPayment = convertEmptyToZero(data.downPayment)
       submitData.percentOfConstruction = convertEmptyToZero(data.percentOfConstruction)
@@ -1065,7 +1061,6 @@ export function AddRecordModal({
           </div>
 
           {/* Unit Counts Section */}
-       
 
           {/* Images Section */}
           <div className="p-4 border rounded-lg shadow-sm">

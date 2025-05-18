@@ -269,7 +269,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     if (selected) {
       setSelectedMasterDev(selected)
       setMasterDevSearchTerm(selected.developmentName)
-      dispatch(updateFilter({ masterDevelopment: selected.developmentName }))
+      dispatch(updateFilter({ developmentName: selected.developmentName }))
     }
   }
 
@@ -366,12 +366,12 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
   // Initialize search terms from filter state
   useEffect(() => {
     if (open) {
-      setMasterDevSearchTerm(filter.masterDevelopment || "")
+      setMasterDevSearchTerm(filter.developmentName || "")
       setSubDevSearchTerm(filter.subDevelopment || "")
       setProjectSearchTerm(filter.project || "")
       setRoadLocationSearchTerm(filter.roadLocation || "")
     }
-  }, [open, filter.masterDevelopment, filter.subDevelopment, filter.project, filter.roadLocation])
+  }, [open, filter.developmentName, filter.subDevelopment, filter.project, filter.roadLocation])
 
   // Fetch initial data when sidebar opens
   useEffect(() => {
@@ -393,7 +393,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
         </SheetHeader>
         <div className="grid gap-6 py-4">
           <div className="space-y-2">
-            <Label htmlFor="masterDevelopment">Master Development</Label>
+            <Label htmlFor="developmentName">Master Development</Label>
             <div className="space-y-2">
               <div className="relative">
                 <Input
@@ -709,12 +709,29 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
           </div>
           <div className="space-y-2">
             <Label htmlFor="unitPurpose">Unit Purpose</Label>
-            <Input
-              id="unitPurpose"
-              placeholder="Enter unit purpose"
+            <Select
               value={filter.unitPurpose || ""}
-              onChange={handleInputChange}
-            />
+              onValueChange={(value) => dispatch(updateFilter({ unitPurpose: value }))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select unit purpose" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries({
+                  Rent: "Rent",
+                  Sell: "Sell",
+                  Manage: "Manage",
+                  Develop: "Develop",
+                  Valuation: "Valuation",
+                  Hold: "Hold",
+                  Pending: "Pending",
+                }).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="chequeFrequency">Cheque Frequency</Label>
