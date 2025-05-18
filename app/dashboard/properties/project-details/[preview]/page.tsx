@@ -30,6 +30,9 @@ import {
   Pause,
   ArrowRight,
   Bed,
+  LayoutGrid,
+  Ruler,
+  Warehouse,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -73,6 +76,17 @@ interface PropertyData {
   __v: number
 }
 
+// Update the PlotData interface to match all possible fields
+interface PlotData {
+  buaAreaSqFt?: string
+  plotBUASqFt?: string | number
+  plotHeight?: string | number
+  plotNumber?: string | number
+  plotPermission?: string[]
+  plotSizeSqFt?: string | number
+  plotStatus?: string
+}
+
 interface MediaItem {
   type: "image" | "video"
   url: string
@@ -93,7 +107,9 @@ export default function PropertyDetail({ params }: Props) {
   const touchEndX = useRef<number>(0)
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [unitDetails, setUnitDetails] = useState<any[]>([])
+  const [plotData, setPlotData] = useState<PlotData | null>(null)
 
+  // Modify the useEffect that fetches data to check for plot data in multiple places
   useEffect(() => {
     const fetchData = async () => {
       if (!params.preview) return
@@ -116,6 +132,40 @@ export default function PropertyDetail({ params }: Props) {
 
         const property = propertyResponse.data
         setPropertyData(property)
+
+        // Check for plot data in multiple places
+        // First check if plot data exists directly in the property response
+        if (property.plot) {
+          console.log("Plot data found in property:", property.plot)
+          setPlotData(property.plot)
+        }
+        // Then check if plot data exists in the subDevelopment object
+        else if (
+          property.subDevelopment &&
+          (property.subDevelopment.plotNumber ||
+            property.subDevelopment.plotHeight ||
+            property.subDevelopment.plotSizeSqFt ||
+            property.subDevelopment.plotBUASqFt ||
+            property.subDevelopment.plotStatus ||
+            property.subDevelopment.plotPermission)
+        ) {
+          console.log("Plot data found in subDevelopment:", property.subDevelopment)
+          // Extract plot-related fields from subDevelopment
+          const subDevPlotData: PlotData = {
+            plotNumber: property.subDevelopment.plotNumber,
+            plotHeight: property.subDevelopment.plotHeight,
+            plotPermission: property.subDevelopment.plotPermission,
+            plotSizeSqFt: property.subDevelopment.plotSizeSqFt,
+            plotBUASqFt: property.subDevelopment.plotBUASqFt,
+            plotStatus: property.subDevelopment.plotStatus,
+            // buaAreaSqFt might not be available in subDevelopment
+            buaAreaSqFt: property.subDevelopment.buaAreaSqFt || property.subDevelopment.plotBUASqFt?.toString(),
+          }
+          setPlotData(subDevPlotData)
+        } else {
+          console.log("No plot data found in property or subDevelopment")
+          setPlotData(null)
+        }
 
         // Set unit details
         if (unitResponse.data && unitResponse.data.data) {
@@ -462,7 +512,7 @@ export default function PropertyDetail({ params }: Props) {
           />
           <StatsCard
             icon={<Hourglass className="h-6 w-6 text-primary" />}
-            value={`${propertyData.percentOfConstruction}%`}
+            value={`${propertyData.constructionStatus}%`}
             label="Construction"
           />
         </div>
@@ -590,20 +640,26 @@ export default function PropertyDetail({ params }: Props) {
                       <thead>
                         <tr className="border-b">
                           <th className="text-left p-2">Unit Number</th>
-                          <th className="text-left p-2">Type</th>
+                          <th className="text-left p-2">Unit Height</th>
                           <th className="text-left p-2">Bedrooms</th>
-                          <th className="text-left p-2">Size (sq ft)</th>
-                          <th className="text-left p-2">Purpose</th>
+                          <th className="text-left p-2">Original Price (AED)</th>
+                          <th className="text-left p-2">Unit Purpose</th>
                         </tr>
                       </thead>
                       <tbody>
                         {unitDetails.map((unit) => (
-                          <tr key={unit._id} className="border-b hover:bg-gray-50 dark:hover:bg-black/80">
+                          <tr
+                            key={unit._id}
+                            className="border-b hover:bg-gray-50 dark:hover:bg-black/80 cursor-pointer"
+                            onClick={() => window.open(`/dashboard/properties/inventory-details/${unit._id}`, "_blank")}
+                          >
                             <td className="p-2 font-medium">{unit.unitNumber}</td>
-                            <td className="p-2">{unit.unitType || "N/A"}</td>
+                            <td className="p-2">{unit.unitHeight || "N/A"}</td>
                             <td className="p-2">{unit.noOfBedRooms || "N/A"}</td>
-                            <td className="p-2">{unit.BuaSqFt > 0 ? `${unit.BuaSqFt}` : "N/A"}</td>
-                            <td className="p-2">{unit.unitPurpose}</td>
+                            <td className="p-2">
+                              {unit.originalPrice ? `${unit.originalPrice.toLocaleString()} AED` : "N/A"}
+                            </td>
+                            <td className="p-2">{unit.unitPurpose || "N/A"}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -715,6 +771,71 @@ export default function PropertyDetail({ params }: Props) {
                   <DateItem label="Launch Date" date={formatDate(propertyData.launchDate)} />
                   <DateItem label="Completion Date" date={formatDate(propertyData.completionDate)} />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Plot Details */}
+            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
+              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <LayoutGrid className="h-5 w-5 text-primary" />
+                  Plot Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6">
+                {plotData ? (
+                  <div className="space-y-4">
+                    <InfoCard
+                      icon={<Warehouse className="h-5 w-5 text-primary" />}
+                      label="Plot Number"
+                      value={plotData.plotNumber ? plotData.plotNumber.toString() : "N/A"}
+                    />
+                    <InfoCard
+                      icon={<Ruler className="h-5 w-5 text-primary" />}
+                      label="Plot Size"
+                      value={plotData.plotSizeSqFt ? `${plotData.plotSizeSqFt} sq ft` : "N/A"}
+                    />
+                    <InfoCard
+                      icon={<Ruler className="h-5 w-5 text-primary" />}
+                      label="BUA Area"
+                      value={plotData.buaAreaSqFt ? `${plotData.buaAreaSqFt} sq ft` : "N/A"}
+                    />
+                    <InfoCard
+                      icon={<Ruler className="h-5 w-5 text-primary" />}
+                      label="Plot BUA"
+                      value={plotData.plotBUASqFt ? `${plotData.plotBUASqFt} sq ft` : "N/A"}
+                    />
+                    <InfoCard
+                      icon={<Ruler className="h-5 w-5 text-primary" />}
+                      label="Plot Height"
+                      value={plotData.plotHeight ? plotData.plotHeight.toString() : "N/A"}
+                    />
+                    <div className="flex justify-between items-center p-3 border rounded-lg">
+                      <div className="text-sm text-muted-foreground">Plot Status</div>
+                      <Badge variant="outline" className="bg-primary/10 border-primary/30">
+                        {plotData.plotStatus || "N/A"}
+                      </Badge>
+                    </div>
+                    {plotData.plotPermission && plotData.plotPermission.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground">Plot Permission</div>
+                        <div className="flex flex-wrap gap-2">
+                          {plotData.plotPermission.map((permission, index) => (
+                            <Badge key={index} variant="secondary" className="px-3 py-1.5 text-sm capitalize">
+                              {permission}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
+                    <LayoutGrid className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                    <p className="font-medium">No Plot Details Available</p>
+                    <p className="text-sm mt-1">This property doesn't have plot information</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
