@@ -98,17 +98,17 @@ export default function PropertiesPage() {
   const rangeFilters = useSelector((state: any) => state.range)
 
   const fetchProperties = useCallback(
-    async (params: any = {}) => {
+    async (params: any = {}, page?: number) => {
       setLoading(true)
       try {
-        const { filter: filterObj, ...restParams } = params;
+        const { filter: filterObj, ...restParams } = params
         const finalParams = {
           ...filterObj, // Spread the filter object contents
           ...restParams, // Include other params
           limit: 10,
-          page: currentPage,
-        };  
-        console.log('finalParams',finalParams)
+          page: page !== undefined ? page : currentPage,
+        }
+        console.log("finalParams", finalParams)
 
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
@@ -135,7 +135,18 @@ export default function PropertiesPage() {
   )
 
   useEffect(() => {
-    handleApplyFilters();
+    if (Object.keys(searchFilter).length > 0) {
+      fetchProperties(
+        {
+          ...searchFilter,
+          sortBy: "createdAt",
+          sortOrder: sortOrder,
+        },
+        currentPage,
+      )
+    } else {
+      fetchProperties({ sortBy: "createdAt", sortOrder: sortOrder }, currentPage)
+    }
   }, [sortOrder, currentPage])
 
   const transformedData = properties.map((property: any) => ({
@@ -277,7 +288,7 @@ export default function PropertiesPage() {
     return cleaned
   }
 
-  const handleApplyFilters = () => { 
+  const handleApplyFilters = () => {
     const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
     const dateFilters = {
@@ -286,10 +297,8 @@ export default function PropertiesPage() {
     }
 
     const propertyTypeFilter = propertyType ? { propertyType } : {}
-    const cleanedSidebarFilters = cleanFilters(sidebarFilters) 
-    console.log('filters',cleanedSidebarFilters)
-    
-    // Create query params object without wrapping in a filter object
+    const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+
     const queryParams = {
       ...cleanedSidebarFilters,
       ...searchFilterObj,
@@ -318,9 +327,9 @@ export default function PropertiesPage() {
       sortBy: "createdAt",
       sortOrder: sortOrder,
     }
-
     setSearchFilter(queryParams)
-    fetchProperties(queryParams)
+    setCurrentPage(1) // Reset to page 1 when applying filters
+    fetchProperties(queryParams, 1) // Pass 1 as the page number
   }
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,7 +470,7 @@ export default function PropertiesPage() {
             params: {
               sortBy: "createdAt",
               sortOrder: "asc",
-              limit: count.toString(),
+              limit: 10,
             },
           },
         )
@@ -513,7 +522,7 @@ export default function PropertiesPage() {
             }),
           sortBy: "createdAt",
           sortOrder: "asc",
-          limit: count.toString(),
+          limit: 10,
         }
 
         const response = await axios.get(

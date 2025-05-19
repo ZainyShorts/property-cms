@@ -11,19 +11,19 @@ import {
   ChevronRight,
   MousePointerIcon as MousePointerSquare,
   X,
-  ClipboardCheck, 
-  Upload, 
+  ClipboardCheck,
+  Upload,
   Eye,
   Info,
   ArrowLeft,
   Edit,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Badge } from "@/components/ui/badge"  
-import { toast } from "react-toastify" 
+import { Badge } from "@/components/ui/badge"
+import { toast } from "react-toastify"
 import { useRouter } from "next/navigation"
 import "react-toastify/dist/ReactToastify.css"
-import axios from "axios" 
+import axios from "axios"
 import DocumentModal from "./DocumentModal"
 import { Switch } from "@/components/ui/switch"
 import { DeleteConfirmationModal } from "@/app/dashboard/properties/projects/delete-confirmation-modal"
@@ -52,7 +52,7 @@ const unitTenancyDetails = ["rentedAt", "rentedTill", "vacantOn"]
 
 const paymentDetails = ["originalPrice", "paidTODevelopers", "payableTODevelopers", "premiumAndLoss"]
 
-const actions = ["edit", "delete", "attachments", "view"]
+const actions = ["edit", "attachDocument", "view"]
 
 interface PropertyDataTableProps {
   data?: any[]
@@ -61,8 +61,8 @@ interface PropertyDataTableProps {
   Count: number
   onDelete?: (id: string) => void
   onShare?: (data: any) => void
-  onEdit?: (row: any) => void 
-  totalPages?: any 
+  onEdit?: (row: any) => void
+  totalPages?: any
   onAttachDocument?: (id: string) => void
   loading?: boolean
   selectedRows?: string[]
@@ -70,7 +70,7 @@ interface PropertyDataTableProps {
   selectedColumns?: string[]
   setSelectedColumns?: (columns: string[]) => void
   toggleColumns?: (column: string) => void
-  toggleRow?: (id: string) => void
+  toggleRow?: (id: string) => boolean
   selectedRowsMap?: Record<string, boolean>
   setSelectedRowsMap?: (map: Record<string, boolean>) => void
   isSelectionMode?: boolean
@@ -84,7 +84,7 @@ function PropertyDataTable({
   page = 1,
   setPage,
   Count,
-  onDelete, 
+  onDelete,
   totalPages,
   onShare,
   selectedRows = [],
@@ -105,8 +105,8 @@ function PropertyDataTable({
 }: PropertyDataTableProps) {
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [checkState, setCheckState] = useState<string>("all")
-  const [isAttachingDocument, setIsAttachingDocument] = useState(false) 
-  const router = useRouter();
+  const [isAttachingDocument, setIsAttachingDocument] = useState(false)
+  const router = useRouter()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [recordDelete, setRecordToDelete] = useState<any>("")
 
@@ -149,8 +149,8 @@ function PropertyDataTable({
     { key: "payableTODevelopers", label: "PAYABLE TO DEVELOPERS" },
     { key: "premiumAndLoss", label: "PREMIUM / LOSS" },
 
-    // Actions 
-    { key: "attachDocument", label: "DOCUMENT" }, 
+    // Actions
+    { key: "attachDocument", label: "DOCUMENT" },
     { key: "view", label: "VIEW" },
     { key: "edit", label: "EDIT" },
     // { key: "delete", label: "DELETE" },
@@ -158,29 +158,29 @@ function PropertyDataTable({
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
-  ) 
+  )
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
-    const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const handleDocumentSave = async (documentData: any) => {
-     setIsAttachingDocument(true)
- 
-     try {
-       console.log("Document data to save:", documentData)
- 
-       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
-       console.log(response)
-       toast.success("Document attached successfully")
- 
-       setIsDocumentModalOpen(false)
-       setSelectedRowId(null)
-     } catch (error) {
-       console.error("Error attaching document:", error)
-       toast.error("Failed to attach document. Please try again.")
-     } finally {
-       setIsAttachingDocument(false)
-     }
-   }
- 
+    setIsAttachingDocument(true)
+
+    try {
+      console.log("Document data to save:", documentData)
+
+      const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
+      console.log(response)
+      toast.success("Document attached successfully")
+
+      setIsDocumentModalOpen(false)
+      setSelectedRowId(null)
+    } catch (error) {
+      console.error("Error attaching document:", error)
+      toast.error("Failed to attach document. Please try again.")
+    } finally {
+      setIsAttachingDocument(false)
+    }
+  }
+
   const handleCopyId = useCallback(
     (id: string) => {
       navigator.clipboard.writeText(id)
@@ -193,12 +193,12 @@ function PropertyDataTable({
   )
 
   const handleAttachDocument = (recordId: string) => {
-   setSelectedRowId(recordId)
+    setSelectedRowId(recordId)
     setIsDocumentModalOpen(true)
   }
-  
-  const handleEditRecord = useCallback( 
-    (record: any) => { 
+
+  const handleEditRecord = useCallback(
+    (record: any) => {
       onEdit?.(record)
     },
     [onEdit],
@@ -257,6 +257,15 @@ function PropertyDataTable({
           }, {})
           return updated
         })
+      } else if (headers === "actions") {
+        setCheckState("actions")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = actions.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
       } else if (headers === "all") {
         setCheckState("all")
         setVisibleColumns((prev) => {
@@ -281,7 +290,6 @@ function PropertyDataTable({
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap, setSelectedRows])
-
 
   const goToPage = useCallback(
     (pageNumber: number) => {
@@ -363,38 +371,42 @@ function PropertyDataTable({
         case "BuaSqFt":
         case "originalPrice":
         case "rentalPrice":
-        case "salePrice": 
+        case "salePrice":
         case "unitNumber":
         case "paidTODevelopers":
         case "payableTODevelopers":
         case "premiumAndLoss":
-          return record[key] ? record[key].toLocaleString() : "-" 
-          case "attachDocument":
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                      onClick={() => handleAttachDocument(record._id)}
-                      disabled={isAttachingDocument}
-                    >
-                      <Upload className="h-4 w-4 mr-1" />
-                      Attach
-                    </Button>
-                  )  
-                    case "view":
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-  onClick={() => window.open(`/dashboard/properties/inventory-details/${record._id}`, '_blank')}
-                      disabled={isAttachingDocument}
-                    >
-                      <Eye  className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                  ) 
+          return record[key] ? record[key].toLocaleString() : "-"
+        case "attachDocument":
+          return (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                onClick={() => handleAttachDocument(record._id)}
+                disabled={isAttachingDocument}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Attach
+              </Button>
+            </div>
+          )
+        case "view":
+          return (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                onClick={() => window.open(`/dashboard/properties/inventory-details/${record._id}`, "_blank")}
+                disabled={isAttachingDocument}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View
+              </Button>
+            </div>
+          )
         case "unitView":
           if (Array.isArray(record[key])) {
             return (
@@ -439,30 +451,34 @@ function PropertyDataTable({
           return record[key] || "-"
         case "edit":
           return (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-              onClick={() => handleEditRecord(record)}
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              Edit
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                onClick={() => handleEditRecord(record)}
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+            </div>
           )
         case "delete":
           return (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
-              onClick={() => {
-                setRecordToDelete(record._id)
-                setIsDeleteModalOpen(true)
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Delete
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                onClick={() => {
+                  setRecordToDelete(record._id)
+                  setIsDeleteModalOpen(true)
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </div>
           )
         case "listingDate":
         case "rentedAt":
@@ -596,6 +612,7 @@ function PropertyDataTable({
                     <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "paymentDetails")}>
                       Payment Details
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>Actions</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
@@ -725,16 +742,27 @@ function PropertyDataTable({
                       </TableHead>
                     )}
 
-                    {(checkState === "actions" || checkState === "all") &&
-                      actions.some((key) => visibleColumns[key]) && (
-                        <TableHead
-                          onClick={() => toggleColumnVisibility("a", "actions")}
-                          colSpan={actions.filter((key) => visibleColumns[key]).length+1}
-                          className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
-                        >
-                          Actions
-                        </TableHead>
-                      )}
+                    {(checkState === "actions" || checkState === "all") && (
+                      <TableHead
+                        onClick={() => toggleColumnVisibility("a", "actions")}
+                        colSpan={actions.filter((key) => visibleColumns[key]).length}
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative" 
+                      >
+                        Actions
+                        {checkState === "actions" && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleColumnVisibility("a", "all")
+                            }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                          >
+                            <ArrowLeft className="w-4 h-4" />
+                            Back
+                          </button>
+                        )}
+                      </TableHead>
+                    )}
                   </TableRow>
                 )}
 
@@ -975,13 +1003,13 @@ function PropertyDataTable({
           setRecordToDelete("")
         }}
         onConfirm={confirmDelete}
-      /> 
-        <DocumentModal
-              isOpen={isDocumentModalOpen}
-              onClose={() => setIsDocumentModalOpen(false)}
-              rowId={selectedRowId}
-              onDocumentSave={handleDocumentSave}
-            />
+      />
+      <DocumentModal
+        isOpen={isDocumentModalOpen}
+        onClose={() => setIsDocumentModalOpen(false)}
+        rowId={selectedRowId}
+        onDocumentSave={handleDocumentSave}
+      />
     </>
   )
 }

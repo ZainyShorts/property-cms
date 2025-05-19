@@ -30,7 +30,7 @@ interface FilterBarProps {
   onAddButton?: () => void
   onFilter: () => void
   onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void 
-  
+  setPage: () => void
   onFilterChange?: (key: string, value: string) => void
   showDatePickers?: boolean
   onApplyFilters: () => void
@@ -64,7 +64,8 @@ export function FilterBar({
   startDate,
   endDate,
   onStartDateChange,
-  onEndDateChange,
+  onEndDateChange, 
+  setPage,
   onClear,
   selectedOptions,
   setSelectedOptions,
@@ -234,7 +235,7 @@ export function FilterBar({
             </TooltipProvider>
             <Button
               className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
-              onClick={onApplyFilters}
+              onClick={()=>  onApplyFilters()}
               variant="default"
             >
               Apply Filters
