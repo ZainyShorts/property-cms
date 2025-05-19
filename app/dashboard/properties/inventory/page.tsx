@@ -329,7 +329,7 @@ export default function PropertiesPage() {
     }
     setSearchFilter(queryParams)
     setCurrentPage(1) // Reset to page 1 when applying filters
-    fetchProperties(queryParams, 1) // Pass 1 as the page number
+    fetchProperties(queryParams, 1) // Pass o1 as the page number
   }
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,9 +374,10 @@ export default function PropertiesPage() {
     }
   }
 
-  const handleUpdate = (property: any) => {
-    const originalProperty = properties.find((p) => p._id === property._id)
-    setPropertyToEdit(originalProperty || property)
+  const handleUpdate = (property: any) => { 
+    // const originalProperty = properties.find((p) => p._id === property._id)
+    // console.log('prpertyto edit',property);
+    setPropertyToEdit( property)
     setAddPropertyModalOpen(true)
     setDataChanged(false)
   }

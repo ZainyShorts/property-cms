@@ -1,5 +1,9 @@
 "use client"
 
+import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+
+import { DropdownMenuLabel } from "@/components/ui/dropdown-menu"
+
 import { useState, useEffect, memo, useCallback } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -17,6 +21,7 @@ import {
   Info,
   ArrowLeft,
   Edit,
+  Settings,
 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
@@ -31,6 +36,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { cn } from "@/lib/utils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
+import { Checkbox as UICheckbox } from "@/components/ui/checkbox"
 
 // Define categories for column grouping
 const projectDetails = ["_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
@@ -109,6 +115,8 @@ function PropertyDataTable({
   const router = useRouter()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [recordDelete, setRecordToDelete] = useState<any>("")
+  // Add a new state to track if columns have been modified via settings wheel
+  const [columnsModified, setColumnsModified] = useState(false)
 
   const itemsPerPage = 10
 
@@ -309,19 +317,34 @@ function PropertyDataTable({
     }
   }, [isSelectionMode, setIsSelectionMode, setSelectedRows, setSelectedColumns, setSelectedRowsMap])
 
+  // Modify the getSelectedData function to handle both selection mode and column visibility mode
   const getSelectedData = useCallback(() => {
-    if (selectedRows.length === 0 || selectedColumns.length === 0) return []
+    if (isSelectionMode) {
+      if (selectedRows.length === 0 || selectedColumns.length === 0) return []
 
-    return data
-      .filter((row) => selectedRows.includes(row._id))
-      .map((row) => {
+      return data
+        .filter((row) => selectedRows.includes(row._id))
+        .map((row) => {
+          const filteredRow: Record<string, any> = {}
+          selectedColumns.forEach((key) => {
+            filteredRow[key] = row[key]
+          })
+          return filteredRow
+        })
+    } else {
+      // When not in selection mode but columns are modified via settings wheel
+      const visibleKeys = Object.keys(visibleColumns).filter((key) => visibleColumns[key])
+      if (visibleKeys.length === 0) return []
+
+      return data.map((row) => {
         const filteredRow: Record<string, any> = {}
-        selectedColumns.forEach((key) => {
+        visibleKeys.forEach((key) => {
           filteredRow[key] = row[key]
         })
         return filteredRow
       })
-  }, [data, selectedRows, selectedColumns])
+    }
+  }, [data, selectedRows, selectedColumns, isSelectionMode, visibleColumns])
 
   const logSelectedData = useCallback(() => {
     const selectedData = getSelectedData()
@@ -618,6 +641,59 @@ function PropertyDataTable({
               )}
             </div>
           </div>
+          {/* Add an export button in the main toolbar when columns are modified but not in selection mode */}
+          {!isSelectionMode && columnsModified && (
+            <Button variant="default" size="sm" onClick={logSelectedData} className="h-8 gap-1.5 ml-auto">
+              <ClipboardCheck className="h-3.5 w-3.5" />
+              Export Visible Columns
+            </Button>
+          )}
+          {/* Add settings wheel dropdown here */} 
+          {!isSelectionMode && 
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Settings className="h-4 w-4" />
+                <span className="sr-only">Toggle columns</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {tableHeaders.map((header) => (
+                <DropdownMenuItem
+                  key={header.key}
+                  className="flex items-center gap-2"
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <div className="flex items-center space-x-2">
+                    <UICheckbox
+                      id={`column-${header.key}`}
+                      checked={visibleColumns[header.key]}
+                      onCheckedChange={(checked) => {
+                        setVisibleColumns((prev) => {
+                          const updated = {
+                            ...prev,
+                            [header.key]: !!checked,
+                          }
+                          // Set columnsModified to true when any column visibility changes
+                          setColumnsModified(true)
+                          return updated
+                        })
+                      }}
+                    />
+                    <label
+                      htmlFor={`column-${header.key}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {header.label}
+                    </label>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          }
         </div>
 
         <div className="overflow-x-auto thin-scrollbar sm:mx-0">
@@ -746,7 +822,7 @@ function PropertyDataTable({
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "actions")}
                         colSpan={actions.filter((key) => visibleColumns[key]).length}
-                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative" 
+                        className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative"
                       >
                         Actions
                         {checkState === "actions" && (
