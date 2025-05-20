@@ -216,7 +216,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
 
       // Add search parameter if provided
       if (searchTerm) {
-        url += `?projectName=${encodeURIComponent(searchTerm)}`
+        url += `?projectName=${encodeURIComponent(searchTerm)}&fields=projectName`
       }
 
       const response = await axios.get(url)

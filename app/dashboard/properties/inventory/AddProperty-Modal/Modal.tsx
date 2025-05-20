@@ -17,8 +17,8 @@ import "react-toastify/dist/ReactToastify.css"
 interface AddPropertyModalProps {
   isOpen: boolean
   onClose: () => void
-  propertyToEdit?: any 
-  fetchRecords?:() => void
+  propertyToEdit?: any
+  fetchRecords?: () => void
 }
 
 const propertyTypes = {
@@ -83,7 +83,7 @@ const propertySections = {
   },
 }
 
-export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
+export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
   const { isSignedIn, user, isLoaded } = useUser()
 
   const [dataForm, setDataForm] = useState<Record<string, any>>({})
@@ -94,56 +94,39 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
   const [isEditing, setIsEditing] = useState(false)
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [projects, setProjects] = useState<any[]>([])
-  const [selectedProject, setSelectedProject] = useState<any>(null) 
-  const [loading , setLoading] = useState<boolean>(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [loading, setLoading] = useState<boolean>(false)
   const [projectSearchTerm, setProjectSearchTerm] = useState("")
   const [isSearching, setIsSearching] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const [showProjectResults, setShowProjectResults] = useState(false)
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
 
   // Fetch projects on component mount
   useEffect(() => {
     fetchProjects()
   }, [])
 
+  // Handle property editing initialization
   useEffect(() => {
-    if (propertyToEdit) {
-      console.log("Initialized data:", propertyToEdit)
+    if (propertyToEdit && !initialLoadComplete) {
+      console.log("Initializing edit mode with data:", propertyToEdit)
+      setIsEditing(true)
 
-      // Fetch specific project details when in edit mode
-      const fetchProjectDetails = async () => {
-        if (propertyToEdit.project && propertyToEdit.project._id) {
-          try {
-            const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${propertyToEdit.project._id}?populate=subDevelopment,masterDevelopment`,
-            )
-            if (response.data && response.data.data) {
-              setSelectedProject(response.data.data)
-            } else {
-              // If API call fails, still set the project from the propertyToEdit data
-              setSelectedProject(propertyToEdit.project)
-            }
-          } catch (error) {
-            console.error("Error fetching project details:", error)
-            // If API call fails, still set the project from the propertyToEdit data
-            setSelectedProject(propertyToEdit.project)
-            toast.error("Failed to load project details, using available data")
-          }
-        }
-      }
-      fetchProjectDetails()
-
+      // Initialize form data from propertyToEdit
       setDataForm({
         project: propertyToEdit.project?._id || "",
-        subDevelopment: propertyToEdit?.project?.subDevelopment?.subDevelopment || "",
-        masterDevelopment: propertyToEdit?.project?.masterDevelopment?.developmentName || "",
+        subDevelopment:
+          propertyToEdit?.project?.subDevelopment?.subDevelopment || propertyToEdit.subDevelopmentName || "",
+        masterDevelopment:
+          propertyToEdit?.project?.masterDevelopment?.developmentName || propertyToEdit.developmentName || "",
         unitNumber: propertyToEdit.unitNumber || "",
-        unitHeight: typeof propertyToEdit.unitHeight === "number" ? propertyToEdit.unitHeight : 0,
+        unitHeight: propertyToEdit.unitHeight || "",
         unitInternalDesign: propertyToEdit.unitInternalDesign || "",
         unitExternalDesign: propertyToEdit.unitExternalDesign || "",
         plotSizeSqFt: typeof propertyToEdit.plotSizeSqFt === "number" ? propertyToEdit.plotSizeSqFt : 0,
         BuaSqFt: typeof propertyToEdit.BuaSqFt === "number" ? propertyToEdit.BuaSqFt : 0,
-        BedRoom: propertyToEdit.noOfBedRooms || "",
+        noOfBedRooms: propertyToEdit.noOfBedRooms || "",
         unitView: propertyToEdit.unitView || [],
         unitPurpose: propertyToEdit.unitPurpose || "",
         listingDate: propertyToEdit.listingDate || "",
@@ -173,7 +156,93 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
         setSelectedImages(propertyToEdit.pictures)
       }
 
-      setIsEditing(true)
+      // Handle flat data structure for project information
+      const handleProjectSearch = async () => {
+        // If we have a projectName but no project._id, search for the project
+        if (propertyToEdit.projectName && !propertyToEdit.project?._id) {
+          setProjectSearchTerm(propertyToEdit.projectName)
+          setIsSearching(true)
+
+          try {
+            // Search for the project by name
+            const url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&projectName=${encodeURIComponent(propertyToEdit.projectName)}`
+            const response = await axios.get(url)
+
+            if (response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+              // Find the exact match or the closest match
+              const exactMatch = response.data.data.find(
+                (p: any) => p.projectName.toLowerCase() === propertyToEdit.projectName.toLowerCase(),
+              )
+
+              const projectData = exactMatch || response.data.data[0]
+              setSelectedProject(projectData)
+
+              // Update form data with the found project
+              setDataForm((prev) => ({
+                ...prev,
+                project: projectData._id,
+                masterDevelopment:
+                  projectData.masterDevelopment?.developmentName || propertyToEdit.developmentName || "",
+                subDevelopment: projectData.subDevelopment?.subDevelopment || propertyToEdit.subDevelopmentName || "",
+              }))
+
+              // Also update the projects list to include this project
+              setProjects(response.data.data)
+            } else {
+              // If no project found, create a temporary project object for display
+              const tempProject = {
+                _id: "", // This will be updated when user selects a real project
+                projectName: propertyToEdit.projectName,
+                masterDevelopment: { developmentName: propertyToEdit.developmentName || "" },
+                subDevelopment: { subDevelopment: propertyToEdit.subDevelopmentName || "" },
+              }
+              setSelectedProject(tempProject)
+            }
+          } catch (error) {
+            console.error("Error searching for project:", error)
+            // Create a temporary project object for display
+            const tempProject = {
+              _id: "",
+              projectName: propertyToEdit.projectName,
+              masterDevelopment: { developmentName: propertyToEdit.developmentName || "" },
+              subDevelopment: { subDevelopment: propertyToEdit.subDevelopmentName || "" },
+            }
+            setSelectedProject(tempProject)
+            toast.error("Failed to load project details, using available data")
+          } finally {
+            setIsSearching(false)
+            setInitialLoadComplete(true)
+          }
+        }
+        // If we have a project._id, fetch the project details
+        else if (propertyToEdit.project && propertyToEdit.project._id) {
+          try {
+            const response = await axios.get(
+              `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${propertyToEdit.project._id}?populate=subDevelopment,masterDevelopment`,
+            )
+
+            if (response.data && response.data.data) {
+              const projectData = response.data.data
+              setSelectedProject(projectData)
+              setProjectSearchTerm(projectData.projectName || "")
+            }
+          } catch (error) {
+            console.error("Error fetching project details:", error)
+            // If API call fails, still set the project from the propertyToEdit data
+            if (propertyToEdit.project) {
+              setSelectedProject(propertyToEdit.project)
+              setProjectSearchTerm(propertyToEdit.project.projectName || "")
+            }
+            toast.error("Failed to load project details, using available data")
+          } finally {
+            setInitialLoadComplete(true)
+          }
+        } else {
+          setInitialLoadComplete(true)
+        }
+      }
+
+      handleProjectSearch()
     } else if (propertyToEdit === null) {
       resetForm()
     }
@@ -184,6 +253,7 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
     if (selectedProject) {
       setDataForm((prev) => ({
         ...prev,
+        project: selectedProject._id,
         masterDevelopment: selectedProject.masterDevelopment?.developmentName || "",
         subDevelopment: selectedProject.subDevelopment?.subDevelopment || "",
       }))
@@ -199,9 +269,9 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
     setIsEditing(false)
     setImagesToDelete([])
     setSelectedProject(null)
-    // Reset search state
     setProjectSearchTerm("")
     setIsSearching(false)
+    setInitialLoadComplete(false)
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
       searchTimeoutRef.current = null
@@ -220,6 +290,9 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
     if (fieldKey === "project") {
       const project = projects.find((p) => p._id === value)
       setSelectedProject(project)
+      if (project) {
+        setProjectSearchTerm(project.projectName || "")
+      }
     }
 
     setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
@@ -235,6 +308,7 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
 
     // Set searching state
     setIsSearching(true)
+    setShowProjectResults(true)
 
     // Set a new timeout for debouncing
     searchTimeoutRef.current = setTimeout(() => {
@@ -352,13 +426,20 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
     if (!validateForm()) {
       // Don't show toast, just scroll to the first error
       return
-    } 
-    setLoading(true);
+    }
+    setLoading(true)
+
+    // If we have a temporary project (no _id), show an error
+    if (isEditing && !dataForm.project) {
+      toast.error("Please select a valid project before updating")
+      setLoading(false)
+      return
+    }
 
     const finalData = {
       project: dataForm.project || "",
       unitNumber: dataForm.unitNumber || "",
-      unitHeight: dataForm.unitHeight ? Number(dataForm.unitHeight) : 0,
+      unitHeight: dataForm.unitHeight || "",
       unitInternalDesign: dataForm.unitInternalDesign || "",
       unitExternalDesign: dataForm.unitExternalDesign || "",
       plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
@@ -400,17 +481,19 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
         console.log("Adding property:", finalData)
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData)
       }
-      console.log(response) 
-          setLoading(false);
+
+      setLoading(false)
+
       if (response.data) {
-        toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")   
+        toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")
         if (fetchRecords) {
-        fetchRecords() 
+          fetchRecords()
         }
         onClose()
         resetForm()
       }
     } catch (error) {
+      setLoading(false)
       console.error(isEditing ? "Error updating property:" : "Error adding property:", error)
       toast.error(
         isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again.",
@@ -1028,20 +1111,15 @@ export function AddPropertyModal({fetchRecords, isOpen, onClose, propertyToEdit 
               </div>
             </div>
 
-            {/* <div className="flex items-center space-x-2 mb-4">
-              <Checkbox id="listed" checked={isListed} onCheckedChange={(checked) => setIsListed(checked as boolean)} />
-              <Label htmlFor="listed">Is property listed?</Label>
-            </div> */}
-
-           <Button
-  onClick={handleSubmit}
-  type="submit"
-  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
-  disabled={loading}
->
-  {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-  {isEditing ? "Update Property" : "Add Property"}
-</Button>
+            <Button
+              onClick={handleSubmit}
+              type="submit"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2"
+              disabled={loading}
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isEditing ? "Update Property" : "Add Property"}
+            </Button>
           </div>
         </ScrollArea>
       </DialogContent>
