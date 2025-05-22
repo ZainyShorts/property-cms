@@ -947,7 +947,7 @@ export default function MasterDevelopmentPage() {
                               variant="outline"
                               size="sm"
                               className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-          onClick={() => window.open(`/dashboard/properties/project-details/${record._id}`, '_blank')}
+          onClick={() => window.open(`/project-details/${record._id}`, '_blank')}
                               disabled={isAttachingDocument}
                             >
                               <Eye  className="h-4 w-4 mr-1" />

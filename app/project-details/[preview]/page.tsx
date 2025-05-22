@@ -16,20 +16,17 @@ import {
   Building,
   Home,
   Landmark,
-  CheckCircle2,
   UserRound,
   Banknote,
-  Hourglass,
   FileText,
   Download,
   Eye,
   Clock,
   ArrowRight,
   Bed,
-  LayoutGrid,
   Ruler,
-  Warehouse,
   SeparatorVerticalIcon as Separator,
+  LayoutGrid,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -38,6 +35,7 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Progress } from "@/components/ui/progress"
 import { formatDate } from "@/lib/utils"
+import Head from "next/head"
 
 const DEFAULT_IMAGE =
   "https://formbuilder.ccavenue.com/live/uploads/company_image/488/17316704336156_Event-Image-Not-Found.jpg"
@@ -72,21 +70,15 @@ interface PropertyData {
   __v: number
 }
 
-// Update the PlotData interface to match all possible fields
-interface PlotData {
-  buaAreaSqFt?: string
-  plotBUASqFt?: string | number
-  plotHeight?: string | number
-  plotNumber?: string | number
-  plotPermission?: string[]
-  plotSizeSqFt?: string | number
-  plotStatus?: string
-}
-
 interface MediaItem {
   type: "image" | "video"
   url: string
   title: string
+}
+
+interface TooltipPosition {
+  x: number
+  y: number
 }
 
 export default function PropertyDetail({ params }: Props) {
@@ -103,7 +95,8 @@ export default function PropertyDetail({ params }: Props) {
   const touchEndX = useRef<number>(0)
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
   const [unitDetails, setUnitDetails] = useState<any[]>([])
-  const [plotData, setPlotData] = useState<PlotData | null>(null)
+  const [showPermissionsTooltip, setShowPermissionsTooltip] = useState(false)
+  const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({ x: 0, y: 0 })
 
   // Modify the useEffect that fetches data to check for plot data in multiple places
   useEffect(() => {
@@ -128,40 +121,6 @@ export default function PropertyDetail({ params }: Props) {
 
         const property = propertyResponse.data
         setPropertyData(property)
-
-        // Check for plot data in multiple places
-        // First check if plot data exists directly in the property response
-        if (property.plot) {
-          console.log("Plot data found in property:", property.plot)
-          setPlotData(property.plot)
-        }
-        // Then check if plot data exists in the subDevelopment object
-        else if (
-          property.subDevelopment &&
-          (property.subDevelopment.plotNumber ||
-            property.subDevelopment.plotHeight ||
-            property.subDevelopment.plotSizeSqFt ||
-            property.subDevelopment.plotBUASqFt ||
-            property.subDevelopment.plotStatus ||
-            property.subDevelopment.plotPermission)
-        ) {
-          console.log("Plot data found in subDevelopment:", property.subDevelopment)
-          // Extract plot-related fields from subDevelopment
-          const subDevPlotData: PlotData = {
-            plotNumber: property.subDevelopment.plotNumber,
-            plotHeight: property.subDevelopment.plotHeight,
-            plotPermission: property.subDevelopment.plotPermission,
-            plotSizeSqFt: property.subDevelopment.plotSizeSqFt,
-            plotBUASqFt: property.subDevelopment.plotBUASqFt,
-            plotStatus: property.subDevelopment.plotStatus,
-            // buaAreaSqFt might not be available in subDevelopment
-            buaAreaSqFt: property.subDevelopment.buaAreaSqFt || property.subDevelopment.plotBUASqFt?.toString(),
-          }
-          setPlotData(subDevPlotData)
-        } else {
-          console.log("No plot data found in property or subDevelopment")
-          setPlotData(null)
-        }
 
         // Set unit details
         if (unitResponse.data && unitResponse.data.data) {
@@ -267,6 +226,36 @@ export default function PropertyDetail({ params }: Props) {
     }
   }, [currentMediaIndex, mediaItems.length])
 
+  // Close tooltip when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showPermissionsTooltip) {
+        setShowPermissionsTooltip(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [showPermissionsTooltip])
+
+  // Handle escape key to close tooltip
+  useEffect(() => {
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && showPermissionsTooltip) {
+        setShowPermissionsTooltip(false)
+      }
+    }
+
+    document.addEventListener("keydown", handleEscKey)
+
+    return () => {
+      document.removeEventListener("keydown", handleEscKey)
+    }
+  }, [showPermissionsTooltip])
+
   if (!params.preview) {
     return (
       <div className="container mx-auto p-8 text-center">
@@ -360,6 +349,16 @@ export default function PropertyDetail({ params }: Props) {
     return <FileText className="h-10 w-10 text-gray-500" />
   }
 
+  const handleShowPermissions = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const rect = e.currentTarget.getBoundingClientRect()
+    setTooltipPosition({
+      x: rect.left + window.scrollX,
+      y: rect.bottom + window.scrollY + 10, // 10px below the element
+    })
+    setShowPermissionsTooltip(true)
+  }
+
   const currentMedia = mediaItems[currentMediaIndex] || {
     type: "image",
     url: DEFAULT_IMAGE,
@@ -371,6 +370,67 @@ export default function PropertyDetail({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-background">
+      <Head>
+        <title>{propertyData?.projectName || "Property Details"} | Real Estate Property</title>
+        <meta
+          name="description"
+          content={`View details of ${propertyData?.projectName || "this property"} including project information, payment details, and available units.`}
+        />
+        <meta
+          name="keywords"
+          content={`real estate, property, ${propertyData?.propertyType || ""}, ${masterDevelopment?.developmentName || ""}, ${subDevelopment?.subDevelopment || ""}`}
+        />
+        <meta
+          property="og:title"
+          content={`${propertyData?.projectName || "Property Details"} | Real Estate Property`}
+        />
+        <meta
+          property="og:description"
+          content={`View details of ${propertyData?.projectName || "this property"} including project information, payment details, and available units.`}
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content={mediaItems[0]?.url || DEFAULT_IMAGE} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta
+          name="twitter:title"
+          content={`${propertyData?.projectName || "Property Details"} | Real Estate Property`}
+        />
+        <meta
+          name="twitter:description"
+          content={`View details of ${propertyData?.projectName || "this property"} including project information, payment details, and available units.`}
+        />
+        <meta name="twitter:image" content={mediaItems[0]?.url || DEFAULT_IMAGE} />
+        <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL}/properties/${params.preview}`} />
+      </Head>
+
+      {/* Permissions Tooltip */}
+      {showPermissionsTooltip && (
+        <div
+          className="fixed z-50 bg-white dark:bg-gray-900 shadow-lg rounded-md p-3 border border-gray-200 dark:border-gray-700 max-w-xs"
+          style={{
+            position: "absolute",
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-sm font-medium mb-2">Plot Permissions:</div>
+          <div className="flex flex-wrap gap-1">
+            {Array.isArray(subDevelopment.plotPermission) ? (
+              subDevelopment.plotPermission.map((permission, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {permission}
+                </Badge>
+              ))
+            ) : (
+              <Badge variant="outline" className="text-xs">
+                {subDevelopment.plotPermission}
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="container mx-auto px-4 py-8">
         {/* Media Slider Section */}
         <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-background">
@@ -430,29 +490,140 @@ export default function PropertyDetail({ params }: Props) {
           </div>
         </div>
 
-        {/* Property Overview Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
-          <StatsCard
-            icon={<Building className="h-6 w-6 text-primary" />}
-            value={propertyData.propertyType}
-            label="Property Type"
-          />
-          <StatsCard
-            icon={<Tag className="h-6 w-6 text-primary" />}
-            value={propertyData.salesStatus}
-            label="Sales Status"
-          />
-          <StatsCard
-            icon={<CheckCircle2 className="h-6 w-6 text-primary" />}
-            value={propertyData.projectQuality}
-            label="Project Quality"
-          />
-          <StatsCard
-            icon={<Hourglass className="h-6 w-6 text-primary" />}
-            value={`${propertyData.constructionStatus}%`}
-            label="Construction"
-          />
-        </div>
+        {/* Project Overview Section */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Building className="h-6 w-6 text-primary" />
+              Project Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {/* Main Project Details */}
+            <div className="p-4 sm:p-6">
+              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50">
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Master Development
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Sub Development
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Project
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Project Quality
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Construction Status
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Sales Category
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {masterDevelopment?.developmentName || "N/A"}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800 font-medium text-primary">
+                        {subDevelopment?.subDevelopment || "N/A"}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">{propertyData.projectName}</td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        <Badge
+                          variant="outline"
+                          className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                        >
+                          {propertyData.projectQuality}
+                        </Badge>
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800 font-medium">
+                        {propertyData.constructionStatus}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                        >
+                          {propertyData.salesStatus}
+                        </Badge>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Plot Details */}
+            <div className="px-4 sm:px-6 pb-6">
+              <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-primary" />
+                Plot Information
+              </h3>
+              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50">
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Plot Permission
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Height
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Plot Size
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        BUA
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Launch Date
+                      </th>
+                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Completion Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {subDevelopment?.plotPermission ? (
+                          <Badge variant="secondary" className="cursor-help" onClick={handleShowPermissions}>
+                            {Array.isArray(subDevelopment.plotPermission)
+                              ? `${subDevelopment.plotPermission.length} Permissions`
+                              : "1 Permission"}
+                          </Badge>
+                        ) : (
+                          "N/A"
+                        )}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {subDevelopment?.plotHeight || "N/A"}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {subDevelopment?.plotSizeSqFt ? `${subDevelopment.plotSizeSqFt} sq ft` : "N/A"}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {subDevelopment?.plotBUASqFt ? `${subDevelopment.plotBUASqFt} sq ft` : "N/A"}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {formatDate(propertyData.launchDate)}
+                      </td>
+                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
+                        {formatDate(propertyData.completionDate)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
@@ -871,71 +1042,6 @@ export default function PropertyDetail({ params }: Props) {
                   <DateItem label="Launch Date" date={formatDate(propertyData.launchDate)} />
                   <DateItem label="Completion Date" date={formatDate(propertyData.completionDate)} />
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Plot Details */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <LayoutGrid className="h-5 w-5 text-primary" />
-                  Plot Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {plotData ? (
-                  <div className="space-y-4">
-                    <InfoCard
-                      icon={<Warehouse className="h-5 w-5 text-primary" />}
-                      label="Plot Number"
-                      value={plotData.plotNumber ? plotData.plotNumber.toString() : "N/A"}
-                    />
-                    <InfoCard
-                      icon={<Ruler className="h-5 w-5 text-primary" />}
-                      label="Plot Size"
-                      value={plotData.plotSizeSqFt ? `${plotData.plotSizeSqFt} sq ft` : "N/A"}
-                    />
-                    <InfoCard
-                      icon={<Ruler className="h-5 w-5 text-primary" />}
-                      label="BUA Area"
-                      value={plotData.buaAreaSqFt ? `${plotData.buaAreaSqFt} sq ft` : "N/A"}
-                    />
-                    <InfoCard
-                      icon={<Ruler className="h-5 w-5 text-primary" />}
-                      label="Plot BUA"
-                      value={plotData.plotBUASqFt ? `${plotData.plotBUASqFt} sq ft` : "N/A"}
-                    />
-                    <InfoCard
-                      icon={<Ruler className="h-5 w-5 text-primary" />}
-                      label="Plot Height"
-                      value={plotData.plotHeight ? plotData.plotHeight.toString() : "N/A"}
-                    />
-                    <div className="flex justify-between items-center p-3 border rounded-lg">
-                      <div className="text-sm text-muted-foreground">Plot Status</div>
-                      <Badge variant="outline" className="bg-primary/10 border-primary/30">
-                        {plotData.plotStatus || "N/A"}
-                      </Badge>
-                    </div>
-                    {plotData.plotPermission && plotData.plotPermission.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">Plot Permission</div>
-                        <div className="flex flex-wrap gap-2">
-                          {plotData.plotPermission.map((permission, index) => (
-                            <Badge key={index} variant="secondary" className="px-3 py-1.5 text-sm capitalize">
-                              {permission}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
-                    <LayoutGrid className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p className="font-medium">No Plot Details Available</p>
-                    <p className="text-sm mt-1">This property doesn't have plot information</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
