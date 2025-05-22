@@ -69,8 +69,8 @@ const propertySections = {
       purpose: { label: "Purpose", type: "text", placeholder: "Required" },
       vacancyStatus: { label: "Vacancy Status", type: "text", placeholder: "Optional" },
       primaryPrice: { label: "Primary Price", type: "number", placeholder: "Optional" },
-      resalePrice: { label: "Resale Price", type: "number", placeholder: "Optional" },
-      premiumLoss: { label: "Premium / Loss", type: "number", placeholder: "Optional" },
+      resalePrice: { label: "Resale Price", type: "number", placeholder: "Required" },
+      premiumLoss: { label: "Premium / Loss", type: "number", placeholder: "Required" },
       rent: { label: "Rent", type: "number", placeholder: "Optional" },
       noOfCheques: { label: "No of Cheques", type: "number", placeholder: "Optional" },
     },
@@ -404,7 +404,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
 
     if (!dataForm.project) newErrors.project = true
     if (!dataForm.unitNumber) newErrors.unitNumber = true
-    if (!dataForm.unitPurpose) newErrors.unitPurpose = true
+    if (!dataForm.unitPurpose) newErrors.unitPurpose = true 
+        if (!dataForm.originalPrice) newErrors.originalPrice = true 
+            if (!dataForm.salePrice) newErrors.salePrice = true
+
+
 
     setErrors(newErrors)
 
@@ -1007,7 +1011,9 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     className="bg-input border-input"
                     placeholder="Enter sale price"
                   />
-                </div>
+                                  {errors.salePrice && <p className="text-sm text-destructive">Sale Price is required</p>}
+                </div> 
+
 
                 <div className="space-y-2">
                   <Label htmlFor="originalPrice">Original Price</Label>
@@ -1019,8 +1025,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     onChange={(e) => handleChange(e, "originalPrice", "number")}
                     className="bg-input border-input"
                     placeholder="Enter original price"
-                  />
-                </div>
+                  /> 
+
+                                  {errors.originalPrice && <p className="text-sm text-destructive">Original Price is required</p>}
+                </div> 
+
 
                 <div className="space-y-2">
                   <Label htmlFor="premiumAndLoss">Premium/Loss</Label>
@@ -1033,7 +1042,8 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     className="bg-input border-input"
                     placeholder="Enter premium/loss amount"
                   />
-                </div>
+                </div> 
+                
               </div>
             </div>
 

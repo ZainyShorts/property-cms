@@ -6,26 +6,17 @@ import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import axios from "axios"
 import {
-  Mail,
-  Phone,
-  MapPin,
   ChevronLeft,
   ChevronRight,
   Tag,
   Calendar,
   Building,
-  Home,
-  Landmark,
-  UserRound,
   Banknote,
   FileText,
   Download,
   Eye,
   Clock,
   ArrowRight,
-  Bed,
-  Ruler,
-  SeparatorVerticalIcon as Separator,
   LayoutGrid,
 } from "lucide-react"
 
@@ -33,7 +24,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Progress } from "@/components/ui/progress"
 import { formatDate } from "@/lib/utils"
 import Head from "next/head"
 
@@ -79,6 +69,15 @@ interface MediaItem {
 interface TooltipPosition {
   x: number
   y: number
+}
+
+interface PriceRange {
+  originalMin: number
+  originalMax: number
+  sellingMin: number
+  sellingMax: number
+  premiumMin: number
+  premiumMax: number
 }
 
 export default function PropertyDetail({ params }: Props) {
@@ -328,11 +327,119 @@ export default function PropertyDetail({ params }: Props) {
     return purposes
   }
 
-  const handleGmail = () => {
-    const recipient = "agent@example.com"
-    const subject = `Inquiry about ${propertyData.projectName}`
-    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(subject)}`
-    window.open(url, "_blank")
+  const calculateInventory = () => {
+    const inventory = {
+      Shop: 1,
+      Offices: 1,
+      Studios: 1,
+      "1 BR": 0,
+      "2 BR": 0,
+      "3 BR": 0,
+      "4 BR": 0,
+      "5 BR": 0,
+      "6 BR": 0,
+      "7 BR": 0,
+      "8 BR": 0,
+    }
+
+    if (unitDetails && unitDetails.length > 0) {
+      unitDetails.forEach((unit) => {
+        if (unit.noOfBedRooms) {
+          const key = `${unit.noOfBedRooms} BR`
+          if (inventory.hasOwnProperty(key)) {
+            inventory[key]++
+          }
+        }
+      })
+    }
+
+    return inventory
+  }
+
+ const calculatePriceRanges = () => {
+  const priceRanges: Record<string, PriceRange> = {
+    Studio: { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "1 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "2 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "3 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "4 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "5 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "6 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "7 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    "8 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+  }
+
+  if (unitDetails && unitDetails.length > 0) {
+    // Group units by bedroom count
+    const unitsByBedroom: Record<string, any[]> = {}
+
+    unitDetails.forEach((unit) => {
+      if (unit.noOfBedRooms) {
+        const key = `${unit.noOfBedRooms} BR`
+        if (!unitsByBedroom[key]) {
+          unitsByBedroom[key] = []
+        }
+        unitsByBedroom[key].push(unit)
+      }
+    })
+
+    // Calculate price ranges for each bedroom type
+    Object.entries(unitsByBedroom).forEach(([bedroomType, units]) => {
+      if (!priceRanges[bedroomType]) return; // ✅ Avoids TypeError
+
+      if (units.length > 0) {
+        const originalPrices = units.map((unit) => unit.originalPrice || 0).filter((price) => price > 0)
+        const sellingPrices = units.map((unit) => unit.salePrice || 0).filter((price) => price > 0)
+
+        if (originalPrices.length > 0) {
+          priceRanges[bedroomType].originalMin = Math.min(...originalPrices)
+          priceRanges[bedroomType].originalMax = Math.max(...originalPrices)
+        }
+
+        if (sellingPrices.length > 0) {
+          priceRanges[bedroomType].sellingMin = Math.min(...sellingPrices)
+          priceRanges[bedroomType].sellingMax = Math.max(...sellingPrices)
+        }
+
+        // Calculate premium/loss
+        units.forEach((unit) => {
+          if (unit.originalPrice && unit.sellingPrice) {
+            const premium = unit.sellingPrice - unit.originalPrice
+
+            if (!priceRanges[bedroomType].premiumMin || premium < priceRanges[bedroomType].premiumMin) {
+              priceRanges[bedroomType].premiumMin = premium
+            }
+
+            if (!priceRanges[bedroomType].premiumMax || premium > priceRanges[bedroomType].premiumMax) {
+              priceRanges[bedroomType].premiumMax = premium
+            }
+          }
+        })
+      }
+    })
+  }
+
+  return priceRanges
+}
+
+
+  const countAmenities = () => {
+    const amenitiesCount: Record<string, number> = {}
+
+    if (unitDetails && unitDetails.length > 0) {
+      unitDetails.forEach((unit) => {
+        if (unit.amenities && Array.isArray(unit.amenities)) {
+          unit.amenities.forEach((amenity: string) => {
+            if (!amenitiesCount[amenity]) {
+              amenitiesCount[amenity] = 0
+            }
+            amenitiesCount[amenity]++
+          })
+        }
+      })
+    }
+
+    return amenitiesCount
   }
 
   const getDocumentIcon = (type: string) => {
@@ -367,6 +474,8 @@ export default function PropertyDetail({ params }: Props) {
 
   const masterDevelopment = propertyData.masterDevelopment || {}
   const subDevelopment = propertyData.subDevelopment || {}
+  const priceRanges = calculatePriceRanges()
+  const amenitiesCount = countAmenities()
 
   return (
     <div className="min-h-screen bg-background">
@@ -625,455 +734,310 @@ export default function PropertyDetail({ params }: Props) {
           </CardContent>
         </Card>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Left Column - Main Content */}
-          <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-            {/* Project Information */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Building className="h-5 w-5 text-primary" />
-                  Project Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <InfoCard
-                    icon={<Home className="h-5 w-5 text-primary" />}
-                    label="Project Name"
-                    value={propertyData.projectName}
-                  />
-                  <InfoCard
-                    icon={<MapPin className="h-5 w-5 text-primary" />}
-                    label="Road Location"
-                    value={masterDevelopment?.roadLocation || "N/A"}
-                  />
-                  <InfoCard
-                    icon={<Landmark className="h-5 w-5 text-primary" />}
-                    label="Master Development"
-                    value={masterDevelopment?.developmentName || "N/A"}
-                  />
-                  <InfoCard
-                    icon={<Landmark className="h-5 w-5 text-primary" />}
-                    label="Sub Development"
-                    value={subDevelopment?.subDevelopment || "N/A"}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+        {/* Inventory Section */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <LayoutGrid className="h-6 w-6 text-primary" />
+              Inventory
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="p-4 sm:p-6">
+              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50">
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Shop
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Offices
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Studios
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        1 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        2 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        3 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        4 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        5 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        6 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        7 BR
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        8 BR
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+                      {Object.entries(calculateInventory()).map(([type, count]) => (
+                        <td
+                          key={type}
+                          className="p-3 border-b border-gray-100 dark:border-gray-800 text-center font-medium"
+                        >
+                          {count}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Payment Information */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Banknote className="h-5 w-5 text-primary" />
-                  Payment Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/10">
-                    <div className="flex items-center gap-3">
-                      <Banknote className="h-6 w-6 text-primary" />
-                      <span className="font-medium">Down Payment</span>
-                    </div>
-                    <span className="text-xl font-bold">{propertyData.downPayment}%</span>
-                  </div>
-
-                  <h3 className="font-semibold text-lg mt-6">Payment Timeline</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    <TimelineItem date={formatDate(propertyData.installmentDate)} label="Installment Date" />
-                    <TimelineItem date={formatDate(propertyData.uponCompletion)} label="Upon Completion" />
-                    <TimelineItem date={formatDate(propertyData.postHandOver)} label="Post Handover" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Features & Amenities */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Tag className="h-5 w-5 text-primary" />
-                  Features & Amenities
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-lg">Amenities</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {propertyData.amenitiesCategories && propertyData.amenitiesCategories.length > 0 ? (
-                        propertyData.amenitiesCategories.map((amenity, index) => (
-                          <Badge key={index} variant="secondary" className="px-3 py-1.5 text-sm capitalize">
-                            {amenity}
-                          </Badge>
-                        ))
-                      ) : (
-                        <p className="text-muted-foreground">No amenities listed</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-lg">Facilities</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {propertyData.facilityCategories && propertyData.facilityCategories.length > 0 ? (
-                        propertyData.facilityCategories.map((facility, index) => (
-                          <Badge key={index} variant="secondary" className="px-3 py-1.5 text-sm capitalize">
-                            {facility}
-                          </Badge>
-                        ))
-                      ) : (
-                        <p className="text-muted-foreground">No facilities listed</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Unit Details Section */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <Home className="h-5 w-5 text-primary" />
-                  Available Units
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {unitDetails.length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-center p-2">Unit Number</th>
-                          <th className="text-center p-2">Unit Height</th>
-                          <th className="text-center p-2">Bedrooms</th>
-                          <th className="text-center p-2">Original Price </th>
-                          <th className="text-center p-2">Unit Purpose</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {unitDetails.map((unit) => (
-                          <tr
-                            key={unit._id}
-                            className="border-b hover:bg-gray-50 dark:hover:bg-black/80 cursor-pointer"
-                            onClick={() => window.open(`/dashboard/properties/inventory-details/${unit._id}`, "_blank")}
-                          >
-                            <td className="p-2 font-medium text-center">{unit.unitNumber}</td>
-                            <td className="p-2 text-center">{unit.unitHeight || "N/A"}</td>
-                            <td className="p-2 text-center">{unit.noOfBedRooms || "N/A"}</td>
-                            <td className="p-2 text-center">
-                              {unit.originalPrice ? `${unit.originalPrice.toLocaleString()} AED` : "N/A"}
-                            </td>
-                            <td className="p-2 text-center">{unit.unitPurpose || "N/A"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
-                    <Home className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p className="font-medium">No units available for this property</p>
-                    <p className="text-sm mt-1">Contact the agent for more information</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Unit Summary */}
-            {unitDetails.length > 0 ? (
-              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-                <CardHeader className="bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/30 dark:to-black pb-2">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Bed className="h-5 w-5 text-primary" />
-                    Unit Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="p-4 sm:p-6 space-y-4">
-                    {/* Total Units with visual indicator */}
-                    <div className="bg-gradient-to-r from-primary/10 to-transparent p-4 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <div className="bg-primary/20 p-2 rounded-full">
-                            <Home className="h-5 w-5 text-primary" />
-                          </div>
-                          <div>
-                            <div className="text-sm text-muted-foreground">Total Units</div>
-                            <div className="text-2xl font-bold">{unitDetails.length}</div>
-                          </div>
-                        </div>
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center border-4 border-primary/20">
-                          <span className="font-bold">{unitDetails.length}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Unit Purposes Summary */}
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-medium flex items-center gap-2">
-                        <Tag className="h-4 w-4 text-primary" />
-                        Unit Purposes
-                      </h3>
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(countUnitPurposes())
-                          .filter(([_, count]) => count > 0)
-                          .map(([purpose, count]) => (
-                            <div
-                              key={purpose}
-                              className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-black/40 rounded-md"
-                            >
-                              <div className="w-2 h-2 rounded-full bg-primary"></div>
-                              <span className="text-xs">{purpose}</span>
-                              <span className="text-xs font-bold ml-auto">{count}</span>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Bedroom Options */}
-                    {unitDetails.some((unit) => unit.noOfBedRooms) && (
-                      <div className="space-y-2 border-t pt-4">
-                        <h3 className="text-sm font-medium flex items-center gap-2">
-                          <Bed className="h-4 w-4 text-primary" />
-                          Bedroom Options
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {Array.from(new Set(unitDetails.map((unit) => unit.noOfBedRooms).filter(Boolean)))
-                            .sort()
-                            .map((bedrooms) => (
-                              <Badge key={bedrooms} variant="outline" className="px-3 py-1.5">
-                                {bedrooms} {Number.parseInt(bedrooms) === 1 ? "Bedroom" : "Bedrooms"}
-                              </Badge>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Size Range */}
-                    {unitDetails.some((unit) => unit.BuaSqFt > 0) && (
-                      <div className="space-y-2 border-t pt-4">
-                        <h3 className="text-sm font-medium flex items-center gap-2">
-                          <Ruler className="h-4 w-4 text-primary" />
-                          Size Range
-                        </h3>
-                        <div className="bg-gray-50 dark:bg-black/40 p-3 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Minimum</div>
-                              <div className="font-bold">
-                                {Math.min(...unitDetails.map((unit) => unit.BuaSqFt || 0).filter(Boolean))} sq ft
-                              </div>
-                            </div>
-                            <Separator orientation="vertical" className="h-8" />
-                            <div>
-                              <div className="text-xs text-muted-foreground">Maximum</div>
-                              <div className="font-bold">
-                                {Math.max(...unitDetails.map((unit) => unit.BuaSqFt || 0))} sq ft
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Price Range */}
-                    {unitDetails.some((unit) => unit.originalPrice > 0) && (
-                      <div className="space-y-2 border-t pt-4">
-                        <h3 className="text-sm font-medium flex items-center gap-2">
-                          <Banknote className="h-4 w-4 text-primary" />
-                          Price Range
-                        </h3>
-                        <div className="bg-gradient-to-r from-primary/10 to-transparent p-3 rounded-lg">
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <div className="text-xs text-muted-foreground">Starting From</div>
-                              <div className="font-bold">
-                                {Math.min(
-                                  ...unitDetails
-                                    .map((unit) => unit.originalPrice || Number.POSITIVE_INFINITY)
-                                    .filter(Boolean),
-                                ).toLocaleString()}{" "}
-                                AED
-                              </div>
-                            </div>
-                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                              <div className="text-xs text-muted-foreground">Up To</div>
-                              <div className="font-bold">
-                                {Math.max(...unitDetails.map((unit) => unit.originalPrice || 0)).toLocaleString()} AED
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="border-t p-4">
-                    <Button variant="outline" className="w-full" size="sm">
-                      <Eye className="h-4 w-4 mr-2" />
-                      View All Units
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-                <CardHeader className="bg-gradient-to-r from-primary/20 to-primary/5 dark:from-primary/30 dark:to-black pb-2">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Bed className="h-5 w-5 text-primary" />
-                    Unit Summary
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6">
-                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
-                    <div className="bg-primary/10 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <Bed className="h-8 w-8 text-primary opacity-70" />
-                    </div>
-                    <p className="font-medium">No units available</p>
-                    <p className="text-sm mt-1">Contact the agent for more information</p>
-                    <Button variant="outline" size="sm" className="mt-4">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Contact Agent
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Documents Section */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="flex items-center gap-2 text-xl">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Documents
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                {documents && documents.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    {documents.map((doc) => (
-                      <div
-                        key={doc._id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors"
+        {/* Price Range Section */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Banknote className="h-6 w-6 text-primary" />
+              Price Range
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="p-4 sm:p-6">
+              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50">
+                      <th
+                        className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
+                        rowSpan={2}
                       >
-                        <div className="flex items-center gap-3">
-                          {getDocumentIcon(doc.type)}
-                          <div>
-                            <h4 className="font-medium">{doc.title}</h4>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <div className="flex items-center">
-                                <Clock className="h-3 w-3 mr-1" />
-                                <span>{formatDate(doc.createdAt)}</span>
-                              </div>
-                            </div>
+                        Type
+                      </th>
+                      <th
+                        className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
+                        colSpan={2}
+                      >
+                        Original Price
+                      </th>
+                      <th
+                        className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
+                        colSpan={2}
+                      >
+                        Selling Price
+                      </th>
+                      <th
+                        className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
+                        colSpan={2}
+                      >
+                        Premium / Loss
+                      </th>
+                    </tr>
+                    <tr className="bg-gray-50 dark:bg-gray-900/50">
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Min
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Max
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Min
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Max
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Min
+                      </th>
+                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
+                        Max
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(priceRanges).map(([type, range]) => (
+                      <tr key={type} className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 font-medium">{type}</td>
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
+                          {range.originalMin > 0 ? range.originalMin.toLocaleString() : "0"}
+                        </td>
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
+                          {range.originalMax > 0 ? range.originalMax.toLocaleString() : "0"}
+                        </td>
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
+                          {range.sellingMin > 0 ? range.sellingMin.toLocaleString() : "0"}
+                        </td>
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
+                          {range.sellingMax > 0 ? range.sellingMax.toLocaleString() : "0"}
+                        </td>
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
+                          {range.premiumMin !== 0 ? range.premiumMin.toLocaleString() : "0"}
+                        </td>
+                        <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
+                          {range.premiumMax !== 0 ? range.premiumMax.toLocaleString() : "0"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Information */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Banknote className="h-6 w-6 text-primary" />
+              Payment Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/10">
+                <div className="flex items-center gap-3">
+                  <Banknote className="h-6 w-6 text-primary" />
+                  <span className="font-medium">Down Payment</span>
+                </div>
+                <span className="text-xl font-bold">{propertyData.downPayment}%</span>
+              </div>
+
+              <h3 className="font-semibold text-xl mt-6">Payment & Project Timeline</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TimelineItem date={formatDate(propertyData.installmentDate)} label="Installment Date" />
+                <TimelineItem date={formatDate(propertyData.uponCompletion)} label="Upon Completion" />
+                <TimelineItem date={formatDate(propertyData.postHandOver)} label="Post Handover" />
+                <TimelineItem date={formatDate(propertyData.launchDate)} label="Launch Date" />
+                <TimelineItem date={formatDate(propertyData.completionDate)} label="Completion Date" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Features & Amenities */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Tag className="h-6 w-6 text-primary" />
+              Features & Amenities
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+ <div className="flex gap-2 items-center">  <h3 className="font-semibold text-xl">Amenities</h3>  
+             
+                       <span className="inline-flex items-center justify-center bg-primary/20 text-primary rounded-full h-5 w-5 text-xs font-medium">
+                          {propertyData.amenitiesCategories?.length}
+                        </span>
+                </div>                <div className="flex flex-wrap gap-3">
+                  {propertyData.amenitiesCategories && propertyData.amenitiesCategories.length > 0 ? (
+                    propertyData.amenitiesCategories.map((amenity, index) => {
+                      const count = amenitiesCount[amenity] || 0
+                      return (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="px-3 py-1.5 text-sm capitalize flex items-center gap-2"
+                        >
+                          {amenity}
+                          
+                        </Badge>
+                      )
+                    })
+                  ) : (
+                    <p className="text-muted-foreground">No amenities listed</p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-4">
+              <div className="flex gap-2 items-center">  <h3 className="font-semibold text-xl">Facilities</h3>  
+             
+                       <span className="inline-flex items-center justify-center bg-primary/20 text-primary rounded-full h-5 w-5 text-xs font-medium">
+                          {propertyData?.facilityCategories?.length}
+                        </span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {propertyData.facilityCategories && propertyData.facilityCategories.length > 0 ? (
+                    propertyData.facilityCategories.map((facility, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="px-3 py-1.5 text-sm capitalize flex items-center gap-2"
+                      >
+                        {facility}
+                       
+                      </Badge>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground">No facilities listed</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Documents Section */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <FileText className="h-6 w-6 text-primary" />
+              Documents
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            {documents && documents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {documents.map((doc) => (
+                  <div
+                    key={doc._id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {getDocumentIcon(doc.type)}
+                      <div>
+                        <h4 className="font-medium">{doc.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>{formatDate(doc.createdAt)}</span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="icon" asChild>
-                            <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
-                              <Eye className="h-4 w-4" />
-                            </a>
-                          </Button>
-                          <Button variant="outline" size="icon" asChild>
-                            <a href={doc.documentUrl} download={doc.title}>
-                              <Download className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
-                    <p className="font-medium">No documents available for this property</p>
-                    <p className="text-sm mt-1">Contact the agent for more information</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Sidebar */}
-          <div className="space-y-6 lg:space-y-8">
-            {/* Construction Status Card */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="text-xl">Construction Status</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Progress</span>
-                      <span className="font-medium">{propertyData.percentOfConstruction}%</span>
                     </div>
-                    <Progress value={propertyData.percentOfConstruction} className="h-3" />
-                  </div>
-                  <div className="text-center font-medium text-lg mt-2">
-                    {propertyData.percentOfConstruction}% Complete
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="flex justify-between">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Property ID</div>
-                      <div className="font-medium">{propertyData._id}</div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
+                          <Eye className="h-4 w-4" />
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={doc.documentUrl} download={doc.title}>
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Project Timeline */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardHeader className="bg-gray-50 dark:bg-black/90 pb-2">
-                <CardTitle className="text-xl">Project Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <DateItem label="Launch Date" date={formatDate(propertyData.launchDate)} />
-                  <DateItem label="Completion Date" date={formatDate(propertyData.completionDate)} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Contact Agent */}
-            <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-              <CardContent className="p-4 sm:p-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">Contact Agent</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-primary/10 rounded-full">
-                      <UserRound className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <div className="font-semibold">Property Specialist</div>
-                      <div className="text-sm text-muted-foreground">Agent ID: AG002</div>
-                    </div>
-                  </div>
-                  <div className="grid gap-3">
-                    <Button className="w-full">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Call Agent
-                    </Button>
-                    <Button onClick={handleGmail} variant="outline" className="w-full">
-                      <Mail className="h-4 w-4 mr-2" />
-                      Email Agent
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground bg-gray-50/50 dark:bg-black/20 rounded-lg border border-dashed">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p className="font-medium">No documents available for this property</p>
+                <p className="text-sm mt-1">Contact the agent for more information</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Schedule Viewing */}
         <Card className="mt-8 border-none shadow-md bg-gradient-to-r from-primary/10 to-primary/5">
@@ -1099,49 +1063,13 @@ export default function PropertyDetail({ params }: Props) {
 }
 
 // Helper Components
-const StatsCard = ({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) => (
-  <Card className="overflow-hidden border-none shadow-md bg-white dark:bg-black">
-    <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
-      {icon}
-      <span className="text-base sm:text-lg font-semibold">{value}</span>
-      <span className="text-xs text-muted-foreground">{label}</span>
-    </CardContent>
-  </Card>
-)
-
-const InfoCard = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
-  <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors">
-    {icon}
-    <div>
-      <span className="text-xs text-muted-foreground block">{label}</span>
-      <span className="font-medium">{value}</span>
-    </div>
-  </div>
-)
-
-const DateItem = ({ label, date }: { label: string; date: string }) => (
-  <div className="flex justify-between items-center">
-    <div className="text-sm text-muted-foreground">{label}</div>
-    <div className="text-md font-medium">{date}</div>
-  </div>
-)
-
 const TimelineItem = ({ date, label }: { date: string; label: string }) => (
-  <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors">
+  <div className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors">
     <Calendar className="h-5 w-5 text-primary" />
     <div>
       <span className="text-xs text-muted-foreground block">{label}</span>
       <span className="font-medium">{date}</span>
     </div>
-  </div>
-)
-
-const UnitPurposeItem = ({ purpose, count }: { purpose: string; count: number }) => (
-  <div className="flex items-center justify-between p-3 border rounded-lg">
-    <span className="text-sm font-medium">{purpose}</span>
-    <Badge variant={count > 0 ? "default" : "outline"} className={count > 0 ? "bg-primary" : "bg-muted"}>
-      {count}
-    </Badge>
   </div>
 )
 
@@ -1156,17 +1084,10 @@ const PropertyDetailSkeleton = () => (
       ))}
     </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-      <div className="lg:col-span-2 space-y-6 lg:space-y-8">
-        {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-64 w-full rounded-lg" />
-        ))}
-      </div>
-      <div className="space-y-6 lg:space-y-8">
-        {[...Array(3)].map((_, i) => (
-          <Skeleton key={i} className="h-64 w-full rounded-lg" />
-        ))}
-      </div>
+    <div className="space-y-6">
+      {[...Array(4)].map((_, i) => (
+        <Skeleton key={i} className="h-64 w-full rounded-lg" />
+      ))}
     </div>
 
     <Skeleton className="h-32 w-full rounded-lg mt-8" />
