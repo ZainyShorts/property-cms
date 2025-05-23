@@ -720,26 +720,20 @@ export default function PropertyDetail({ params }: Props) {
     let videoId = ""
 
     if (url.includes("youtube.com/embed/")) {
-      // Already an embed URL
       const baseUrl = url.split("?")[0]
-      return `${baseUrl}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`
+      return `${baseUrl}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`
     } else if (url.includes("youtube.com/watch")) {
-      // Regular youtube.com/watch?v=VIDEO_ID format
       const urlParams = new URLSearchParams(url.split("?")[1])
       videoId = urlParams.get("v") || ""
     } else if (url.includes("youtu.be/")) {
-      // Shortened youtu.be/VIDEO_ID format
       videoId = url.split("youtu.be/")[1].split("?")[0]
     } else if (url.includes("youtube.com/shorts/")) {
-      // YouTube Shorts format
       videoId = url.split("youtube.com/shorts/")[1].split("?")[0]
     }
 
     if (!videoId) return url
 
-    // Return properly formatted embed URL with parameters to improve embedding
-    // Set controls=1 to enable YouTube's original controls
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`
   }
 
   return (
@@ -816,91 +810,124 @@ export default function PropertyDetail({ params }: Props) {
             onTouchEnd={handleTouchEnd}
           >
             {/* Media Content */}
-            <div id="video-container" className="absolute inset-0 flex items-center justify-center bg-black">
-              {currentMedia.type === "image" ? (
-                <Image
-                  src={currentMedia.url || "/placeholder.svg"}
-                  alt="Property image"
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              ) : currentMedia.type === "youtube" || currentMedia.type === "youtube-short" ? (
-                <div className="relative w-full h-full">
-                  <iframe
-                    ref={youtubeIframeRef}
-                    src={getYouTubeEmbedUrl(currentMedia.url)}
-                    className="w-full h-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                    allowFullScreen
-                    frameBorder="0"
-                  ></iframe>
-                </div>
-              ) : (
-                <div className="relative w-full h-full">
-                  <video
-                    ref={videoRef}
-                    src={currentMedia.url}
-                    className="w-full h-full object-contain"
-                    onClick={togglePlayPause}
-                    onTimeUpdate={updateProgress}
-                    onLoadedMetadata={setVideoDuration}
+            <div className="absolute inset-0">
+              <div id="video-container" className="w-full h-full flex items-center justify-center bg-black">
+                {currentMedia.type === "image" ? (
+                  <Image
+                    src={currentMedia.url || "/placeholder.svg"}
+                    alt="Property image"
+                    fill
+                    className="object-cover"
+                    priority
                   />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-3 flex flex-col gap-2">
-                    <div className="flex items-center justify-between text-white">
-                      <button onClick={togglePlayPause} className="p-1 rounded-full bg-white/20 hover:bg-white/30">
-                        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-                      </button>
-                      <div className="flex items-center gap-2 text-sm">
-                        <span>{formatTime(currentTime)}</span>
-                        <span>/</span>
-                        <span>{formatTime(duration)}</span>
+                ) : currentMedia.type === "youtube" || currentMedia.type === "youtube-short" ? (
+                  <div className="relative w-full h-full">
+                    <iframe
+                      ref={youtubeIframeRef}
+                      src={getYouTubeEmbedUrl(currentMedia.url)}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      frameBorder="0"
+                      title="YouTube video"
+                      style={{ pointerEvents: "auto", zIndex: 10 }}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative w-full h-full">
+                    <video
+                      ref={videoRef}
+                      src={currentMedia.url}
+                      className="w-full h-full object-contain"
+                      onClick={togglePlayPause}
+                      onTimeUpdate={updateProgress}
+                      onLoadedMetadata={setVideoDuration}
+                    />
+                    {/* Video controls */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-3 flex flex-col gap-2">
+                      <div className="w-full bg-gray-600 h-1 rounded cursor-pointer" onClick={seekVideo}>
+                        <div
+                          className="bg-red-500 h-full rounded"
+                          style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                        />
                       </div>
-                      <button onClick={toggleFullscreen} className="p-1 rounded-full bg-white/20 hover:bg-white/30">
-                        <Maximize2 className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div
-                      className="w-full bg-gray-600 h-1.5 rounded-full overflow-hidden cursor-pointer"
-                      onClick={seekVideo}
-                    >
-                      <div
-                        className="bg-primary h-full rounded-full"
-                        style={{ width: `${(currentTime / duration) * 100}%` }}
-                      ></div>
+                      <div className="flex items-center justify-between text-white">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20"
+                            onClick={togglePlayPause}
+                          >
+                            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                          </Button>
+                          <span className="text-sm">
+                            {formatTime(currentTime)} / {formatTime(duration)}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white hover:bg-white/20"
+                          onClick={toggleFullscreen}
+                        >
+                          <Maximize2 className="h-5 w-5" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Media counter */}
-            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
+            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium z-50 pointer-events-none">
               {currentMediaIndex + 1} / {mediaItems.length}
             </div>
 
             {/* Media navigation controls */}
-            <div className="absolute inset-0 flex items-center justify-between p-4">
+            <div className="absolute inset-0 flex items-center justify-between p-4 z-40 pointer-events-none">
               <Button
                 variant="secondary"
                 size="icon"
-                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm"
-                onClick={prevMedia}
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  prevMedia()
+                }}
               >
                 <ChevronLeft className="h-6 w-6" />
               </Button>
               <Button
                 variant="secondary"
                 size="icon"
-                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm"
-                onClick={nextMedia}
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  nextMedia()
+                }}
               >
                 <ChevronRight className="h-6 w-6" />
               </Button>
             </div>
+
+            {/* Auto-play toggle - positioned away from YouTube controls */}
+            <div className="absolute top-4 left-4 z-50">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleAutoPlay()
+                }}
+              >
+                {isAutoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <span className="ml-1 text-xs">Auto</span>
+              </Button>
+            </div>
           </div>
         </div>
-
         {/* Development Information */}
         <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
           <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
