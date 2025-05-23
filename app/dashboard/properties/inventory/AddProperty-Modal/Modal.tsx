@@ -404,11 +404,9 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
 
     if (!dataForm.project) newErrors.project = true
     if (!dataForm.unitNumber) newErrors.unitNumber = true
-    if (!dataForm.unitPurpose) newErrors.unitPurpose = true 
-        if (!dataForm.originalPrice) newErrors.originalPrice = true 
-            if (!dataForm.salePrice) newErrors.salePrice = true
-
-
+    if (!dataForm.unitPurpose) newErrors.unitPurpose = true
+    if (!dataForm.originalPrice) newErrors.originalPrice = true
+    if (!dataForm.salePrice) newErrors.salePrice = true
 
     setErrors(newErrors)
 
@@ -646,6 +644,17 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [])
+
+  // Calculate premium/loss automatically
+  useEffect(() => {
+    if (dataForm.salePrice && dataForm.originalPrice) {
+      const premium = Number(dataForm.salePrice) - Number(dataForm.originalPrice)
+      setDataForm((prev) => ({
+        ...prev,
+        premiumAndLoss: premium,
+      }))
+    }
+  }, [dataForm.salePrice, dataForm.originalPrice])
 
   return (
     <Dialog
@@ -1011,9 +1020,8 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     className="bg-input border-input"
                     placeholder="Enter sale price"
                   />
-                                  {errors.salePrice && <p className="text-sm text-destructive">Sale Price is required</p>}
-                </div> 
-
+                  {errors.salePrice && <p className="text-sm text-destructive">Sale Price is required</p>}
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="originalPrice">Original Price</Label>
@@ -1025,11 +1033,10 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     onChange={(e) => handleChange(e, "originalPrice", "number")}
                     className="bg-input border-input"
                     placeholder="Enter original price"
-                  /> 
+                  />
 
-                                  {errors.originalPrice && <p className="text-sm text-destructive">Original Price is required</p>}
-                </div> 
-
+                  {errors.originalPrice && <p className="text-sm text-destructive">Original Price is required</p>}
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="premiumAndLoss">Premium/Loss</Label>
@@ -1038,12 +1045,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     name="premiumAndLoss"
                     type="number"
                     value={dataForm.premiumAndLoss || ""}
-                    onChange={(e) => handleChange(e, "premiumAndLoss", "number")}
-                    className="bg-input border-input"
-                    placeholder="Enter premium/loss amount"
+                    disabled
+                    className="bg-input border-input opacity-70"
+                    placeholder="Calculated automatically"
                   />
-                </div> 
-                
+                </div>
               </div>
             </div>
 
