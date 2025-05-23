@@ -12,7 +12,8 @@ import {
   SignedIn,
   SignedOut,
   UserButton
-} from '@clerk/nextjs'
+} from '@clerk/nextjs' 
+
 
 export const metadata: Metadata = {
   title: "AFS Real Estate",

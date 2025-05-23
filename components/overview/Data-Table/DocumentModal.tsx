@@ -4,12 +4,13 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import axios from "axios"
-import { Upload, File, Trash2 } from "lucide-react"
+import { Upload, File, Trash2, Link as LinkIcon } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Define the file type enum
 export enum FileType {
@@ -38,12 +39,13 @@ interface DocumentModalProps {
 
 interface UploadedDocument {
   id: string
-  file: File
+  file?: File
   preview?: string
   awsUrl?: string
   key?: string
   title: string
   type: FileType
+  videoLink?: string
 }
 
 const uploadFileToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
@@ -123,6 +125,8 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
   const [uploadedDocument, setUploadedDocument] = useState<UploadedDocument | null>(null)
   const [uploadProgress, setUploadProgress] = useState<number>(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [videoLink, setVideoLink] = useState("")
+  const [activeTab, setActiveTab] = useState<"upload" | "link">("upload")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -133,7 +137,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
       const detectedType = getFileTypeFromExtension(file.name)
 
       if (!detectedType) {
-        alert("Invalid file type. Please upload DOCX, XLSX, CSV, Image, or PDF files.")
+        alert("Invalid file type. Please upload DOCX, XLSX, CSV, Image, PDF, or MP4 files.")
         return
       }
 
@@ -152,10 +156,27 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
       }
 
       setUploadedDocument(doc)
+      setVideoLink("") // Clear any existing link when uploading a file
 
       if (fileInputRef.current) {
         fileInputRef.current.value = ""
       }
+    }
+  }
+
+  const handleVideoLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const link = e.target.value
+    setVideoLink(link)
+    
+    if (link && documentType === FileType.VIDEO) {
+      setUploadedDocument({
+        id: Math.random().toString(36).substring(2, 9),
+        title: documentTitle || "Video Link",
+        type: FileType.VIDEO,
+        videoLink: link
+      })
+    } else {
+      setUploadedDocument(null)
     }
   }
 
@@ -164,7 +185,7 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
       URL.revokeObjectURL(uploadedDocument.preview)
     }
     setUploadedDocument(null)
-    setDocumentType("")
+    setVideoLink("")
   }
 
   const handleSubmit = async () => {
@@ -173,38 +194,56 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
     setIsUploading(true)
 
     try {
-      // Update document title and type if changed
-      const docWithTitle = {
-        ...uploadedDocument,
-        title: documentTitle || uploadedDocument.title,
-        type: documentType as FileType,
+      // For video links, we don't need to upload to AWS
+      if (documentType === FileType.VIDEO && uploadedDocument.videoLink) {
+        const documentData: DocumentData = {
+          refId: rowId,
+          documentUrl: uploadedDocument.videoLink,
+          title: documentTitle || uploadedDocument.title,
+          type: FileType.VIDEO,
+        }
+        
+        onDocumentSave(documentData)
+      } 
+      // For file uploads (including videos)
+      else if (uploadedDocument.file) {
+        // Update document title and type if changed
+        const docWithTitle = {
+          ...uploadedDocument,
+          title: documentTitle || uploadedDocument.title,
+          type: documentType as FileType,
+        }
+
+        // Upload the document to AWS
+        const updateDocumentProgress = (progress: number) => {
+          setUploadProgress(progress)
+        }
+
+        // Upload the document
+        const result = await uploadFileToAWS(docWithTitle.file, updateDocumentProgress)
+
+        // Create the document data to return to parent
+        const documentData: DocumentData = {
+          refId: rowId,
+          documentUrl: result.awsUrl,
+          title: docWithTitle.title,
+          type: docWithTitle.type,
+        }
+
+        // Pass the document data to the parent component
+        onDocumentSave(documentData)
+      } else {
+        throw new Error("No file or link provided")
       }
-
-      // Upload the document to AWS
-      const updateDocumentProgress = (progress: number) => {
-        setUploadProgress(progress)
-      }
-
-      // Upload the document
-      const result = await uploadFileToAWS(docWithTitle.file, updateDocumentProgress)
-
-      // Create the document data to return to parent
-      const documentData: DocumentData = {
-        refId: rowId,
-        documentUrl: result.awsUrl,
-        title: docWithTitle.title,
-        type: docWithTitle.type,
-      }
-
-      // Pass the document data to the parent component
-      onDocumentSave(documentData)
 
       // Reset state and close modal
       onClose()
       setUploadedDocument(null)
       setDocumentTitle("")
       setDocumentType("")
+      setVideoLink("")
       setUploadProgress(0)
+      setActiveTab("upload")
     } catch (error) {
       console.error("Error uploading document:", error)
       alert("Failed to upload document. Please try again.")
@@ -212,6 +251,8 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
       setIsUploading(false)
     }
   }
+
+  const isVideoType = documentType === FileType.VIDEO
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -233,7 +274,16 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
 
           <div className="space-y-2">
             <Label htmlFor="document-type">Document Type</Label>
-            <Select value={documentType} onValueChange={(value) => setDocumentType(value as FileType)}>
+            <Select 
+              value={documentType} 
+              onValueChange={(value) => {
+                setDocumentType(value as FileType)
+                // Reset uploaded document and link when type changes
+                setUploadedDocument(null)
+                setVideoLink("")
+                setActiveTab("upload")
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select document type" />
               </SelectTrigger>
@@ -248,25 +298,68 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
             </Select>
           </div>
 
-          <div className="flex items-center justify-center">
-            <Input
-              ref={fileInputRef}
-              type="file"
-              onChange={handleFileChange}
-              className="hidden"
-              id="document-upload"
-              accept={getAcceptAttributeForType(documentType as FileType)}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-12 h-12 rounded-full p-0 flex items-center justify-center"
-            >
-              <Upload className="h-5 w-5" />
-              <span className="sr-only">Upload document</span>
-            </Button>
-          </div>
+          {isVideoType ? (
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "upload" | "link")}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upload">Upload File</TabsTrigger>
+                <TabsTrigger value="link">Paste Link</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upload">
+                <div className="flex items-center justify-center">
+                  <Input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="document-upload"
+                    accept={getAcceptAttributeForType(documentType as FileType)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-12 h-12 rounded-full p-0 flex items-center justify-center"
+                  >
+                    <Upload className="h-5 w-5" />
+                    <span className="sr-only">Upload document</span>
+                  </Button>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="link">
+                <div className="space-y-2">
+                  <Label htmlFor="video-link">Video URL</Label>
+                  <Input
+                    id="video-link"
+                    value={videoLink}
+                    onChange={handleVideoLinkChange}
+                    placeholder="Paste video link (YouTube, Vimeo, etc.)"
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="flex items-center justify-center">
+              <Input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                className="hidden"
+                id="document-upload"
+                accept={getAcceptAttributeForType(documentType as FileType)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-12 h-12 rounded-full p-0 flex items-center justify-center"
+              >
+                <Upload className="h-5 w-5" />
+                <span className="sr-only">Upload document</span>
+              </Button>
+            </div>
+          )}
 
           {uploadedDocument && (
             <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
@@ -275,19 +368,27 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
                   <div className="h-10 w-10 rounded overflow-hidden">
                     <img
                       src={uploadedDocument.preview || "/placeholder.svg"}
-                      alt={uploadedDocument.file.name}
+                      alt={uploadedDocument.file?.name || "Document preview"}
                       className="h-full w-full object-cover"
                     />
                   </div>
+                ) : uploadedDocument.videoLink ? (
+                  <LinkIcon className="h-10 w-10 text-muted-foreground" />
                 ) : (
                   <File className="h-10 w-10 text-muted-foreground" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{uploadedDocument.file.name.slice(0, 30)}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {(uploadedDocument.file.size / 1024).toFixed(1)} KB
+                <p className="text-sm font-medium truncate">
+                  {uploadedDocument.videoLink 
+                    ? "Video Link" 
+                    : uploadedDocument.file?.name.slice(0, 30) || "Document"}
                 </p>
+                {uploadedDocument.file && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {(uploadedDocument.file.size / 1024).toFixed(1)} KB
+                  </p>
+                )}
                 {uploadProgress > 0 && (
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                     <div className="bg-primary h-1.5 rounded-full" style={{ width: `${uploadProgress}%` }}></div>

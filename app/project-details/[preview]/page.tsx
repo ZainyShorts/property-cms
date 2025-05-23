@@ -10,7 +10,6 @@ import {
   ChevronRight,
   Tag,
   Calendar,
-  Building,
   Banknote,
   FileText,
   Download,
@@ -18,6 +17,11 @@ import {
   Clock,
   ArrowRight,
   LayoutGrid,
+  CheckCircle2,
+  Circle,
+  Play,
+  Pause,
+  Maximize2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -26,6 +30,9 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/utils"
 import Head from "next/head"
+
+// Add these imports at the top of the file
+import { Bed, Building, Store, Building2, Palette } from "lucide-react"
 
 const DEFAULT_IMAGE =
   "https://formbuilder.ccavenue.com/live/uploads/company_image/488/17316704336156_Event-Image-Not-Found.jpg"
@@ -61,7 +68,7 @@ interface PropertyData {
 }
 
 interface MediaItem {
-  type: "image" | "video"
+  type: "image" | "video" | "youtube" | "youtube-short"
   url: string
   title: string
 }
@@ -89,13 +96,66 @@ export default function PropertyDetail({ params }: Props) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
-  const sliderRef = useRef<HTMLDivElement>(null)
-  const touchStartX = useRef<number>(0)
-  const touchEndX = useRef<number>(0)
-  const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const [sliderRef] = useState(useRef<HTMLDivElement>(null))
+  const [touchStartX] = useState(useRef<number>(0))
+  const [touchEndX] = useState(useRef<number>(0))
+  const [autoPlayTimerRef] = useState(useRef<NodeJS.Timeout | null>(null))
   const [unitDetails, setUnitDetails] = useState<any[]>([])
   const [showPermissionsTooltip, setShowPermissionsTooltip] = useState(false)
   const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>({ x: 0, y: 0 })
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [videoRef] = useState(useRef<HTMLVideoElement>(null))
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [youtubePlayer, setYoutubePlayer] = useState<any>(null)
+  const [youtubeIframeRef] = useState(useRef<HTMLIFrameElement>(null))
+  const [darkMode, setDarkMode] = useState(false) // defaults to light mode
+
+  // On mount, check for stored theme preference (default to light)
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("theme")
+    if (storedTheme === "dark") {
+      setDarkMode(true)
+    }
+  }, [])
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark")
+      localStorage.setItem("theme", "dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+      localStorage.setItem("theme", "light")
+    }
+  }, [darkMode])
+
+  // Initialize YouTube API
+  useEffect(() => {
+    const initYouTubeAPI = () => {
+      // If the API is already loaded, don't load it again
+      if (window.YT) return
+
+      // Create script element
+      const tag = document.createElement("script")
+      tag.src = "https://www.youtube.com/iframe_api"
+
+      // Insert the script before the first script tag
+      const firstScriptTag = document.getElementsByTagName("script")[0]
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+    }
+
+    initYouTubeAPI()
+
+    // Define the onYouTubeIframeAPIReady function
+    window.onYouTubeIframeAPIReady = () => {
+      console.log("YouTube API ready")
+    }
+
+    return () => {
+      // Clean up
+      window.onYouTubeIframeAPIReady = undefined
+    }
+  }, [])
 
   // Modify the useEffect that fetches data to check for plot data in multiple places
   useEffect(() => {
@@ -179,6 +239,20 @@ export default function PropertyDetail({ params }: Props) {
       }
     })
 
+    // Add the YouTube videos
+    media.push({
+      type: "youtube",
+      url: "https://www.youtube.com/watch?v=4jnzf1yj48M",
+      title: "DESIGNER RESIDENCE | CINEMATIC REAL ESTATE VIDEO IN 4K",
+    })
+
+    // Add the YouTube Short
+    media.push({
+      type: "youtube",
+      url: "https://youtube.com/shorts/cx6V1vOEKwg?si=L6PZXbfbglg2-NKe",
+      title: "Property Showcase Short",
+    })
+
     // If no media found, add default image
     if (media.length === 0) {
       media.push({
@@ -191,31 +265,27 @@ export default function PropertyDetail({ params }: Props) {
     setMediaItems(media)
   }, [documents, propertyData])
 
-  // Auto-advance slider
+  // Auto-advance slider - pause when on video content
   useEffect(() => {
-    if (isAutoPlaying && mediaItems.length > 1) {
-      autoPlayTimerRef.current = setInterval(() => {
-        nextMedia()
-      }, 3000)
-    }
-
-    return () => {
-      if (autoPlayTimerRef.current) {
-        clearInterval(autoPlayTimerRef.current)
-      }
-    }
-  }, [isAutoPlaying, mediaItems.length, currentMediaIndex])
-
-  // Reset auto-play when media changes
-  useEffect(() => {
+    // Clear any existing timer
     if (autoPlayTimerRef.current) {
       clearInterval(autoPlayTimerRef.current)
     }
 
     if (isAutoPlaying && mediaItems.length > 1) {
+      // Don't auto-advance if current media is a video
+      const currentItem = mediaItems[currentMediaIndex]
+      if (
+        currentItem &&
+        (currentItem.type === "video" || currentItem.type === "youtube" || currentItem.type === "youtube-short")
+      ) {
+        return // Don't set a timer for videos
+      }
+
+      // Set timer for images
       autoPlayTimerRef.current = setInterval(() => {
         nextMedia()
-      }, 3000)
+      }, 1500) // 1.5 seconds
     }
 
     return () => {
@@ -223,7 +293,26 @@ export default function PropertyDetail({ params }: Props) {
         clearInterval(autoPlayTimerRef.current)
       }
     }
-  }, [currentMediaIndex, mediaItems.length])
+  }, [isAutoPlaying, currentMediaIndex, mediaItems])
+
+  // Reset auto-play when media changes
+  // useEffect(() => {
+  //   if (autoPlayTimerRef.current) {
+  //     clearInterval(autoPlayTimerRef.current)
+  //   }
+
+  //   // if (isAutoPlaying && mediaItems.length > 1) {
+  //   //   autoPlayTimerRef.current = setInterval(() => {
+  //   //     nextMedia()
+  //   //   }, 100000)
+  //   // }
+
+  //   return () => {
+  //     if (autoPlayTimerRef.current) {
+  //       clearInterval(autoPlayTimerRef.current)
+  //     }
+  //   }
+  // }, [currentMediaIndex, mediaItems.length])
 
   // Close tooltip when clicking outside
   useEffect(() => {
@@ -254,6 +343,72 @@ export default function PropertyDetail({ params }: Props) {
       document.removeEventListener("keydown", handleEscKey)
     }
   }, [showPermissionsTooltip])
+
+  // Pause video when changing slides
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    }
+  }, [currentMediaIndex])
+
+  // Handle fullscreen change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+    }
+  }, [])
+
+  // Function to play YouTube video
+  const playYouTubeVideo = () => {
+    const iframe = youtubeIframeRef.current
+    if (iframe) {
+      iframe.contentWindow?.postMessage('{"event":"command","func":"playVideo","args":""}', "*")
+    }
+  }
+
+  // Function to pause YouTube video
+  const pauseYouTubeVideo = () => {
+    const iframe = youtubeIframeRef.current
+    if (iframe) {
+      iframe.contentWindow?.postMessage('{"event":"command","func":"pauseVideo","args":""}', "*")
+    }
+  }
+
+  // Function to toggle YouTube video play/pause
+  const toggleYouTubePlayPause = () => {
+    const iframe = youtubeIframeRef.current
+    if (!iframe) return
+
+    try {
+      // Use postMessage with proper JSON format
+      if (isPlaying) {
+        iframe.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: "" }), "*")
+      } else {
+        iframe.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: "" }), "*")
+      }
+      setIsPlaying(!isPlaying)
+    } catch (error) {
+      console.error("Error controlling YouTube video:", error)
+    }
+  }
+
+  // Pause YouTube video when changing slides
+  useEffect(() => {
+    if (
+      youtubeIframeRef.current &&
+      (mediaItems[currentMediaIndex]?.type === "youtube" || mediaItems[currentMediaIndex]?.type === "youtube-short")
+    ) {
+      pauseYouTubeVideo()
+      setIsPlaying(false)
+    }
+  }, [currentMediaIndex, isPlaying, mediaItems])
 
   if (!params.preview) {
     return (
@@ -326,6 +481,37 @@ export default function PropertyDetail({ params }: Props) {
 
     return purposes
   }
+  const calculateAvailableInventory = () => {
+    const inventory = {
+      Shop: 0,
+      Offices: 0,
+      Studios: 0,
+      "1 BR": 0,
+      "2 BR": 0,
+      "3 BR": 0,
+      "4 BR": 0,
+      "5 BR": 0,
+      "6 BR": 0,
+      "7 BR": 0,
+      "8 BR": 0,
+    }
+
+    if (unitDetails && unitDetails.length > 0) {
+      unitDetails.forEach((unit) => {
+        // Only count units with purpose Sell or Rent
+        if (unit.unitPurpose === "Sell" || unit.unitPurpose === "Rent") {
+          if (unit.noOfBedRooms) {
+            const key = `${unit.noOfBedRooms} BR`
+            if (inventory.hasOwnProperty(key)) {
+              inventory[key]++
+            }
+          }
+        }
+      })
+    }
+
+    return inventory
+  }
 
   const calculateInventory = () => {
     const inventory = {
@@ -356,72 +542,71 @@ export default function PropertyDetail({ params }: Props) {
     return inventory
   }
 
- const calculatePriceRanges = () => {
-  const priceRanges: Record<string, PriceRange> = {
-    Studio: { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "1 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "2 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "3 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "4 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "5 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "6 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "7 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    "8 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-  }
+  const calculatePriceRanges = () => {
+    const priceRanges: Record<string, PriceRange> = {
+      Studio: { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "1 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "2 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "3 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "4 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "5 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "6 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "7 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+      "8 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
+    }
 
-  if (unitDetails && unitDetails.length > 0) {
-    // Group units by bedroom count
-    const unitsByBedroom: Record<string, any[]> = {}
+    if (unitDetails && unitDetails.length > 0) {
+      // Group units by bedroom count
+      const unitsByBedroom: Record<string, any[]> = {}
 
-    unitDetails.forEach((unit) => {
-      if (unit.noOfBedRooms) {
-        const key = `${unit.noOfBedRooms} BR`
-        if (!unitsByBedroom[key]) {
-          unitsByBedroom[key] = []
-        }
-        unitsByBedroom[key].push(unit)
-      }
-    })
-
-    // Calculate price ranges for each bedroom type
-    Object.entries(unitsByBedroom).forEach(([bedroomType, units]) => {
-      if (!priceRanges[bedroomType]) return; // ✅ Avoids TypeError
-
-      if (units.length > 0) {
-        const originalPrices = units.map((unit) => unit.originalPrice || 0).filter((price) => price > 0)
-        const sellingPrices = units.map((unit) => unit.salePrice || 0).filter((price) => price > 0)
-
-        if (originalPrices.length > 0) {
-          priceRanges[bedroomType].originalMin = Math.min(...originalPrices)
-          priceRanges[bedroomType].originalMax = Math.max(...originalPrices)
-        }
-
-        if (sellingPrices.length > 0) {
-          priceRanges[bedroomType].sellingMin = Math.min(...sellingPrices)
-          priceRanges[bedroomType].sellingMax = Math.max(...sellingPrices)
-        }
-
-        // Calculate premium/loss
-        units.forEach((unit) => {
-          if (unit.originalPrice && unit.sellingPrice) {
-            const premium = unit.sellingPrice - unit.originalPrice
-
-            if (!priceRanges[bedroomType].premiumMin || premium < priceRanges[bedroomType].premiumMin) {
-              priceRanges[bedroomType].premiumMin = premium
-            }
-
-            if (!priceRanges[bedroomType].premiumMax || premium > priceRanges[bedroomType].premiumMax) {
-              priceRanges[bedroomType].premiumMax = premium
-            }
+      unitDetails.forEach((unit) => {
+        if (unit.noOfBedRooms) {
+          const key = `${unit.noOfBedRooms} BR`
+          if (!unitsByBedroom[key]) {
+            unitsByBedroom[key] = []
           }
-        })
-      }
-    })
+          unitsByBedroom[key].push(unit)
+        }
+      })
+
+      // Calculate price ranges for each bedroom type
+      Object.entries(unitsByBedroom).forEach(([bedroomType, units]) => {
+        if (!priceRanges[bedroomType]) return // ✅ Avoids TypeError
+
+        if (units.length > 0) {
+          const originalPrices = units.map((unit) => unit.originalPrice || 0).filter((price) => price > 0)
+          const sellingPrices = units.map((unit) => unit.salePrice || 0).filter((price) => price > 0)
+
+          if (originalPrices.length > 0) {
+            priceRanges[bedroomType].originalMin = Math.min(...originalPrices)
+            priceRanges[bedroomType].originalMax = Math.max(...originalPrices)
+          }
+
+          if (sellingPrices.length > 0) {
+            priceRanges[bedroomType].sellingMin = Math.min(...sellingPrices)
+            priceRanges[bedroomType].sellingMax = Math.max(...sellingPrices)
+          }
+
+          // Calculate premium/loss
+          units.forEach((unit) => {
+            if (unit.originalPrice && unit.sellingPrice) {
+              const premium = unit.sellingPrice - unit.originalPrice
+
+              if (!priceRanges[bedroomType].premiumMin || premium < priceRanges[bedroomType].premiumMin) {
+                priceRanges[bedroomType].premiumMin = premium
+              }
+
+              if (!priceRanges[bedroomType].premiumMax || premium > priceRanges[bedroomType].premiumMax) {
+                priceRanges[bedroomType].premiumMax = premium
+              }
+            }
+          })
+        }
+      })
+    }
+
+    return priceRanges
   }
-
-  return priceRanges
-}
-
 
   const countAmenities = () => {
     const amenitiesCount: Record<string, number> = {}
@@ -476,6 +661,86 @@ export default function PropertyDetail({ params }: Props) {
   const subDevelopment = propertyData.subDevelopment || {}
   const priceRanges = calculatePriceRanges()
   const amenitiesCount = countAmenities()
+
+  const togglePlayPause = () => {
+    if (!videoRef.current) return
+
+    if (isPlaying) {
+      videoRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      videoRef.current.play()
+      setIsPlaying(true)
+    }
+  }
+
+  const updateProgress = () => {
+    if (!videoRef.current) return
+    setCurrentTime(videoRef.current.currentTime)
+  }
+
+  const setVideoDuration = () => {
+    if (!videoRef.current) return
+    setDuration(videoRef.current.duration)
+  }
+
+  const seekVideo = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videoRef.current) return
+
+    const progressBar = e.currentTarget
+    const clickPosition = e.clientX - progressBar.getBoundingClientRect().left
+    const percentClicked = clickPosition / progressBar.offsetWidth
+
+    videoRef.current.currentTime = percentClicked * duration
+  }
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00"
+
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`
+  }
+
+  const toggleFullscreen = () => {
+    const videoContainer = document.getElementById("video-container")
+    if (!videoContainer) return
+
+    if (!document.fullscreenElement) {
+      videoContainer.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable fullscreen: ${err.message}`)
+      })
+    } else {
+      document.exitFullscreen()
+    }
+  }
+
+  function getYouTubeEmbedUrl(url: string) {
+    // Extract video ID from various YouTube URL formats
+    let videoId = ""
+
+    if (url.includes("youtube.com/embed/")) {
+      // Already an embed URL
+      const baseUrl = url.split("?")[0]
+      return `${baseUrl}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`
+    } else if (url.includes("youtube.com/watch")) {
+      // Regular youtube.com/watch?v=VIDEO_ID format
+      const urlParams = new URLSearchParams(url.split("?")[1])
+      videoId = urlParams.get("v") || ""
+    } else if (url.includes("youtu.be/")) {
+      // Shortened youtu.be/VIDEO_ID format
+      videoId = url.split("youtu.be/")[1].split("?")[0]
+    } else if (url.includes("youtube.com/shorts/")) {
+      // YouTube Shorts format
+      videoId = url.split("youtube.com/shorts/")[1].split("?")[0]
+    }
+
+    if (!videoId) return url
+
+    // Return properly formatted embed URL with parameters to improve embedding
+    // Set controls=1 to enable YouTube's original controls
+    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&origin=${encodeURIComponent(window.location.origin)}`
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -545,13 +810,13 @@ export default function PropertyDetail({ params }: Props) {
         <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-background">
           <div
             ref={sliderRef}
-            className={`relative h-[40vh] sm:h-[50vh] md:h-[60vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
+            className={`relative h-[50vh] sm:h-[60vh] md:h-[75vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             {/* Media Content */}
-            <div className="absolute inset-0 flex items-center justify-center bg-black">
+            <div id="video-container" className="absolute inset-0 flex items-center justify-center bg-black">
               {currentMedia.type === "image" ? (
                 <Image
                   src={currentMedia.url || "/placeholder.svg"}
@@ -560,15 +825,52 @@ export default function PropertyDetail({ params }: Props) {
                   className="object-cover"
                   priority
                 />
+              ) : currentMedia.type === "youtube" || currentMedia.type === "youtube-short" ? (
+                <div className="relative w-full h-full">
+                  <iframe
+                    ref={youtubeIframeRef}
+                    src={getYouTubeEmbedUrl(currentMedia.url)}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                    allowFullScreen
+                    frameBorder="0"
+                  ></iframe>
+                </div>
               ) : (
-                <video
-                  src={currentMedia.url}
-                  className="w-full h-full object-contain"
-                  controls={false}
-                  autoPlay
-                  muted
-                  loop
-                />
+                <div className="relative w-full h-full">
+                  <video
+                    ref={videoRef}
+                    src={currentMedia.url}
+                    className="w-full h-full object-contain"
+                    onClick={togglePlayPause}
+                    onTimeUpdate={updateProgress}
+                    onLoadedMetadata={setVideoDuration}
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between text-white">
+                      <button onClick={togglePlayPause} className="p-1 rounded-full bg-white/20 hover:bg-white/30">
+                        {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                      </button>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span>{formatTime(currentTime)}</span>
+                        <span>/</span>
+                        <span>{formatTime(duration)}</span>
+                      </div>
+                      <button onClick={toggleFullscreen} className="p-1 rounded-full bg-white/20 hover:bg-white/30">
+                        <Maximize2 className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div
+                      className="w-full bg-gray-600 h-1.5 rounded-full overflow-hidden cursor-pointer"
+                      onClick={seekVideo}
+                    >
+                      <div
+                        className="bg-primary h-full rounded-full"
+                        style={{ width: `${(currentTime / duration) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
 
@@ -599,142 +901,161 @@ export default function PropertyDetail({ params }: Props) {
           </div>
         </div>
 
-        {/* Project Overview Section */}
+        {/* Development Information */}
         <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
           <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
-              <Building className="h-6 w-6 text-primary" />
-              Project Overview
+              <Building2 className="h-6 w-6 text-primary" />
+              Development Information
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {/* Main Project Details */}
             <div className="p-4 sm:p-6">
-              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Master Development
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Sub Development
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Project
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Project Quality
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Construction Status
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Sales Category
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {masterDevelopment?.developmentName || "N/A"}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800 font-medium text-primary">
-                        {subDevelopment?.subDevelopment || "N/A"}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">{propertyData.projectName}</td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        <Badge
-                          variant="outline"
-                          className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                        >
-                          {propertyData.projectQuality}
-                        </Badge>
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800 font-medium">
-                        {propertyData.constructionStatus}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
-                        >
-                          {propertyData.salesStatus}
-                        </Badge>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              <div className="w-full overflow-hidden rounded-lg border border-gray-100 dark:border-gray-800">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-0">
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Building className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Master Development</div>
+                    <div className="font-medium">{masterDevelopment?.developmentName || "N/A"}</div>
+                  </div>
 
-            {/* Plot Details */}
-            <div className="px-4 sm:px-6 pb-6">
-              <h3 className="text-lg font-medium mb-3 flex items-center gap-2">
-                <LayoutGrid className="h-5 w-5 text-primary" />
-                Plot Information
-              </h3>
-              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Plot Permission
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Height
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Plot Size
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        BUA
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Launch Date
-                      </th>
-                      <th className="p-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Completion Date
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {subDevelopment?.plotPermission ? (
-                          <Badge variant="secondary" className="cursor-help" onClick={handleShowPermissions}>
-                            {Array.isArray(subDevelopment.plotPermission)
-                              ? `${subDevelopment.plotPermission.length} Permissions`
-                              : "1 Permission"}
-                          </Badge>
-                        ) : (
-                          "N/A"
-                        )}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {subDevelopment?.plotHeight || "N/A"}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {subDevelopment?.plotSizeSqFt ? `${subDevelopment.plotSizeSqFt} sq ft` : "N/A"}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {subDevelopment?.plotBUASqFt ? `${subDevelopment.plotBUASqFt} sq ft` : "N/A"}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {formatDate(propertyData.launchDate)}
-                      </td>
-                      <td className="p-3 border-b border-gray-100 dark:border-gray-800">
-                        {formatDate(propertyData.completionDate)}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Building2 className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Sub Development</div>
+                    <div className="font-medium">{subDevelopment?.subDevelopment || "N/A"}</div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <LayoutGrid className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Project</div>
+                    <div className="font-medium">{propertyData.projectName}</div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Palette className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Project Quality</div>
+                    <Badge
+                      variant="outline"
+                      className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                    >
+                      {propertyData.projectQuality}
+                    </Badge>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <CheckCircle2 className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Construction Status</div>
+                    <div className="font-medium">{propertyData.constructionStatus}</div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Tag className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Sales Category</div>
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800"
+                    >
+                      {propertyData.salesStatus}
+                    </Badge>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Inventory Section */}
+        {/* Plot Information */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <LayoutGrid className="h-6 w-6 text-primary" />
+              Plot Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="p-4 sm:p-6">
+              <div className="w-full overflow-hidden rounded-lg border border-gray-100 dark:border-gray-800">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-0">
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <FileText className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Plot Permission</div>
+                    <div className="font-medium">
+                      {subDevelopment?.plotPermission ? (
+                        <Badge variant="secondary" className="cursor-help" onClick={handleShowPermissions}>
+                          {Array.isArray(subDevelopment.plotPermission)
+                            ? `${subDevelopment.plotPermission.length} Permissions`
+                            : "1 Permission"}
+                        </Badge>
+                      ) : (
+                        "N/A"
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <ArrowRight className="h-6 w-6 rotate-90" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Height</div>
+                    <div className="font-medium">{subDevelopment?.plotHeight || "N/A"}</div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <LayoutGrid className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Plot Size</div>
+                    <div className="font-medium">
+                      {subDevelopment?.plotSizeSqFt ? `${subDevelopment.plotSizeSqFt} sq ft` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Building className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">BUA</div>
+                    <div className="font-medium">
+                      {subDevelopment?.plotBUASqFt ? `${subDevelopment.plotBUASqFt} sq ft` : "N/A"}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Calendar className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Launch Date</div>
+                    <div className="font-medium">{formatDate(propertyData.launchDate)}</div>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
+                    <div className="mb-2 text-primary">
+                      <Clock className="h-6 w-6" />
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Completion Date</div>
+                    <div className="font-medium">{formatDate(propertyData.completionDate)}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Project Overview Section */}
         <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
           <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
             <CardTitle className="text-2xl font-bold flex items-center gap-2">
@@ -742,60 +1063,107 @@ export default function PropertyDetail({ params }: Props) {
               Inventory
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="p-4 sm:p-6">
-              <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-800">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-900/50">
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Shop
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Offices
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        Studios
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        1 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        2 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        3 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        4 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        5 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        6 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        7 BR
-                      </th>
-                      <th className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b">
-                        8 BR
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
-                      {Object.entries(calculateInventory()).map(([type, count]) => (
-                        <td
-                          key={type}
-                          className="p-3 border-b border-gray-100 dark:border-gray-800 text-center font-medium"
-                        >
-                          {count}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
+          <CardContent className="p-4 sm:p-6">
+            <div className="w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 xl:grid-cols-11">
+                {Object.entries(calculateInventory()).map(([type, count], index) => {
+                  // Determine which icon to use based on the type
+                  let Icon
+                  switch (type) {
+                    case "Shop":
+                      Icon = <Store className="h-6 w-6" />
+                      break
+                    case "Offices":
+                      Icon = <Building2 className="h-6 w-6" />
+                      break
+                    case "Studios":
+                      Icon = <Palette className="h-6 w-6" />
+                      break
+                    case "1 BR":
+                    case "2 BR":
+                    case "3 BR":
+                    case "4 BR":
+                    case "5 BR":
+                    case "6 BR":
+                    case "7 BR":
+                    case "8 BR":
+                      Icon = <Bed className="h-6 w-6" />
+                      break
+                    default:
+                      Icon = <Building className="h-6 w-6" />
+                  }
+
+                  return (
+                    <div
+                      key={type}
+                      className="flex flex-col items-center justify-center py-4 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0"
+                    >
+                      <div className="mb-2 text-primary">{Icon}</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{count}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{type}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Available Section */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Tag className="h-6 w-6 text-primary" />
+              Available
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 xl:grid-cols-11">
+                {Object.entries(calculateAvailableInventory()).map(([type, count], index) => {
+                  // Determine which icon to use based on the type
+                  let Icon
+                  switch (type) {
+                    case "Shop":
+                      Icon = <Store className="h-6 w-6" />
+                      break
+                    case "Offices":
+                      Icon = <Building2 className="h-6 w-6" />
+                      break
+                    case "Studios":
+                      Icon = <Palette className="h-6 w-6" />
+                      break
+                    case "1 BR":
+                    case "2 BR":
+                    case "3 BR":
+                    case "4 BR":
+                    case "5 BR":
+                    case "6 BR":
+                    case "7 BR":
+                    case "8 BR":
+                      Icon = <Bed className="h-6 w-6" />
+                      break
+                    default:
+                      Icon = <Building className="h-6 w-6" />
+                  }
+
+                  return (
+                    <div
+                      key={type}
+                      className="flex flex-col items-center justify-center py-4 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0"
+                    >
+                      <div className={`mb-2 ${count > 0 ? "text-primary" : "text-gray-400 dark:text-gray-500"}`}>
+                        {Icon}
+                      </div>
+                      <div
+                        className={`text-2xl font-bold ${count > 0 ? "text-primary" : "text-gray-400 dark:text-gray-500"}`}
+                      >
+                        {count}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{type}</div>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </CardContent>
@@ -910,13 +1278,142 @@ export default function PropertyDetail({ params }: Props) {
                 <span className="text-xl font-bold">{propertyData.downPayment}%</span>
               </div>
 
-              <h3 className="font-semibold text-xl mt-6">Payment & Project Timeline</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <TimelineItem date={formatDate(propertyData.installmentDate)} label="Installment Date" />
-                <TimelineItem date={formatDate(propertyData.uponCompletion)} label="Upon Completion" />
-                <TimelineItem date={formatDate(propertyData.postHandOver)} label="Post Handover" />
-                <TimelineItem date={formatDate(propertyData.launchDate)} label="Launch Date" />
-                <TimelineItem date={formatDate(propertyData.completionDate)} label="Completion Date" />
+              <h3 className="font-semibold text-xl mt-6">Payment Timeline</h3>
+              <div className="bg-gray-50 dark:bg-gray-900/10 rounded-lg p-6">
+                <div className="relative pl-8 pb-6 border-l-2 border-primary/30">
+                  <div className="absolute -left-3 top-0">
+                    <div
+                      className={`${new Date(propertyData.installmentDate) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
+                    >
+                      {new Date(propertyData.installmentDate) < new Date() ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-lg">Installment Date</h4>
+                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
+                      {formatDate(propertyData.installmentDate)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative pl-8 pb-6 border-l-2 border-primary/30">
+                  <div className="absolute -left-3 top-0">
+                    <div
+                      className={`${new Date(propertyData.uponCompletion) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
+                    >
+                      {new Date(propertyData.uponCompletion) < new Date() ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-lg">Upon Completion</h4>
+                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
+                      {formatDate(propertyData.uponCompletion)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative pl-8">
+                  <div className="absolute -left-3 top-0">
+                    <div
+                      className={`${new Date(propertyData.postHandOver) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
+                    >
+                      {new Date(propertyData.postHandOver) < new Date() ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-lg">Post Handover</h4>
+                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
+                      {formatDate(propertyData.postHandOver)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Project Timeline */}
+        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
+          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
+            <CardTitle className="text-2xl font-bold flex items-center gap-2">
+              <Calendar className="h-6 w-6 text-primary" />
+              Project Timeline
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 sm:p-6">
+            <div className="bg-gray-50 dark:bg-gray-900/10 rounded-lg p-6">
+              <div className="space-y-6">
+                <div className="relative pl-8 pb-6 border-l-2 border-primary/30">
+                  <div className="absolute -left-3 top-0">
+                    <div
+                      className={`${new Date(propertyData.createdAt) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
+                    >
+                      {new Date(propertyData.createdAt) < new Date() ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-lg">Project Announcement</h4>
+                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
+                      {formatDate(propertyData.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative pl-8 pb-6 border-l-2 border-primary/30">
+                  <div className="absolute -left-3 top-0">
+                    <div
+                      className={`${new Date(propertyData.launchDate) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
+                    >
+                      {new Date(propertyData.launchDate) < new Date() ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-lg">Launch Date</h4>
+                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
+                      {formatDate(propertyData.launchDate)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative pl-8">
+                  <div className="absolute -left-3 top-0">
+                    <div
+                      className={`${new Date(propertyData.completionDate) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
+                    >
+                      {new Date(propertyData.completionDate) < new Date() ? (
+                        <CheckCircle2 className="h-4 w-4" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-lg">Expected Completion</h4>
+                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
+                      {formatDate(propertyData.completionDate)}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -933,12 +1430,14 @@ export default function PropertyDetail({ params }: Props) {
           <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
- <div className="flex gap-2 items-center">  <h3 className="font-semibold text-xl">Amenities</h3>  
-             
-                       <span className="inline-flex items-center justify-center bg-primary/20 text-primary rounded-full h-5 w-5 text-xs font-medium">
-                          {propertyData.amenitiesCategories?.length}
-                        </span>
-                </div>                <div className="flex flex-wrap gap-3">
+                <div className="flex gap-2 items-center">
+                  {" "}
+                  <h3 className="font-semibold text-xl">Amenities</h3>
+                  <span className="inline-flex items-center justify-center bg-primary/20 text-primary rounded-full h-5 w-5 text-xs font-medium">
+                    {propertyData.amenitiesCategories?.length}
+                  </span>
+                </div>{" "}
+                <div className="flex flex-wrap gap-3">
                   {propertyData.amenitiesCategories && propertyData.amenitiesCategories.length > 0 ? (
                     propertyData.amenitiesCategories.map((amenity, index) => {
                       const count = amenitiesCount[amenity] || 0
@@ -949,7 +1448,6 @@ export default function PropertyDetail({ params }: Props) {
                           className="px-3 py-1.5 text-sm capitalize flex items-center gap-2"
                         >
                           {amenity}
-                          
                         </Badge>
                       )
                     })
@@ -959,11 +1457,12 @@ export default function PropertyDetail({ params }: Props) {
                 </div>
               </div>
               <div className="space-y-4">
-              <div className="flex gap-2 items-center">  <h3 className="font-semibold text-xl">Facilities</h3>  
-             
-                       <span className="inline-flex items-center justify-center bg-primary/20 text-primary rounded-full h-5 w-5 text-xs font-medium">
-                          {propertyData?.facilityCategories?.length}
-                        </span>
+                <div className="flex gap-2 items-center">
+                  {" "}
+                  <h3 className="font-semibold text-xl">Facilities</h3>
+                  <span className="inline-flex items-center justify-center bg-primary/20 text-primary rounded-full h-5 w-5 text-xs font-medium">
+                    {propertyData?.facilityCategories?.length}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {propertyData.facilityCategories && propertyData.facilityCategories.length > 0 ? (
@@ -974,7 +1473,6 @@ export default function PropertyDetail({ params }: Props) {
                         className="px-3 py-1.5 text-sm capitalize flex items-center gap-2"
                       >
                         {facility}
-                       
                       </Badge>
                     ))
                   ) : (
@@ -1061,17 +1559,6 @@ export default function PropertyDetail({ params }: Props) {
     </div>
   )
 }
-
-// Helper Components
-const TimelineItem = ({ date, label }: { date: string; label: string }) => (
-  <div className="flex items-center gap-3 p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-black/80 transition-colors">
-    <Calendar className="h-5 w-5 text-primary" />
-    <div>
-      <span className="text-xs text-muted-foreground block">{label}</span>
-      <span className="font-medium">{date}</span>
-    </div>
-  </div>
-)
 
 // Loading Skeleton
 const PropertyDetailSkeleton = () => (

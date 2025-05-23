@@ -139,8 +139,26 @@ interface MediaItem {
   url: string
   title: string
 }
-
-function PropertySkeleton() {
+ 
+function PropertySkeleton() { 
+  const [darkMode, setDarkMode] = useState(false) // defaults to light mode
+    
+      // On mount, check for stored theme preference (default to light)
+      useEffect(() => {
+        const storedTheme = localStorage.getItem("theme")
+        if (storedTheme === "dark") {
+          setDarkMode(true)
+        }
+      }, []) 
+        useEffect(() => {
+          if (darkMode) {
+            document.documentElement.classList.add("dark")
+            localStorage.setItem("theme", "dark")
+          } else {
+            document.documentElement.classList.remove("dark")
+            localStorage.setItem("theme", "light")
+          }
+        }, [darkMode])
   return (
     <div className="min-h-screen bg-background animate-pulse">
       <div className="container mx-auto px-4 py-8">
