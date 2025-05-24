@@ -1,7 +1,12 @@
 "use client"
 
+import type React from "react"
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import { useRef, useState, useEffect } from "react"
 import {
   Building2,
   MapPin,
@@ -19,12 +24,317 @@ import {
   Calendar,
   Ruler,
   Square,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  Maximize2,
 } from "lucide-react"
 
+interface MediaItem {
+  type: "image" | "video" | "youtube" | "youtube-short"
+  url: string
+  title?: string
+}
+
 export default function Component() {
+  // Media slider state
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [isSliding, setIsSliding] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+
+  // Refs
+  const sliderRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const youtubeIframeRef = useRef<HTMLIFrameElement>(null)
+  const autoPlayIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Touch handling
+  const [touchStart, setTouchStart] = useState(0)
+  const [touchEnd, setTouchEnd] = useState(0)
+
+  // Sample media data
+  const mediaItems: MediaItem[] = [
+    {
+      type: "image",
+      url: "/placeholder.svg?height=600&width=800",
+      title: "Property Exterior View",
+    },
+    {
+      type: "youtube",
+      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      title: "Property Tour Video",
+    },
+    {
+      type: "image",
+      url: "/placeholder.svg?height=600&width=900",
+      title: "Interior Design",
+    },
+    {
+      type: "video",
+      url: "/placeholder.mp4",
+      title: "Development Progress",
+    },
+    {
+      type: "image",
+      url: "/placeholder.svg?height=600&width=1000",
+      title: "Amenities Overview",
+    },
+  ]
+
+  const currentMedia = mediaItems[currentMediaIndex]
+
+  // Auto-play functionality
+  useEffect(() => {
+    if (isAutoPlaying && currentMedia.type === "image") {
+      autoPlayIntervalRef.current = setInterval(() => {
+        nextMedia()
+      }, 4000) // Change slide every 4 seconds for images
+    } else {
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current)
+        autoPlayIntervalRef.current = null
+      }
+    }
+
+    return () => {
+      if (autoPlayIntervalRef.current) {
+        clearInterval(autoPlayIntervalRef.current)
+      }
+    }
+  }, [isAutoPlaying, currentMediaIndex, currentMedia.type])
+
+  // Navigation functions
+  const nextMedia = () => {
+    setIsSliding(true)
+    setTimeout(() => {
+      setCurrentMediaIndex((prev) => (prev + 1) % mediaItems.length)
+      setIsSliding(false)
+    }, 150)
+  }
+
+  const prevMedia = () => {
+    setIsSliding(true)
+    setTimeout(() => {
+      setCurrentMediaIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length)
+      setIsSliding(false)
+    }, 150)
+  }
+
+  const toggleAutoPlay = () => {
+    setIsAutoPlaying(!isAutoPlaying)
+  }
+
+  // Touch handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      nextMedia()
+    } else if (isRightSwipe) {
+      prevMedia()
+    }
+  }
+
+  // Video controls
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
+  }
+
+  const updateProgress = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime)
+    }
+  }
+
+  const setVideoDuration = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration)
+    }
+  }
+
+  const seekVideo = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (videoRef.current && duration) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const clickX = e.clientX - rect.left
+      const newTime = (clickX / rect.width) * duration
+      videoRef.current.currentTime = newTime
+      setCurrentTime(newTime)
+    }
+  }
+
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen()
+      }
+    }
+  }
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  }
+
+  const getYouTubeEmbedUrl = (url: string) => {
+    const videoId = url.split("v=")[1]?.split("&")[0] || url.split("/").pop()
+    return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto p-6 space-y-6">
+        {/* Media Slider */}
+        <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-background">
+          <div
+            ref={sliderRef}
+            className={`relative h-[50vh] sm:h-[60vh] md:h-[75vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {/* Media Content */}
+            <div className="absolute inset-0">
+              <div id="video-container" className="w-full h-full flex items-center justify-center bg-black">
+                {currentMedia.type === "image" ? (
+                  <Image
+                    src={currentMedia.url || "/placeholder.svg"}
+                    alt="Property image"
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                ) : currentMedia.type === "youtube" || currentMedia.type === "youtube-short" ? (
+                  <div className="relative w-full h-full">
+                    <iframe
+                      ref={youtubeIframeRef}
+                      src={getYouTubeEmbedUrl(currentMedia.url)}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      frameBorder="0"
+                      title="YouTube video"
+                      style={{ pointerEvents: "auto", zIndex: 10 }}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative w-full h-full">
+                    <video
+                      ref={videoRef}
+                      src={currentMedia.url}
+                      className="w-full h-full object-contain"
+                      onClick={togglePlayPause}
+                      onTimeUpdate={updateProgress}
+                      onLoadedMetadata={setVideoDuration}
+                    />
+                    {/* Video controls */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-3 flex flex-col gap-2">
+                      <div className="w-full bg-gray-600 h-1 rounded cursor-pointer" onClick={seekVideo}>
+                        <div
+                          className="bg-red-500 h-full rounded"
+                          style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-white">
+                        <div className="flex items-center gap-3">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20"
+                            onClick={togglePlayPause}
+                          >
+                            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                          </Button>
+                          <span className="text-sm">
+                            {formatTime(currentTime)} / {formatTime(duration)}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-white hover:bg-white/20"
+                          onClick={toggleFullscreen}
+                        >
+                          <Maximize2 className="h-5 w-5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Media counter */}
+            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium z-50 pointer-events-none">
+              {currentMediaIndex + 1} / {mediaItems.length}
+            </div>
+
+            {/* Media navigation controls */}
+            <div className="absolute inset-0 flex items-center justify-between p-4 z-40 pointer-events-none">
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  prevMedia()
+                }}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="icon"
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  nextMedia()
+                }}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </Button>
+            </div>
+
+            {/* Auto-play toggle - positioned away from YouTube controls */}
+            <div className="absolute top-4 left-4 z-50">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleAutoPlay()
+                }}
+              >
+                {isAutoPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <span className="ml-1 text-xs">Auto</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Development Info Section */}
         <Card className="bg-white dark:bg-gray-800 shadow-sm">
           <CardHeader className="bg-gray-100 dark:bg-gray-700">
