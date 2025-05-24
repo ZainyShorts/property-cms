@@ -125,94 +125,110 @@ export default function Component() {
               Project Types
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            {/* Project Heights */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Project Heights</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <TrendingDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Minimum</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">5 floors</div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <TrendingUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Maximum</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">50 floors</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Project BUA */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Project BUA Sq. Ft.</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Ruler className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Min</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">500 sq ft</div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Ruler className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Max</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">5000 sq ft</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Property Types */}
-            <div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Apartments</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">150</div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Hotel className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Hotel Apartments</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">75</div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Castle className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Villas</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">100</div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Building className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Townhouses</span>
-                  </div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100">175</div>
-                </div>
-
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <BarChart3 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    <span className="text-sm text-blue-600 dark:text-blue-400">Total</span>
-                  </div>
-                  <div className="font-semibold text-blue-800 dark:text-blue-300">500</div>
-                </div>
-              </div>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th
+                      colSpan={2}
+                      className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <TrendingUp className="h-4 w-4" />
+                        Project Heights
+                      </div>
+                    </th>
+                    <th
+                      colSpan={2}
+                      className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Ruler className="h-4 w-4" />
+                        Project BUA Sq. Ft.
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center justify-center gap-1">
+                        <Home className="h-4 w-4" />
+                        Apartments
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center justify-center gap-1">
+                        <Hotel className="h-4 w-4" />
+                        Hotel Apartments
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center justify-center gap-1">
+                        <Castle className="h-4 w-4" />
+                        Villas
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center justify-center gap-1">
+                        <Building className="h-4 w-4" />
+                        Townhouses
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-center justify-center gap-1">
+                        <BarChart3 className="h-4 w-4" />
+                        Total
+                      </div>
+                    </th>
+                  </tr>
+                  <tr className="bg-gray-100 dark:bg-gray-600">
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-center gap-1">
+                        <TrendingDown className="h-4 w-4" />
+                        Minimum
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-center gap-1">
+                        <TrendingUp className="h-4 w-4" />
+                        Maximum
+                      </div>
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
+                      Min
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-600">
+                      Max
+                    </th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
+                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-gray-200 dark:border-gray-600">
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-600">
+                      5 floors
+                    </td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-600">
+                      50 floors
+                    </td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-600">
+                      500 sq ft
+                    </td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100 border-r border-gray-200 dark:border-gray-600">
+                      5000 sq ft
+                    </td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100">150</td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100">75</td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100">100</td>
+                    <td className="p-3 text-center text-sm text-gray-900 dark:text-gray-100">175</td>
+                    <td className="p-3 text-center text-sm font-semibold text-blue-800 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20">
+                      500
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
