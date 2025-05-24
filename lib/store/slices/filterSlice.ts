@@ -15,14 +15,13 @@ interface FilterState {
   roadLocation?:string
   unitInternalDesign?: string
   unitExternalDesign?: string
-  plotSizeSqFt?: number
-  buaSqFt?: number
-  noOfBedRooms?: string
+  plotSizeSqFt?: Range
+  buaSqFt?: Range
+  noOfBedRooms?: Range
   unitView?: string[]
   pictures?: string[]
   unitPurpose?: string
   listingDate?: string
-  chequeFrequency?: string
   rentalPriceRange?: Range
   salePriceRange?: Range
   originalPriceRange?: Range
@@ -45,14 +44,13 @@ const initialState: FilterState = {
   unitHeight: undefined,
   unitInternalDesign: undefined,
   unitExternalDesign: undefined,
-  plotSizeSqFt: undefined,
-  buaSqFt: undefined,
-  noOfBedRooms: undefined,
+  plotSizeSqFt: { min: undefined, max: undefined },
+  buaSqFt: { min: undefined, max: undefined },
+  noOfBedRooms: { min: undefined, max: undefined },
   unitView: [],
   pictures: [],
   unitPurpose: undefined,
   listingDate: undefined,
-  chequeFrequency: undefined,
   rentalPriceRange: { min: undefined, max: undefined },
   salePriceRange: { min: undefined, max: undefined },
   originalPriceRange: { min: undefined, max: undefined },

@@ -14,7 +14,8 @@ import {
   Edit,
   Info,
   Upload,
-  Copy,
+  Copy, 
+  Eye,
   Check,
   ArrowLeft,
   MousePointerIcon as MousePointerSquare,
@@ -87,7 +88,9 @@ const tableHeaders = [
   { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
   { key: "amentiesCategories", label: "AMENITIES" },
-  { key: "attachDocument", label: "DOCUMENT" },
+  { key: "attachDocument", label: "DOCUMENT" }, 
+  { key: "view", label: "VIEW" },
+
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
@@ -611,7 +614,22 @@ export default function MasterDevelopmentPage() {
               )}
             </Button>
           </div>
-        )
+        ) 
+         case "view":
+                  return (
+                    <div className="flex justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                        onClick={() => window.open(`/masterDev-details/${record._id}`, "_blank")}
+                        disabled={isAttachingDocument}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </div>
+                  )
       case "buaAreaSqFt":
       case "facilitiesAreaSqFt":
       case "amentiesAreaSqFt":
@@ -1306,8 +1324,11 @@ export default function MasterDevelopmentPage() {
                             header.key === "totalAreaSqFt" && "w-[150px]",
                             header.key === "facilitiesCategories" && "w-[120px]",
                             header.key === "amentiesCategories" && "w-[120px]",
-                            header.key === "attachDocument" && "w-[120px]",
-                            header.key === "edit" && "w-[100px]",
+                            header.key === "attachDocument" && "w-[120px]", 
+                            header.key === "view" && "w-[100px]",
+
+                            header.key === "edit" && "w-[100px]", 
+
                             header.key === "delete" && "w-[100px]",
                           )}
                         >

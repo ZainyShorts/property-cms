@@ -33,7 +33,7 @@ const sidebarItems = [
   { title: "Listings", icon: ClipboardList, items: ["Overview", "Listing Gallery", "Listing Kanban"], enabled: false },
   { title: "Transactions", icon: FileCheck, items: ["Overview", "Transactions Dashboard"], enabled: false },
   { title: "Appointments", icon: Calendar, items: ["Overview", "Appointments Calender"], enabled: false },
-  { title: "Documents", icon: FileText, items: ["Overview"], enabled: false },
+  { title: "Documents", icon: FileText, items: ["Overview"], enabled: true },
   { title: "Leads", icon: UserPlus, items: ["Overview", "Leads Kanban"], enabled: false },
   { title: "Reviews", icon: ClipboardList, items: ["Overview"], enabled: false },
   { title: "Contracts", icon: Contact, items: ["Overview"], enabled: false },

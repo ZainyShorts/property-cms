@@ -83,7 +83,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     dispatch(updateFilter({ [id]: value ? Number(value) : undefined }))
   }
 
-  type RangeField = "rentalPriceRange" | "salePriceRange" | "originalPriceRange" | "premiumAndLossRange"
+  type RangeField = "rentalPriceRange" | "salePriceRange" | "originalPriceRange" | "premiumAndLossRange" | "plotSizeSqFt" | "buaSqFt" | "noOfBedRooms"
 
   const handleRangeInputChange = (field: RangeField, minOrMax: "min" | "max", value: string) => {
     const numValue = value ? Number(value) : undefined
@@ -677,36 +677,67 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
               onChange={handleInputChange}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="plotSizeSqFt">Plot Size (sq ft)</Label>
-            <Input
-              id="plotSizeSqFt"
-              type="number"
-              placeholder="Enter plot size"
-              value={filter.plotSizeSqFt || ""}
-              onChange={handleNumberInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="buaSqFt">BUA (sq ft)</Label>
-            <Input
-              id="buaSqFt"
-              type="number"
-              placeholder="Enter BUA"
-              value={filter.buaSqFt || ""}
-              onChange={handleNumberInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="noOfBedRooms">Bed Rooms</Label>
-            <Input
-              id="noOfBedRooms"
-              type="number"
-              placeholder="Enter Bed Rooms"
-              value={filter.noOfBedRooms || ""}
-              onChange={handleInputChange}
-            />
-          </div>
+                   <div className="space-y-4">
+                <Label className="text-sm font-normal">Plot Size Range (sq ft)</Label>
+                <div className="flex items-center gap-2 mt-3">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filter.plotSizeSqFt?.min || ""}
+                    onChange={(e) => handleRangeInputChange("plotSizeSqFt", "min", e.target.value)}
+                    className="w-full"
+                  />
+                  <span>to</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filter.plotSizeSqFt?.max || ""}
+                    onChange={(e) => handleRangeInputChange("plotSizeSqFt", "max", e.target.value)}
+                    className="w-full"
+                  />
+              </div>
+ </div>
+              <div>
+                <Label className="text-sm font-normal">BUA Range (sq ft)</Label>
+                <div className="flex items-center gap-2 mt-3">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filter.buaSqFt?.min || ""}
+                    onChange={(e) => handleRangeInputChange("buaSqFt", "min", e.target.value)}
+                    className="w-full"
+                  />
+                  <span>to</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filter.buaSqFt?.max || ""}
+                    onChange={(e) => handleRangeInputChange("buaSqFt", "max", e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-normal">Number of Bedrooms Range</Label>
+                <div className="flex items-center gap-2 mt-3">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={filter.noOfBedRooms?.min || ""}
+                    onChange={(e) => handleRangeInputChange("noOfBedRooms", "min", e.target.value)}
+                    className="w-full"
+                  />
+                  <span>to</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={filter.noOfBedRooms?.max || ""}
+                    onChange={(e) => handleRangeInputChange("noOfBedRooms", "max", e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+              </div>
           <div className="space-y-2">
             <Label htmlFor="unitPurpose">Unit Purpose</Label>
             <Select
@@ -733,15 +764,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="chequeFrequency">Cheque Frequency</Label>
-            <Input
-              id="chequeFrequency"
-              placeholder="Enter cheque frequency"
-              value={filter.chequeFrequency || ""}
-              onChange={handleInputChange}
-            />
-          </div>
+      
 
           <div className="space-y-4">
             <div className="space-y-5">
