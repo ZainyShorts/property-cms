@@ -139,7 +139,6 @@ export default function PropertyDetail({ params }: Props) {
       const tag = document.createElement("script")
       tag.src = "https://www.youtube.com/iframe_api"
 
-      // Insert the script before the first script tag
       const firstScriptTag = document.getElementsByTagName("script")[0]
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
     }
@@ -1038,7 +1037,7 @@ export default function PropertyDetail({ params }: Props) {
                       <ArrowRight className="h-6 w-6 rotate-90" />
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Height</div>
-                    <div className="font-medium">{subDevelopment?.plotHeight || "N/A"}</div>
+                      {subDevelopment?.plotHeight ? `${subDevelopment.plotHeight} sq ft` : "N/A"}
                   </div>
 
                   <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
@@ -1179,11 +1178,11 @@ export default function PropertyDetail({ params }: Props) {
                       key={type}
                       className="flex flex-col items-center justify-center py-4 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0"
                     >
-                      <div className={`mb-2 ${count > 0 ? "text-primary" : "text-gray-400 dark:text-gray-500"}`}>
+                      <div className={`mb-2 ${count > 0 ? "text-primary" : "text-primary dark:text-gray-500"}`}>
                         {Icon}
                       </div>
                       <div
-                        className={`text-2xl font-bold ${count > 0 ? "text-primary" : "text-gray-400 dark:text-gray-500"}`}
+                        className={`text-2xl font-bold ${count > 0 ? "text-primary" : "text-primary dark:text-gray-500"}`}
                       >
                         {count}
                       </div>

@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { usePathname } from "next/navigation"
 import {
   Building2,
@@ -15,6 +16,7 @@ import {
   Contact,
   ChevronDown,
   X,
+  Lock,
 } from "lucide-react"
 import { useState } from "react"
 import Link from "next/link"
@@ -23,19 +25,20 @@ const sidebarItems = [
   {
     title: "Properties",
     icon: Building2,
-    items: ["Master Development" , "Sub Development" ,"Projects", "Inventory" ],
+    items: ["Master Development", "Sub Development", "Projects", "Inventory"],
+    enabled: true,
   },
-  { title: "Agents", icon: Users, items: ["Overview", "Agents Gallery", "Agents Dashboard"] },
-  { title: "Clients", icon: UserCircle, items: ["Overview"] },
-  { title: "Listings", icon: ClipboardList, items: ["Overview", "Listing Gallery", "Listing Kanban"] },
-  { title: "Transactions", icon: FileCheck, items: ["Overview", "Transactions Dashboard"] },
-  { title: "Appointments", icon: Calendar, items: ["Overview", "Appointments Calender"] },
-  { title: "Documents", icon: FileText, items: ["Overview"] },
-  { title: "Leads", icon: UserPlus, items: ["Overview", "Leads Kanban"] },
-  { title: "Reviews", icon: ClipboardList, items: ["Overview"] },
-  { title: "Contracts", icon: Contact, items: ["Overview"] },
-  { title: "Invoices", icon: Contact, items: ["Overview"] },
-  { title: "Maintainance Requests", icon: Contact, items: ["Overview", "Maintainance Request Gallery"] },
+  { title: "Agents", icon: Users, items: ["Overview", "Agents Gallery", "Agents Dashboard"], enabled: false },
+  { title: "Clients", icon: UserCircle, items: ["Overview"], enabled: false },
+  { title: "Listings", icon: ClipboardList, items: ["Overview", "Listing Gallery", "Listing Kanban"], enabled: false },
+  { title: "Transactions", icon: FileCheck, items: ["Overview", "Transactions Dashboard"], enabled: false },
+  { title: "Appointments", icon: Calendar, items: ["Overview", "Appointments Calender"], enabled: false },
+  { title: "Documents", icon: FileText, items: ["Overview"], enabled: false },
+  { title: "Leads", icon: UserPlus, items: ["Overview", "Leads Kanban"], enabled: false },
+  { title: "Reviews", icon: ClipboardList, items: ["Overview"], enabled: false },
+  { title: "Contracts", icon: Contact, items: ["Overview"], enabled: false },
+  { title: "Invoices", icon: Contact, items: ["Overview"], enabled: false },
+  { title: "Maintainance Requests", icon: Contact, items: ["Overview", "Maintainance Request Gallery"], enabled: false },
 ]
 
 export function Sidebar({ isOpen = true, onClose = () => {} }) {
@@ -94,23 +97,38 @@ export function Sidebar({ isOpen = true, onClose = () => {} }) {
         <div className="space-y-2">
           {sidebarItems.map((item) => (
             <div key={item.title} className="space-y-1">
-              <Button
-                variant="ghost"
-                onClick={() => handleDropdown(item.title)}
-                className={`w-[90%] flex justify-between gap-3 thin-scrollbar text-white hover:bg-white/10 dark:hover:bg-white/20 hover:text-white transition-colors duration-200 ${
-                  isMainItemActive(item.title) ? " bg-white/20" : ""
-                }`}
-              >
-                <div className="flex items-center  gap-3 ">
-                  {item.icon && <item.icon className="h-5 w-5" />}
-                  <span className="font-medium">{item.title}</span>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 mr-2 text-white transition-transform duration-300 ease-in-out ${
-                    selectedItem === item.title ? "rotate-180" : "hidden"
-                  }`}
-                />
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleDropdown(item.title)}
+                      className={`w-[90%] flex justify-between gap-3 thin-scrollbar text-white hover:bg-white/10 dark:hover:bg-white/20 hover:text-white transition-colors duration-200 ${
+                        isMainItemActive(item.title) ? " bg-white/20" : ""
+                      } ${!item.enabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                      disabled={!item.enabled}
+                    >
+                      <div className="flex items-center gap-3">
+                        {item.icon && <item.icon className="h-5 w-5" />}
+                        <span className="font-medium">{item.title}</span>
+                      </div>
+                      <div className="flex items-center">
+                        {!item.enabled && <Lock className="h-3 w-3 mr-1 text-white/70" />}
+                        <ChevronDown
+                          className={`h-4 w-4 mr-2 text-white transition-transform duration-300 ease-in-out ${
+                            selectedItem === item.title ? "rotate-180" : "hidden"
+                          }`}
+                        />
+                      </div>
+                    </Button>
+                  </TooltipTrigger>
+                  {!item.enabled && (
+                    <TooltipContent side="right" className="bg-slate-900 text-white border-none">
+                      <p>This feature is coming soon</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
 
               <div
                 className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out ${
@@ -118,16 +136,35 @@ export function Sidebar({ isOpen = true, onClose = () => {} }) {
                 }`}
               >
                 {item.items.map((subItem) => (
-                  <Link key={subItem} href={generateRoute(item.title, subItem)} onClick={handleNavigation} passHref>
-                    <Button
-                      variant="ghost"
-                      className={`w-full justify-start pl-12 text-sm text-gray-300 hover:bg-white/10 dark:hover:bg-white/20 hover:text-white transition-colors duration-200 ${
-                        isCurrentPage(item.title, subItem) ? "bg-white/20" : ""
-                      }`}
-                    >
-                      {subItem}
-                    </Button>
-                  </Link>
+                  item.enabled ? (
+                    <Link key={subItem} href={generateRoute(item.title, subItem)} onClick={handleNavigation} passHref>
+                      <Button
+                        variant="ghost"
+                        className={`w-full justify-start pl-12 text-sm text-gray-300 hover:bg-white/10 dark:hover:bg-white/20 hover:text-white transition-colors duration-200 ${
+                          isCurrentPage(item.title, subItem) ? "bg-white/20" : ""
+                        }`}
+                      >
+                        {subItem}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <TooltipProvider key={subItem}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start pl-12 text-sm text-gray-300/60 opacity-60 cursor-not-allowed"
+                            disabled
+                          >
+                            {subItem}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="bg-slate-900 text-white border-none">
+                          <p>This feature is coming soon</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )
                 ))}
               </div>
             </div>
@@ -137,4 +174,3 @@ export function Sidebar({ isOpen = true, onClose = () => {} }) {
     </div>
   )
 }
-

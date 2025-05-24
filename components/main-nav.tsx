@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Menu } from "lucide-react"
@@ -14,12 +19,14 @@ interface MainNavProps {
 
 export function MainNav({ onOpenSidebar }: MainNavProps) {
   const [isScrolled, setIsScrolled] = useState(false)
-  const [darkMode, setDarkMode] = useState(false) // defaults to light mode
+  const [darkMode, setDarkMode] = useState<null | boolean>(null) // ← initially unknown
 
-  // On mount, check for stored theme preference (default to light)
+  // Read theme from localStorage only once on mount
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme")
-    if (storedTheme === "dark") {
+    if (storedTheme === "light") {
+      setDarkMode(false)
+    } else {
       setDarkMode(true)
     }
   }, [])
@@ -33,8 +40,9 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
-  // Update the document class and store the theme preference
+  // Apply class & save preference
   useEffect(() => {
+    if (darkMode === null) return // don’t run until theme is resolved
     if (darkMode) {
       document.documentElement.classList.add("dark")
       localStorage.setItem("theme", "dark")
@@ -44,6 +52,8 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
     }
   }, [darkMode])
 
+  if (darkMode === null) return null // Avoid rendering until theme is set
+
   return (
     <div
       className={`sticky top-0 z-50 transition-all duration-300 ${
@@ -52,18 +62,14 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
     >
       <div className="flex h-16 items-center px-4">
         <div className="flex items-center space-x-4">
-          {/* Hamburger menu */}
           <Button variant="ghost" size="icon" className="md:hidden" onClick={onOpenSidebar}>
             <Menu className="h-5 w-5" />
             <span className="sr-only">Open sidebar</span>
           </Button>
-          <nav className="flex items-center space-x-4">
-       
-          </nav>
+          <nav className="flex items-center space-x-4"></nav>
         </div>
         <div className="ml-auto flex items-center space-x-4">
-          {/* Dark mode toggle switch */}
-          <Switch checked={darkMode} onCheckedChange={(checked) => setDarkMode(checked)} className="mr-4" />
+          <Switch checked={darkMode} onCheckedChange={setDarkMode} className="mr-4" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Avatar className="h-8 w-8 cursor-pointer">
@@ -87,4 +93,3 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
     </div>
   )
 }
-
