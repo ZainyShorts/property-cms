@@ -280,9 +280,9 @@ export default function OTPPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isLoading || otp.some(digit => digit === "")}
-                  className="w-full h-14 text-base transition-all relative overflow-hidden group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none rounded-xl shadow-lg"
+                  className="w-full h-14 text-base transition-all relative overflow-hidden group bg-white  border-none rounded-xl shadow-lg"
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-2 text-white font-semibold">
+                  <span className="relative z-10 flex items-center justify-center gap-2 text-black font-semibold">
                     {isLoading ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin" />

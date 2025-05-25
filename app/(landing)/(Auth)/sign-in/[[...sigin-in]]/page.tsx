@@ -165,10 +165,10 @@ export default function LoginPage() {
               >
                 <Button
                   type="submit"
-                  className="w-full h-14 text-base transition-all relative overflow-hidden group bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 border-none rounded-xl shadow-lg"
+                  className="w-full h-14 text-base transition-all relative overflow-hidden group bg-white hover:bg-gray-300 border-none rounded-xl shadow-lg"
                   disabled={isLoading}
                 >
-                  <span className="relative z-10 flex items-center justify-center gap-2 text-white font-semibold">
+                  <span className="relative z-10 flex items-center justify-center gap-2  text-black font-semibold">
                     {isLoading ? (
                       <>
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -178,7 +178,7 @@ export default function LoginPage() {
                       "Sign In"
                     )}
                   </span>
-                  <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
+                  <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-100 transition-opacity rounded-xl" />
                 </Button>
               </motion.div>
             </form>
