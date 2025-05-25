@@ -102,6 +102,13 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
   const [showProjectResults, setShowProjectResults] = useState(false)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
 
+  const unitTypes = {
+    Studio: "Studio",
+    Office: "Office",
+    Shop: "Shop",
+    Bedroom: "Bedroom",
+  }
+
   // Fetch projects on component mount
   useEffect(() => {
     fetchProjects()
@@ -116,6 +123,7 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       // Initialize form data from propertyToEdit
       setDataForm({
         project: propertyToEdit.project?._id || "",
+        unitType: propertyToEdit.unitType || "",
         subDevelopment:
           propertyToEdit?.project?.subDevelopment?.subDevelopment || propertyToEdit.subDevelopmentName || "",
         masterDevelopment:
@@ -441,12 +449,13 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     const finalData = {
       project: dataForm.project || "",
       unitNumber: dataForm.unitNumber || "",
+      unitType: dataForm.unitType || "",
       unitHeight: dataForm.unitHeight || "",
       unitInternalDesign: dataForm.unitInternalDesign || "",
       unitExternalDesign: dataForm.unitExternalDesign || "",
       plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
       BuaSqFt: dataForm.BuaSqFt ? Number(dataForm.BuaSqFt) : 0,
-      noOfBedRooms: dataForm.noOfBedRooms || "",
+      noOfBedRooms: dataForm.unitType === "Bedroom" ? dataForm.noOfBedRooms || "" : "",
       unitView: dataForm.unitView || [],
       pictures: selectedImages,
       unitPurpose: dataForm.unitPurpose || "",
@@ -854,18 +863,45 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="noOfBedRooms">Bed Room</Label>
-                  <Input
-                    id="noOfBedRooms"
-                    name="noOfBedRooms"
-                    value={dataForm.noOfBedRooms || ""}
-                    onChange={(e) => handleChange(e, "noOfBedRooms", "number")}
-                    type="number"
-                    className="bg-input border-input"
-                    placeholder="e.g., 1 BR"
-                  />
-                  {errors.noOfBedRooms && <p className="text-sm text-destructive">Bed Room is required</p>}
+                  <Label htmlFor="unitType">Unit Type</Label>
+                  <Select
+                    value={dataForm.unitType || ""}
+                    onValueChange={(value) => {
+                      handleSelectChange(value, "unitType")
+                      // Clear bedrooms if not bedroom type
+                      if (value !== "BEDROOM") {
+                        setDataForm((prev) => ({ ...prev, noOfBedRooms: "" }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="unitType" className="bg-input border-input">
+                      <SelectValue placeholder="Select unit type..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {Object.entries(unitTypes).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {/* Conditional Bedrooms field - only show when BEDROOM is selected */}
+                {dataForm.unitType === "Bedroom" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="noOfBedRooms">Number of Bedrooms</Label>
+                    <Input
+                      id="noOfBedRooms"
+                      name="noOfBedRooms"
+                      value={dataForm.noOfBedRooms || ""}
+                      onChange={(e) => handleChange(e, "noOfBedRooms", "number")}
+                      type="number"
+                      className="bg-input border-input"
+                      placeholder="e.g., 2"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="unitView">Unit View</Label>

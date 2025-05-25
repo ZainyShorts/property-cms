@@ -1247,13 +1247,7 @@ export default function PropertyDetail({ params }: Props) {
                   <div className="space-y-4">
                     <h3 className="font-semibold">Rental Details</h3>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Banknote className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Cheque Frequency</span>
-                          <span className="font-medium">{propertyData.chequeFrequency}</span>
-                        </div>
-                      </div>
+                   
                       <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
                         <Tag className="h-5 w-5 text-primary" />
                         <div>

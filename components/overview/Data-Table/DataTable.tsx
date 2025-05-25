@@ -46,7 +46,8 @@ const unitDetails = [
   "unitHeight",
   "unitInternalDesign",
   "unitExternalDesign",
-  "plotSizeSqFt",
+  "plotSizeSqFt", 
+  "unitType",
   "BuaSqFt",
   "noOfBedRooms",
   "unitView",
@@ -136,7 +137,8 @@ function PropertyDataTable({
     { key: "unitExternalDesign", label: "EXTERNAL DESIGN" },
     { key: "plotSizeSqFt", label: "PLOT SIZE (SQ. FT)" },
     { key: "BuaSqFt", label: "BUA (SQ. FT)" },
-    { key: "noOfBedRooms", label: "BED ROOMS" },
+    { key: "noOfBedRooms", label: "BED ROOMS" }, 
+    {key : "unitType" , label : "Unit Type"},
     { key: "unitView", label: "UNIT VIEW" },
 
     // Availability
@@ -393,7 +395,8 @@ function PropertyDataTable({
         case "plotSizeSqFt":
         case "BuaSqFt":
         case "originalPrice":
-        case "rentalPrice":
+        case "rentalPrice": 
+        case "unitType":
         case "salePrice":
         case "unitNumber":
         case "paidTODevelopers":

@@ -23,6 +23,7 @@ import {
   Activity,
 } from "lucide-react"
 import { useDevelopmentReport } from "../hooks/useDevelopmentReport"
+import axios from "axios"
 
 interface MediaItem {
   type: "image" | "video" | "youtube" | "youtube-short"
@@ -62,11 +63,30 @@ type Props = {
 
 function App({ params }: Props) {
   const [developmentId, setDevelopmentId] = useState<string | null>(null)
+  const [documents, setDocuments] = useState<any[]>([])
 
   const urlParams = params.preview
   useEffect(() => {
     setDevelopmentId(urlParams)
   }, [])
+
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!developmentId) return
+
+      try {
+        const documentsResponse = await axios.get(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/document/byRefId/${params.preview}`,
+        )
+        setDocuments(documentsResponse.data.data || [])
+      } catch (error) {
+        console.error("Error fetching documents:", error)
+        setDocuments([])
+      }
+    }
+
+    fetchDocuments()
+  }, [developmentId, params.preview])
 
   const { data, isLoading, error, refetch } = useDevelopmentReport(developmentId)
   console.log("data", data)
@@ -86,40 +106,78 @@ function App({ params }: Props) {
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
 
-  // Sample media data
-  const mediaItems: MediaItem[] = [
-    {
-      type: "image",
-      url: "/placeholder.svg?height=600&width=800",
-      title: "Property Exterior View",
-    },
-    {
-      type: "youtube",
-      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-      title: "Property Tour Video",
-    },
-    {
-      type: "image",
-      url: "/placeholder.svg?height=600&width=900",
-      title: "Interior Design",
-    },
-    {
-      type: "video",
-      url: "/placeholder.mp4",
-      title: "Development Progress",
-    },
-    {
-      type: "image",
-      url: "/placeholder.svg?height=600&width=1000",
-      title: "Amenities Overview",
-    },
-  ]
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
+
+  const DEFAULT_IMAGE = "/placeholder.svg?height=600&width=800"
+
+  useEffect(() => {
+    if (!documents) return
+
+    const media: MediaItem[] = []
+
+    // Add media from documents
+    documents.forEach((doc) => {
+      const type = doc.type.toLowerCase()
+      if (
+        type.includes("image") ||
+        type.includes("jpg") ||
+        type.includes("jpeg") ||
+        type.includes("png") ||
+        type.includes("gif")
+      ) {
+        media.push({
+          type: "image",
+          url: doc.documentUrl,
+          title: doc.title || "Document Image",
+        })
+      } else if (type.includes("video") || type.includes("mp4") || type.includes("mov") || type.includes("avi")) {
+        media.push({
+          type: "video",
+          url: doc.documentUrl,
+          title: doc.title || "Document Video",
+        })
+      }
+    })
+
+    // If no media found, add default images
+    if (media.length === 0) {
+      media.push(
+        {
+          type: "image",
+          url: DEFAULT_IMAGE,
+          title: "Property Exterior View",
+        },
+        {
+          type: "youtube",
+          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          title: "Property Tour Video",
+        },
+        {
+          type: "image",
+          url: "/placeholder.svg?height=600&width=900",
+          title: "Interior Design",
+        },
+        {
+          type: "video",
+          url: "/placeholder.mp4",
+          title: "Development Progress",
+        },
+        {
+          type: "image",
+          url: "/placeholder.svg?height=600&width=1000",
+          title: "Amenities Overview",
+        },
+      )
+    }
+
+    setMediaItems(media)
+  }, [documents])
 
   const currentMedia = mediaItems[currentMediaIndex]
 
   // Auto-play functionality
   useEffect(() => {
-    if (isAutoPlaying && currentMedia.type === "image") {
+    if (isAutoPlaying && currentMedia?.type === "image") {
       autoPlayIntervalRef.current = setInterval(() => {
         nextMedia()
       }, 4000)
@@ -135,7 +193,7 @@ function App({ params }: Props) {
         clearInterval(autoPlayIntervalRef.current)
       }
     }
-  }, [isAutoPlaying, currentMediaIndex, currentMedia.type])
+  }, [isAutoPlaying, currentMediaIndex, currentMedia?.type])
 
   // Navigation functions
   const nextMedia = () => {
@@ -309,17 +367,17 @@ function App({ params }: Props) {
             {/* Media Content */}
             <div className="absolute inset-0">
               <div id="video-container" className="w-full h-full flex items-center justify-center bg-black">
-                {currentMedia.type === "image" ? (
+                {currentMedia?.type === "image" ? (
                   <img
-                    src={currentMedia.url || "/placeholder.svg"}
+                    src={currentMedia?.url || "/placeholder.svg"}
                     alt="Property image"
                     className="w-full h-full object-cover"
                   />
-                ) : currentMedia.type === "youtube" || currentMedia.type === "youtube-short" ? (
+                ) : currentMedia?.type === "youtube" || currentMedia?.type === "youtube-short" ? (
                   <div className="relative w-full h-full">
                     <iframe
                       ref={youtubeIframeRef}
-                      src={getYouTubeEmbedUrl(currentMedia.url)}
+                      src={getYouTubeEmbedUrl(currentMedia?.url)}
                       className="w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                       allowFullScreen
@@ -331,7 +389,7 @@ function App({ params }: Props) {
                   <div className="relative w-full h-full">
                     <video
                       ref={videoRef}
-                      src={currentMedia.url}
+                      src={currentMedia?.url}
                       className="w-full h-full object-contain"
                       onClick={togglePlayPause}
                       onTimeUpdate={updateProgress}
@@ -662,7 +720,7 @@ function App({ params }: Props) {
         </div>
 
         {/* Availability Section */}
-        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg pb-12 overflow-hidden">
           <div className="bg-gradient-to-r from-primary/20 to-transparent dark:bg-gray-700 px-4 py-3">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-gray-200">
               <BarChart3 className="h-5 w-5" />

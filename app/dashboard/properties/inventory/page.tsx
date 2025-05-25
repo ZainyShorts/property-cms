@@ -108,14 +108,15 @@ export default function PropertiesPage() {
           limit: 10,
           page: page !== undefined ? page : currentPage,
         }
-        console.log("finalParams", finalParams)
 
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
           {
             params: finalParams,
-          },
-        )
+          }, 
+
+        ) 
+        console.log('res',response);
 
         if (response.data) {
           setProperties(response.data.data || [])
@@ -160,7 +161,8 @@ export default function PropertiesPage() {
     unitExternalDesign: property.unitExternalDesign || "N/A",
     plotSizeSqFt: property.plotSizeSqFt || "N/A",
     BuaSqFt: property.BuaSqFt || "N/A",
-    unitNumber: property.unitNumber || "N/A",
+    unitNumber: property.unitNumber || "N/A", 
+    unitType : property.unitType || "N/A",
     noOfBedRooms: property.noOfBedRooms || "N/A",
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
     unitPurpose: property.unitPurpose || "N/A",
