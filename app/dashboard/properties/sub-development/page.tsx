@@ -1047,10 +1047,10 @@ export default function SubDevelopmentPage() {
               <Upload size={18} />
               Import Records
             </Button>
-            <Button variant="outline" onClick={handleExport} className="gap-2">
+            {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
-            </Button>
+            </Button> */}
             <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
               <DialogTrigger asChild>
                 <Button className="gap-2">Add record</Button>
@@ -1176,7 +1176,7 @@ export default function SubDevelopmentPage() {
                   )}
                 </div>
 
-                {!isSelectionMode ? (
+                {/* {!isSelectionMode ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -1233,7 +1233,7 @@ export default function SubDevelopmentPage() {
                       Share
                     </Button>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -1499,11 +1499,11 @@ export default function SubDevelopmentPage() {
       <SubDevFilterSidebar open={isFilterSidebarOpen} onOpenChange={setIsFilterSidebarOpen} />
 
       {/* Export Modal */}
-      <ExportModal
+      {/* <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         onSubmitExport={handleSubmitExport}
-      />
+      /> */}
       <ImportRecordsModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}

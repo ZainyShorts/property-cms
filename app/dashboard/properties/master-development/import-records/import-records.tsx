@@ -136,6 +136,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
             <div
               {...getRootProps()}
               className={`
+                cursor-pointer
                 border-2 border-dashed rounded-lg p-6 transition-colors
                 ${isDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"}
                 ${file ? "bg-primary/5 border-primary" : ""}
