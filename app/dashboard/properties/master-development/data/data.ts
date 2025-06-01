@@ -1,6 +1,8 @@
-export const locationDetails = ["_id","roadLocation", "developmentName" , "locationQuality"] 
+export const locationDetails = ["index","_id","country","city","roadLocation", "developmentName" , "locationQuality"] 
 export const overview =  ["buaAreaSqFt", "facilitiesAreaSqFt","amentiesAreaSqFt","totalAreaSqFt"] 
-export const facilities = ["facilitiesCategories", "amentiesCategories"] 
+export const facilities = ["facilitiesCategories", "amentiesCategories"]   
+export const actions = ["attachDocument", "view", "edit", "delete"]
+
 export interface CountryData {
     id: string;
     name: string;

@@ -229,10 +229,10 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
 
   // Fetch all development names on component mount
   useEffect(() => {
-    if (open) {
+    if (devNameSearchTerm != "") {
       fetchDevelopmentNames(devNameSearchTerm)
     }
-  }, [open, devNameSearchTerm])
+  },  [devNameSearchTerm])
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -278,7 +278,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               </SelectTrigger>
               <SelectContent>
                 {availableCities.map((city) => (
-                  <SelectItem key={city.id} value={city.id}>
+                  <SelectItem key={city.id} value={city.name}>
                     {city.name}
                   </SelectItem>
                 ))}
@@ -298,7 +298,8 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
             />
           </div>
 
-          {/* Development Name Dropdown */} 
+          {/* Development Name Dropdown */}  
+          
             <div className="space-y-2"> 
                           <Label htmlFor="developmentName">Development Name</Label>
 
@@ -319,7 +320,8 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               )}
             </div>
-          </div>
+          </div> 
+          {devNameSearchTerm && 
           <div className="space-y-2">
             <div className="relative">
               <Select
@@ -346,6 +348,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               </Select>
             </div>
           </div>
+           }
 
           {/* Development Name Search Query */}
         

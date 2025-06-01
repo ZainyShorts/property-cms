@@ -1,29 +1,11 @@
 "use client"
 import React, { useState, useEffect } from "react"
-import {
-  ChevronLeft,
-  ChevronRight,
-  Play,
-  Pause,
-  Maximize2,
-  Building2,
-  BarChart3,
-  Warehouse,
-  Home,
-  Castle,
-  Building,
-  Hotel,
-  Users,
-  MapPin,
-  Award,
-  Clock,
-  Tag,
-  Grid,
-  Layers,
-  Activity,
-} from "lucide-react"
+import { ChevronLeft, ChevronRight, Play, Pause, Maximize2, Building2, BarChart3, Warehouse, Home, Castle, Building, Hotel, Users, MapPin, Award, Clock, Tag, Grid, Layers, Activity } from 'lucide-react'
 import { useDevelopmentReport } from "../hooks/useDevelopmentReport"
 import axios from "axios"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { FileText, Eye, Download } from 'lucide-react'
 
 interface MediaItem {
   type: "image" | "video" | "youtube" | "youtube-short"
@@ -53,6 +35,22 @@ const formatDisplayFloors = (value: any): string => {
   if (value === 0) return "0 floors"
   if (value === null || value === undefined || value === "") return "N/A"
   return `${value} floors`
+}
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString()
+}
+
+const getDocumentIcon = (type: string) => {
+  const iconType = type.toLowerCase()
+  if (iconType.includes('pdf')) {
+    return <FileText className="h-5 w-5 text-red-500" />
+  } else if (iconType.includes('image') || iconType.includes('jpg') || iconType.includes('png')) {
+    return <FileText className="h-5 w-5 text-blue-500" />
+  } else if (iconType.includes('doc')) {
+    return <FileText className="h-5 w-5 text-blue-600" />
+  }
+  return <FileText className="h-5 w-5 text-gray-500" />
 }
 
 type Props = {
@@ -430,22 +428,22 @@ function App({ params }: Props) {
             {/* Media navigation controls */}
             <div className="absolute inset-0 flex items-center justify-between p-4 z-40 pointer-events-none">
               <button
-                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto h-10 w-10 flex items-center justify-center"
+                className="rounded-full opacity-80 hover:opacity-100 bg-white backdrop-blur-sm pointer-events-auto h-10 w-10 flex items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation()
                   prevMedia()
                 }}
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ChevronLeft className="h-6 w-6 text-black" />
               </button>
               <button
-                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto h-10 w-10 flex items-center justify-center"
+                className="rounded-full opacity-80 hover:opacity-100 bg-white backdrop-blur-sm pointer-events-auto h-10 w-10 flex items-center justify-center"
                 onClick={(e) => {
                   e.stopPropagation()
                   nextMedia()
                 }}
               >
-                <ChevronRight className="h-6 w-6" />
+                <ChevronRight className="h-6 w-6 text-black" />
               </button>
             </div>
 
@@ -680,7 +678,6 @@ function App({ params }: Props) {
                     <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
                     <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
                     <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
-                    <th className="p-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -772,6 +769,58 @@ function App({ params }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Documents Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Documents
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {documents && documents.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {documents.map((doc) => (
+                  <div
+                    key={doc._id}
+                    className="flex items-center justify-between p-4 border rounded-lg dark:border-border"
+                  >
+                    <div className="flex items-center gap-3">
+                      {getDocumentIcon(doc.type)}
+                      <div>
+                        <h4 className="font-medium">{doc.title}</h4>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 mr-1" />
+                            <span>{formatDate(doc.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={doc.documentUrl} target="_blank" rel="noopener noreferrer">
+                          <Eye className="h-4 w-4" />
+                        </a>
+                      </Button>
+                      <Button variant="outline" size="icon" asChild>
+                        <a href={doc.documentUrl} download={doc.title}>
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-20" />
+                <p>No documents available for this property</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

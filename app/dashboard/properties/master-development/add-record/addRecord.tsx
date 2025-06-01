@@ -18,14 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import type { MasterDevelopment } from "../page"
 import { Progress } from "@/components/ui/progress"
-import { countries , getCitiesByCountry } from "../data/data"
+import { countries, getCitiesByCountry } from "../data/data"
 
 const formSchema = z.object({
-  roadLocation: z.string().min(1, "Road location is required"),
+  roadLocation: z.string().min(1, "Road location is Required"),
   developmentName: z.string().min(1, "Development name is required"),
   country: z.string().min(1, "Country is required"),
   city: z.string().min(1, "City is required"),
-  locationQuality: z.string().min(0, "Location quality is required"),
+  locationQuality: z.string().min(1, "Location quality is required"), 
   buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "BUA area is required"),
   facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Facilities area is required"),
   amentiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Amenities area is required"),
@@ -56,89 +56,82 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
-  const [availableCities, setAvailableCities] = useState<Array<{ id: string; name: string }>>([])
+  const [availableCities, setAvailableCities] = useState<string[]>([])
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const isEditMode = !!editRecord
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      roadLocation: editRecord?.roadLocation || "",
-      developmentName: editRecord?.developmentName || "",
-      country: editRecord?.country || "",
-      city: editRecord?.city || "",
-      locationQuality: editRecord?.locationQuality || "",
-      buaAreaSqFt: editRecord?.buaAreaSqFt || 0,
-      facilitiesAreaSqFt: editRecord?.facilitiesAreaSqFt || 0,
-      amentiesAreaSqFt: editRecord?.amentiesAreaSqFt || 0,
-      totalAreaSqFt: editRecord?.totalAreaSqFt || 0,
-      facilitiesCategories: editRecord?.facilitiesCategories || [],
-      amentiesCategories: editRecord?.amentiesCategories || [],
+      roadLocation: "",
+      developmentName: "",
+      country: "",
+      city: "",
+      locationQuality: "",
+      buaAreaSqFt: 0,
+      facilitiesAreaSqFt: 0,
+      amentiesAreaSqFt: 0,
+      totalAreaSqFt: 0,
+      facilitiesCategories: [],
+      amentiesCategories: [],
       pictures: [],
     },
   })
 
-  // Watch for country changes
   const selectedCountry = useWatch({
     control: form.control,
     name: "country",
   })
 
-  // Update available cities when country changes
   useEffect(() => {
     if (selectedCountry) {
       const cities = getCitiesByCountry(selectedCountry)
-      setAvailableCities(cities)
-      
-      // Reset city field when country changes, unless in edit mode with matching city
+      const cityNames = cities.map((city) => city.name)
+      setAvailableCities(cityNames)
+
       const currentCity = form.getValues("city")
-      const cityExists = cities.some(city => city.id === currentCity)
-      
-      if (!cityExists) {
+      const cityExists = cityNames.includes(currentCity)
+
+      // Only clear city if not in edit mode and city doesn't exist
+      if (!cityExists && !isEditMode) {
         form.setValue("city", "")
       }
     } else {
       setAvailableCities([])
-      form.setValue("city", "")
+      if (!isEditMode) {
+        form.setValue("city", "")
+      }
     }
-  }, [selectedCountry, form])
+  }, [selectedCountry, form, isEditMode])
 
   useEffect(() => {
     if (editRecord) {
-      form.reset({
-        roadLocation: editRecord.roadLocation || "",
-        developmentName: editRecord.developmentName || "",
-        country: editRecord.country || "",
-        city: editRecord.city || "",
-        locationQuality: editRecord.locationQuality || "",
-        buaAreaSqFt: editRecord.buaAreaSqFt || 0,
-        facilitiesAreaSqFt: editRecord.facilitiesAreaSqFt || 0,
-        amentiesAreaSqFt: editRecord.amentiesAreaSqFt || 0,
-        totalAreaSqFt: editRecord.totalAreaSqFt || 0,
-        facilitiesCategories: editRecord.facilitiesCategories || [],
-        amentiesCategories: editRecord.amentiesCategories || [],
-        pictures: [],
-      })
-      
-      // If country exists in edit mode, load the cities
       if (editRecord.country) {
-        setAvailableCities(getCitiesByCountry(editRecord.country))
-      }
+        const cities = getCitiesByCountry(editRecord.country)
+        const cityNames = cities.map((city) => city.name)
 
-      // Initialize pictures from existing record
-      if (editRecord.pictures && editRecord.pictures.length > 0) {
-        const newPictures = Array(6).fill(null)
-        editRecord.pictures.forEach((url, index) => {
-          if (index < 6) {
-            newPictures[index] = {
-              file: new File([], `image-${index}.jpg`),
-              preview: url,
-              awsUrl: url,
-              isExisting: true,
-            }
-          }
+        // If editRecord.city exists but is not in the standard city list, add it
+        let finalCityNames = [...cityNames]
+        if (editRecord.city && !cityNames.includes(editRecord.city)) {
+          finalCityNames = [...cityNames, editRecord.city]
+        }
+
+        setAvailableCities(finalCityNames)
+
+        form.reset({
+          roadLocation: editRecord.roadLocation || "",
+          developmentName: editRecord.developmentName || "",
+          country: editRecord.country || "",
+          city: editRecord.city || "",
+          locationQuality: editRecord.locationQuality || "",
+          buaAreaSqFt: editRecord.buaAreaSqFt || 0,
+          facilitiesAreaSqFt: editRecord.facilitiesAreaSqFt || 0,
+          amentiesAreaSqFt: editRecord.amentiesAreaSqFt || 0,
+          totalAreaSqFt: editRecord.totalAreaSqFt || 0,
+          facilitiesCategories: editRecord.facilitiesCategories || [],
+          amentiesCategories: editRecord.amentiesCategories || [],
+          pictures: [],
         })
-        setPictures(newPictures)
       }
     } else {
       form.reset({
@@ -368,13 +361,13 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
           )
           toast.success("Master development record has been updated successfully")
         }
-      } else { 
+      } else {
         console.log(submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
           submitData,
-        ) 
-        console.log(response);
+        )
+        console.log(response)
         toast.success("Master development record has been added successfully")
       }
 
@@ -545,9 +538,9 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>City</FormLabel>
-                  <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value} 
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
                     disabled={!selectedCountry || availableCities.length === 0}
                   >
                     <FormControl>
@@ -556,9 +549,9 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="max-h-[200px]">
-                      {availableCities.map((city) => (
-                        <SelectItem key={city.id} value={city.id}>
-                          {city.name}
+                      {availableCities.map((city, index) => (
+                        <SelectItem key={`${city}-${index}`} value={city}>
+                          {city}
                         </SelectItem>
                       ))}
                     </SelectContent>

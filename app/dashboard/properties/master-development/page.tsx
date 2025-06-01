@@ -1,12 +1,19 @@
 "use client"
 
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
+
+import { DropdownMenuContent } from "@/components/ui/dropdown-menu"
+
+import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+import { DropdownMenu } from "@/components/ui/dropdown-menu"
+
 import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  Download,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -14,13 +21,11 @@ import {
   Edit,
   Info,
   Upload,
-  Copy, 
+  Copy,
   Eye,
   Check,
   ArrowLeft,
-  MousePointerIcon as MousePointerSquare,
   Settings,
-  Share2,
   ChevronDown,
 } from "lucide-react"
 import { toast } from "react-toastify"
@@ -48,8 +53,7 @@ import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sideba
 import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
-import { locationDetails, overview, facilities } from "./data/data"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { locationDetails, overview, facilities, actions } from "./data/data"
 export interface MasterDevelopment {
   _id: string
   country: string
@@ -75,6 +79,7 @@ interface ApiResponse {
   pageNumber: number
 }
 const tableHeaders = [
+  { key: "index", label: "INDEX" },
   { key: "_id", label: "ID" },
   { key: "country", label: "COUNTRY" },
   { key: "city", label: "CITY" },
@@ -88,7 +93,7 @@ const tableHeaders = [
   { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
   { key: "amentiesCategories", label: "AMENITIES" },
-  { key: "attachDocument", label: "DOCUMENT" }, 
+  { key: "attachDocument", label: "DOCUMENT" },
   { key: "view", label: "VIEW" },
 
   { key: "edit", label: "EDIT" },
@@ -126,6 +131,8 @@ export default function MasterDevelopmentPage() {
   const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [currentIndex, setCurrentIndex] = useState(1)
+  const [startingIndex, setStartingIndex] = useState(0)
   const [shareData, setShareData] = useState(null)
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
@@ -143,6 +150,8 @@ export default function MasterDevelopmentPage() {
   }
   useEffect(() => {
     fetchRecords()
+    // Calculate starting index based on current page and limit
+    setStartingIndex((currentPage - 1) * limit)
   }, [currentPage, sortOrder, limit])
 
   useEffect(() => {
@@ -328,6 +337,7 @@ export default function MasterDevelopmentPage() {
   }
 
   const applyFilters = () => {
+    setCurrentPage(1)
     setLoading(true)
     try {
       // Create a filter object with all possible filters
@@ -518,6 +528,7 @@ export default function MasterDevelopmentPage() {
     try {
       await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`)
       toast.success("Record deleted successfully")
+      setCurrentPage(1)
       fetchRecords()
     } catch (error: any) {
       console.error("Error deleting record:", error)
@@ -571,6 +582,15 @@ export default function MasterDevelopmentPage() {
           }, {})
           return updated
         })
+      } else if (headers === "actions") {
+        setCheckState("actions")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = actions.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
       } else if (headers === "all") {
         setCheckState("all")
         setVisibleColumns((prev) => {
@@ -592,7 +612,7 @@ export default function MasterDevelopmentPage() {
     }
   }
 
-  const renderCellContent = (record: MasterDevelopment, key: string) => {
+  const renderCellContent = (record: MasterDevelopment, key: string, index: number) => {
     switch (key) {
       case "_id":
         return (
@@ -614,22 +634,24 @@ export default function MasterDevelopmentPage() {
               )}
             </Button>
           </div>
-        ) 
-         case "view":
-                  return (
-                    <div className="flex justify-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-                        onClick={() => window.open(`/masterDev-details/${record._id}`, "_blank")}
-                        disabled={isAttachingDocument}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
-                    </div>
-                  )
+        )
+      case "index":
+        return <div className="flex justify-center">{startingIndex + index + 1}</div>
+      case "view":
+        return (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+              onClick={() => window.open(`/masterDev-details/${record._id}`, "_blank")}
+              disabled={isAttachingDocument}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+          </div>
+        )
       case "buaAreaSqFt":
       case "facilitiesAreaSqFt":
       case "amentiesAreaSqFt":
@@ -1103,6 +1125,17 @@ export default function MasterDevelopmentPage() {
                     ))}
                   </div>
                 </div>
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "all")}>All Headers</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "locationDetails")}>
+                  Location Details
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "overview")}>Overview</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "facilities")}>
+                  Facilities & Amenities
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
+                  Other Actions
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="outline" size="icon" onClick={handleResetFilters}>
@@ -1148,6 +1181,9 @@ export default function MasterDevelopmentPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "facilities")}>
                           Facilities & Amenities
+                        </DropdownMenuItem> 
+                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
+                          Actions
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1218,7 +1254,7 @@ export default function MasterDevelopmentPage() {
                       {(checkState === "locationDetails" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "locationDetails")}
-                          colSpan={isSelectionMode ? 5 : 4}
+                          colSpan={isSelectionMode ? 7 : 7}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
                         >
                           Location Details
@@ -1284,10 +1320,22 @@ export default function MasterDevelopmentPage() {
                       {(checkState === "actions" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "actions")}
-                          colSpan={isSelectionMode ? 6 : 5}
-                          className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                          colSpan={isSelectionMode ? 4 : 4}
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative"
                         >
                           Other Actions
+                          {checkState === "actions" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
                         </TableHead>
                       )}
                     </TableRow>
@@ -1324,10 +1372,10 @@ export default function MasterDevelopmentPage() {
                             header.key === "totalAreaSqFt" && "w-[150px]",
                             header.key === "facilitiesCategories" && "w-[120px]",
                             header.key === "amentiesCategories" && "w-[120px]",
-                            header.key === "attachDocument" && "w-[120px]", 
+                            header.key === "attachDocument" && "w-[120px]",
                             header.key === "view" && "w-[100px]",
 
-                            header.key === "edit" && "w-[100px]", 
+                            header.key === "edit" && "w-[100px]",
 
                             header.key === "delete" && "w-[100px]",
                           )}
@@ -1381,7 +1429,7 @@ export default function MasterDevelopmentPage() {
                           .filter((header) => visibleColumns[header.key])
                           .map((header) => (
                             <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                              {renderCellContent(record, header.key)}
+                              {renderCellContent(record, header.key, index)}
                             </TableCell>
                           ))}
                       </TableRow>
@@ -1406,7 +1454,7 @@ export default function MasterDevelopmentPage() {
 
             {/* Pagination - Updated to match the image */}
             {pagination.totalPages > 0 && (
-              <div className="flex items-center justify-center p-4 border-t">
+              <div className="flex items-center justify-between p-4 border-t">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -1451,8 +1499,12 @@ export default function MasterDevelopmentPage() {
                   <div className="text-sm text-muted-foreground ml-2">
                     Page {pagination.pageNumber} of {pagination.totalPages}
                   </div>
+                </div> 
+                <div className="flex items-center gap-2"> 
+                Total Records: {pagination.totalCount}
                 </div>
-              </div>
+              </div> 
+              
             )}
           </CardContent>
         </Card>
