@@ -208,7 +208,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
 
       // Add search parameter if provided
       if (searchTerm) {
-        url += `?developmentName=${encodeURIComponent(searchTerm)}`
+        url += `?developmentName=${encodeURIComponent(searchTerm)}&fields=developmentName`
       }
 
       const response = await axios.get(url)

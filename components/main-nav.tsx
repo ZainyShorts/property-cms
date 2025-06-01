@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Menu } from "lucide-react"
+import { logoutUser } from "@/lib/auth"
 
 interface MainNavProps {
   onOpenSidebar: () => void
@@ -82,9 +83,9 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Link href="/logout" className="w-full">
+                <p onClick={logoutUser} className="w-full cursor-pointer">
                   Logout
-                </Link>
+                </p>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

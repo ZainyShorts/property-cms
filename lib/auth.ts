@@ -1,5 +1,4 @@
 // lib/auth.ts
-'use client'
 import jwt from "jsonwebtoken";
 import { deleteCookie } from 'cookies-next';
 
@@ -53,7 +52,7 @@ export const isAuthenticated = (): boolean => {
 export function useUser(token: string): DecodedToken | null {
   if (!token) return null;
 
-  const decoded = jwt.decode(token);
+  const decoded = jwt.verify(token, process.env.JWT_SECRET!);
 
   if (!decoded || typeof decoded !== 'object') return null;
 

@@ -151,7 +151,6 @@ export default function OTPPage() {
       const response = await verifyOtp(email, otpString)
       console.log(response)
       if (response.success) {
-        localStorage.setItem('afs-access-token', response.token);
         setCookie('token', response.token, {
           maxAge: 60 * 60 * 24, // 7 days
           httpOnly: false,

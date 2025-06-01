@@ -1,19 +1,20 @@
 // pages/api/me.ts
 
-import { isTokenExpired, useUser } from "@/lib/auth";
+import { isTokenExpired, useUser } from "../../../lib/auth";
+import { NextResponse } from "next/server";
 
+export async function GET(req: any) {
 
-export default function handler(req:any, res:any) {
-  const token = req.cookies.authToken;
+    const token = req.cookies.get("token")?.value;
 
-  if (!token) return res.status(401).send(null);
+  if (!token) return NextResponse.json(null);
 
   const expired = isTokenExpired(token)
 
-  if(expired) return res.status(401).send(null);
+  if(expired) return NextResponse.json(null);
 
   const user = useUser(token);
 
-  return res.status(200).send(user);
+  return NextResponse.json(user);
 
 }

@@ -80,7 +80,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
         fetchRecords()
         // Show toast with import results using react-toastify
         toast.success(
-          `Import successful: ${data.insertedEntries} entries added, ${data.skippedDuplicateEntires} duplicates skipped.`,
+          `Import successful: ${data.insertedEntries} entries added, ${data.skippedInvalidEntries} duplicates skipped.`,
           {
             position: "top-right",
             autoClose: 5000,

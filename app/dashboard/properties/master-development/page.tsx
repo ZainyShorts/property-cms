@@ -275,7 +275,7 @@ export default function MasterDevelopmentPage() {
   const handleSortChange = async (value: string) => {
     setLoading(true)
     const response = await axios.get<ApiResponse>(
-      `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?sortOrder=${value})}`,
+      `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?sortOrder=${value}`,
     )
     setLoading(false)
 
@@ -1030,10 +1030,10 @@ export default function MasterDevelopmentPage() {
               <Upload size={18} />
               Import Records
             </Button>
-            <Button variant="outline" onClick={handleExport} className="gap-2">
+            {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
-            </Button>
+            </Button> */}
             <Dialog open={isModalOpen} onOpenChange={handleModalClose}>
               <DialogTrigger asChild>
                 <Button className="gap-2">Add record</Button>
@@ -1154,7 +1154,7 @@ export default function MasterDevelopmentPage() {
                   )}
                 </div>
 
-                {!isSelectionMode ? (
+                {/* {!isSelectionMode ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -1207,7 +1207,7 @@ export default function MasterDevelopmentPage() {
                       Share
                     </Button>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
             <div className="overflow-x-auto">
