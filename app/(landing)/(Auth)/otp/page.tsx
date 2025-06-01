@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { motion } from "@/lib/motion"
 import { Loader2 } from "lucide-react"
+import { setCookie } from 'cookies-next';
 
 export default function OTPPage() {
   const router = useRouter()
@@ -148,19 +149,28 @@ export default function OTPPage() {
     try {
       const otpString = otp.join("")
       const response = await verifyOtp(email, otpString)
+      console.log(response)
       if (response.success) {
-        router.push("/dashboard/properties/inventory")
+        localStorage.setItem('afs-access-token', response.token);
+        setCookie('token', response.token, {
+          maxAge: 60 * 60 * 24, // 7 days
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          path: '/',
+        });
+        router.replace("/dashboard/properties/inventory")
       } else {
         setError(response.message || "Invalid OTP. Please try again.")
         // Clear OTP on error
         setOtp(Array(6).fill(""))
         inputRefs.current[0]?.focus()
+        setIsLoading(true)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed. Please try again.")
-    } finally {
       setIsLoading(false)
-    }
+    } 
   }
 
   const handleResendOtp = async () => {

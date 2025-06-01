@@ -5,7 +5,6 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { FileUp, X, Upload } from "lucide-react"
-import { useUser } from "@clerk/nextjs"
 import axios from "axios"
 import { toast } from "react-toastify"
 
@@ -18,7 +17,7 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
   const [dragActive, setDragActive] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const { user } = useUser()
+  
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -48,13 +47,11 @@ export function FileUploadModal({ isOpen, onClose }: FileUploadModalProps) {
   }
 
   const handleUpload = async () => {
-    if (!file || !user) return
+    if (!file) return
 
     setIsUploading(true)
     const formData = new FormData()
     formData.append("file", file)
-    formData.append("clerkId", user?.id) 
-    console.log('test',user?.id)
 
     try {
       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/property/updateBulkRecord`, formData, {

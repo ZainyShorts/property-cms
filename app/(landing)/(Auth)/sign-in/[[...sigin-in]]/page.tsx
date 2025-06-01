@@ -9,6 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { motion } from "@/lib/motion"
 import { authService } from "@/lib/auth-service"
 import { Loader2 } from "lucide-react"
+import Image from "next/image"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -53,19 +54,7 @@ export default function LoginPage() {
                 transition={{ delay: 0.2, duration: 0.5, type: "spring" }}
                 className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shadow-lg"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-8 w-8 text-white"
-                >
-                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                  <circle cx="12" cy="7" r="4" />
-                </svg>
+                <Image alt="logo" height={100} width={100} src={"./afs-logo.avif"} />
               </motion.div>
             </div>
             <motion.div
@@ -103,6 +92,7 @@ export default function LoginPage() {
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
                       fill="none"
+                      color="#000000"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
@@ -135,6 +125,7 @@ export default function LoginPage() {
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
                       fill="none"
+                      color="#000000"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
@@ -192,7 +183,7 @@ export default function LoginPage() {
             >
               <p className="text-sm text-white/70">
                 Don't have an account?{" "}
-                <Link href="#" className="text-blue-300 hover:text-blue-200 transition-colors underline-offset-4 hover:underline font-medium">
+                <Link  href="mailto:info@afsrealestate.com" className="text-blue-300 hover:text-blue-200 transition-colors underline-offset-4 hover:underline font-medium">
                   Contact administrator
                 </Link>
               </p>

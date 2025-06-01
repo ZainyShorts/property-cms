@@ -3,9 +3,18 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+// import useSWR from 'swr'
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export function Navbar() {
   const router = useRouter()
+  // const { data, error } = useSWR('/api/me', fetcher);
+
+  // console.log(data)
+
+  // if (error) return <div>Error loading user</div>;
+  // if (!data) return <div>Loading...</div>;
 
   return (
     <nav className="absolute top-0 left-0 right-0 z-50 py-4">
@@ -17,7 +26,7 @@ export function Navbar() {
         <div>
           <Button
             variant="outline"
-            className="text-white border-white hover:bg-white hover:text-black transition-colors"
+            className="text-black border-white  hover:text-white hover:bg-black transition-colors"
             onClick={() => router.push("/sign-in")}
           >
             Sign In

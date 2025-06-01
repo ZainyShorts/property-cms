@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { File, Plus, Minus, X, Search, Loader2 } from "lucide-react"
 import axios from "axios"
-import { useUser } from "@clerk/nextjs"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 
@@ -84,7 +83,6 @@ const propertySections = {
 }
 
 export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
-  const { isSignedIn, user, isLoaded } = useUser()
 
   const [dataForm, setDataForm] = useState<Record<string, any>>({})
   const [selectedImages, setSelectedImages] = useState<string[]>([])

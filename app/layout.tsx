@@ -4,9 +4,7 @@ import { ToastContainer } from "react-toastify"
 import { ApolloProvider } from "@/lib/ApolloPovider"
 import "./globals.css"
 import type React from "react"
-import {
-  ClerkProvider
-} from '@clerk/nextjs'
+
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -22,7 +20,6 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <ClerkProvider>
       <html lang="en">
         <head>
           {/* Inject theme detection script before hydration */}
@@ -61,6 +58,5 @@ export default function RootLayout({
           </ApolloProvider>
         </body>
       </html>
-    </ClerkProvider>
   )
 }
