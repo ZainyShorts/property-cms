@@ -41,7 +41,7 @@ interface SubDevRecord {
   roadLocation?: string
   developmentName?: string
   subDevelopment: string
-  plotNumber: number
+  plotNumber: string
   plotHeight: number
   plotPermission: string
   plotSizeSqFt: number
@@ -93,6 +93,27 @@ interface ImageData {
   isExisting?: boolean
 }
 
+// Define empty form values
+const emptyFormValues = {
+  masterDevelopment: "",
+  roadLocation: "",
+  developmentName: "",
+  subDevelopment: "",
+  plotNumber: "",
+  plotHeight: 0,
+  plotPermission: [],
+  plotSizeSqFt: 0,
+  plotBUASqFt: 0,
+  plotStatus: "",
+  buaAreaSqFt: 0,
+  facilitiesAreaSqFt: 0,
+  amenitiesAreaSqFt: 0,
+  totalAreaSqFt: 0,
+  facilitiesCategories: [],
+  amentiesCategories: [],
+  pictures: [],
+}
+
 export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
   const [error, setError] = useState<any>(null)
@@ -120,96 +141,23 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     return editRecord.masterDevelopment as string
   }
 
-  // Update the default values for plotPermission to be an array
+  // Initialize form with empty values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      masterDevelopment: getMasterDevelopmentId(),
-      roadLocation: editRecord?.roadLocation || "",
-      developmentName: editRecord?.developmentName || "",
-      subDevelopment: editRecord?.subDevelopment || "",
-      plotNumber: editRecord?.plotNumber || 0,
-      plotHeight: editRecord?.plotHeight || 0,
-      plotPermission: Array.isArray(editRecord?.plotPermission)
-        ? editRecord?.plotPermission
-        : editRecord?.plotPermission
-          ? [editRecord.plotPermission]
-          : [],
-      plotSizeSqFt: editRecord?.plotSizeSqFt || 0,
-      plotBUASqFt: editRecord?.plotBUASqFt || 0,
-      plotStatus: editRecord?.plotStatus || "",
-      buaAreaSqFt: editRecord?.buaAreaSqFt || 0,
-      facilitiesAreaSqFt: editRecord?.facilitiesAreaSqFt || 0,
-      amenitiesAreaSqFt: editRecord?.amenitiesAreaSqFt || 0,
-      totalAreaSqFt: editRecord?.totalAreaSqFt || 0,
-      facilitiesCategories: editRecord?.facilitiesCategories || [],
-      amentiesCategories: editRecord?.amentiesCategories || [],
-      pictures: [],
-    },
+    defaultValues: emptyFormValues,
   })
 
-  // Get the current masterDevelopment value from the form
-  const masterDevelopment = useWatch({
-    control: form.control,
-    name: "masterDevelopment",
-  })
-
-  // Update the fetchMasterDevelopments function to check if the currently selected masterDevelopment
-  // is still in the filtered results, and clear it if not
-  const fetchMasterDevelopments = async (searchTerm = "") => {
-    try {
-      setIsLoading(true)
-      const endpoint = searchTerm
-        ? `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?developmentName=${searchTerm}`
-        : `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
-
-      const response = await axios.get(endpoint)
-      const fetchedDevelopments = response.data.data
-      setMasterDevelopments(fetchedDevelopments)
-
-      // If there's a search term and a currently selected masterDevelopment,
-      // check if the selected masterDevelopment is still in the filtered results
-      if (searchTerm && masterDevelopment) {
-        const isSelectedDevInResults = fetchedDevelopments.some(
-          (dev: MasterDevelopment) => dev._id === masterDevelopment,
-        )
-
-        // If the selected development is not in the filtered results, clear the selection
-        if (!isSelectedDevInResults) {
-          form.setValue("masterDevelopment", "")
-          form.setValue("roadLocation", "")
-          form.setValue("developmentName", "")
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching master developments:", error)
-      toast.error("Failed to load master developments")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Update the useEffect to call fetchMasterDevelopments without a search term on mount
+  // Reset form when edit mode changes
   useEffect(() => {
-    // Initial load of master developments is now handled in the loadInitialData useEffect
-    // This useEffect is now only for the initial load without search term
-    if (!masterDevelopments.length) {
-      fetchMasterDevelopments()
-    }
-  }, [])
-
-  // Update the reset function to handle plotPermission as an array
-  useEffect(() => {
-    if (editRecord) {
+    if (isEditMode && editRecord) {
       const masterDevId = getMasterDevelopmentId()
-      console.log("Setting master development ID:", masterDevId)
 
       form.reset({
         masterDevelopment: masterDevId,
         roadLocation: editRecord.roadLocation || "",
         developmentName: editRecord.developmentName || "",
         subDevelopment: editRecord.subDevelopment || "",
-        plotNumber: editRecord.plotNumber || 0,
+        plotNumber: editRecord.plotNumber || "",
         plotHeight: editRecord.plotHeight || 0,
         plotPermission: Array.isArray(editRecord.plotPermission)
           ? editRecord.plotPermission
@@ -244,45 +192,96 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         setPictures(newPictures)
       }
     } else {
-      form.reset({
-        masterDevelopment: "",
-        roadLocation: "",
-        developmentName: "",
-        subDevelopment: "",
-        plotNumber: 0,
-        plotHeight: 0,
-        plotPermission: [],
-        plotSizeSqFt: 0,
-        plotBUASqFt: 0,
-        plotStatus: "",
-        buaAreaSqFt: 0,
-        facilitiesAreaSqFt: 0,
-        amenitiesAreaSqFt: 0,
-        totalAreaSqFt: 0,
-        facilitiesCategories: [],
-        amentiesCategories: [],
-        pictures: [],
-      })
+      // Reset to empty values for add mode
+      form.reset(emptyFormValues)
       setPictures(Array(6).fill(null))
     }
-  }, [editRecord, form])
+  }, [editRecord, form, isEditMode])
+
+  const masterDevelopment = useWatch({
+    control: form.control,
+    name: "masterDevelopment",
+  })
+
+  const fetchMasterDevelopments = async (searchTerm = "") => {
+    try {
+      setIsLoading(true)
+      const endpoint = searchTerm
+        ? `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?developmentName=${searchTerm}`
+        : `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+
+      const response = await axios.get(endpoint)
+      const fetchedDevelopments = response.data.data
+      setMasterDevelopments(fetchedDevelopments)
+
+      // If there's a search term and a currently selected masterDevelopment,
+      // check if the selected masterDevelopment is still in the filtered results
+      if (searchTerm && masterDevelopment) {
+        const isSelectedDevInResults = fetchedDevelopments.some(
+          (dev: MasterDevelopment) => dev._id === masterDevelopment,
+        )
+
+        if (!isSelectedDevInResults) {
+          form.setValue("masterDevelopment", "")
+          form.setValue("roadLocation", "")
+          form.setValue("developmentName", "")
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching master developments:", error)
+      toast.error("Failed to load master developments")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!masterDevelopments.length) {
+      fetchMasterDevelopments()
+    }
+  }, [])
+
+  // Cleanup effect to reset form when component unmounts
+  useEffect(() => {
+    return () => {
+      // Reset form to empty values
+      form.reset(emptyFormValues)
+
+      // Clear pictures state and revoke blob URLs
+      setPictures((prevPictures) => {
+        prevPictures.forEach((pic) => {
+          if (pic && pic.preview && pic.preview.startsWith("blob:")) {
+            URL.revokeObjectURL(pic.preview)
+          }
+        })
+        return Array(6).fill(null)
+      })
+
+      // Reset other states
+      setError(null)
+      setActiveImageIndex(null)
+      setUploadProgress(Array(6).fill(0))
+      setDevNameSearchTerm("")
+      setIsSearchingDevName(false)
+    }
+  }, [form])
 
   const buaAreaSqFt = useWatch({
     control: form.control,
     name: "buaAreaSqFt",
-    defaultValue: editRecord?.buaAreaSqFt || 0,
+    defaultValue: 0,
   })
 
   const facilitiesAreaSqFt = useWatch({
     control: form.control,
     name: "facilitiesAreaSqFt",
-    defaultValue: editRecord?.facilitiesAreaSqFt || 0,
+    defaultValue: 0,
   })
 
   const amenitiesAreaSqFt = useWatch({
     control: form.control,
     name: "amenitiesAreaSqFt",
-    defaultValue: editRecord?.amenitiesAreaSqFt || 0,
+    defaultValue: 0,
   })
 
   // Update development name and road location when master development changes
@@ -550,6 +549,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         }
       }
 
+      // Reset form after successful submission
+      if (!isEditMode) {
+        form.reset(emptyFormValues)
+        setPictures(Array(6).fill(null))
+      }
+
       setIsModalOpen(false)
     } catch (error: any) {
       console.error("Error submitting form:", error)
@@ -688,15 +693,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         const fetchedDevelopments = response.data.data
         setMasterDevelopments(fetchedDevelopments)
 
-        // If we're in edit mode and have a masterDevelopment ID, make sure it's selected
         if (editRecord && editRecord.masterDevelopment) {
           const masterDevId = getMasterDevelopmentId()
           console.log("Edit mode, setting master development:", masterDevId)
 
-          // Force update the form value after developments are loaded
           form.setValue("masterDevelopment", masterDevId)
 
-          // Also update the related fields
           const selectedDevelopment = fetchedDevelopments.find((dev) => dev._id === masterDevId)
           if (selectedDevelopment) {
             form.setValue("roadLocation", selectedDevelopment.roadLocation)
@@ -845,8 +847,6 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                 </FormItem>
               )}
             />
-
-            {/* Plot Permission */}
 
             {/* Plot Size SqFt */}
             <FormField
@@ -1145,7 +1145,19 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsModalOpen(false)
+                // Reset form when modal is closed
+                if (!isEditMode) {
+                  form.reset(emptyFormValues)
+                  setPictures(Array(6).fill(null))
+                }
+              }}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button

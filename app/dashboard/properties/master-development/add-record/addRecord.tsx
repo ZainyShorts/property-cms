@@ -16,16 +16,32 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import type { MasterDevelopment } from "../page"
 import { Progress } from "@/components/ui/progress"
 import { countries, getCitiesByCountry } from "../data/data"
+
+// Define MasterDevelopment interface
+interface MasterDevelopment {
+  _id?: string
+  roadLocation: string
+  developmentName: string
+  country: string
+  city: string
+  locationQuality: string
+  buaAreaSqFt: number
+  facilitiesAreaSqFt: number
+  amentiesAreaSqFt: number
+  totalAreaSqFt: number
+  facilitiesCategories: string[]
+  amentiesCategories: string[]
+  pictures: string[]
+}
 
 const formSchema = z.object({
   roadLocation: z.string().min(1, "Road location is Required"),
   developmentName: z.string().min(1, "Development name is required"),
   country: z.string().min(1, "Country is required"),
   city: z.string().min(1, "City is required"),
-  locationQuality: z.string().min(1, "Location quality is required"), 
+  locationQuality: z.string().min(1, "Location quality is required"),
   buaAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "BUA area is required"),
   facilitiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Facilities area is required"),
   amentiesAreaSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Amenities area is required"),
@@ -51,6 +67,22 @@ interface ImageData {
   isExisting?: boolean
 }
 
+// Define empty form values
+const emptyFormValues = {
+  roadLocation: "",
+  developmentName: "",
+  country: "",
+  city: "",
+  locationQuality: "",
+  buaAreaSqFt: 0,
+  facilitiesAreaSqFt: 0,
+  amentiesAreaSqFt: 0,
+  totalAreaSqFt: 0,
+  facilitiesCategories: [],
+  amentiesCategories: [],
+  pictures: [],
+}
+
 export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -60,22 +92,10 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const isEditMode = !!editRecord
 
+  // Initialize form with empty values
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      roadLocation: "",
-      developmentName: "",
-      country: "",
-      city: "",
-      locationQuality: "",
-      buaAreaSqFt: 0,
-      facilitiesAreaSqFt: 0,
-      amentiesAreaSqFt: 0,
-      totalAreaSqFt: 0,
-      facilitiesCategories: [],
-      amentiesCategories: [],
-      pictures: [],
-    },
+    defaultValues: emptyFormValues,
   })
 
   const selectedCountry = useWatch({
@@ -104,8 +124,9 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     }
   }, [selectedCountry, form, isEditMode])
 
+  // Reset form when edit mode changes
   useEffect(() => {
-    if (editRecord) {
+    if (isEditMode && editRecord) {
       if (editRecord.country) {
         const cities = getCitiesByCountry(editRecord.country)
         const cityNames = cities.map((city) => city.name)
@@ -132,42 +153,70 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
           amentiesCategories: editRecord.amentiesCategories || [],
           pictures: [],
         })
+
+        // Initialize pictures from existing record
+        if (editRecord.pictures && editRecord.pictures.length > 0) {
+          const newPictures = Array(6).fill(null)
+          editRecord.pictures.forEach((url, index) => {
+            if (index < 6) {
+              newPictures[index] = {
+                file: new File([], `image-${index}.jpg`),
+                preview: url,
+                awsUrl: url,
+                isExisting: true,
+              }
+            }
+          })
+          setPictures(newPictures)
+        }
       }
     } else {
-      form.reset({
-        roadLocation: "",
-        developmentName: "",
-        country: "",
-        city: "",
-        locationQuality: "",
-        buaAreaSqFt: 0,
-        facilitiesAreaSqFt: 0,
-        amentiesAreaSqFt: 0,
-        totalAreaSqFt: 0,
-        facilitiesCategories: [],
-        amentiesCategories: [],
-        pictures: [],
-      })
+      // Reset to empty values for add mode
+      form.reset(emptyFormValues)
       setPictures(Array(6).fill(null))
+      setAvailableCities([])
     }
-  }, [editRecord, form])
+  }, [editRecord, form, isEditMode])
+
+  // Cleanup effect to reset form when component unmounts
+  useEffect(() => {
+    return () => {
+      // Reset form to empty values
+      form.reset(emptyFormValues)
+
+      // Clear pictures state and revoke blob URLs
+      setPictures((prevPictures) => {
+        prevPictures.forEach((pic) => {
+          if (pic && pic.preview && pic.preview.startsWith("blob:")) {
+            URL.revokeObjectURL(pic.preview)
+          }
+        })
+        return Array(6).fill(null)
+      })
+
+      // Reset other states
+      setActiveImageIndex(null)
+      setUploadProgress(Array(6).fill(0))
+      setAvailableCities([])
+    }
+  }, [form])
 
   const buaAreaSqFt = useWatch({
     control: form.control,
     name: "buaAreaSqFt",
-    defaultValue: editRecord?.buaAreaSqFt || 0,
+    defaultValue: 0,
   })
 
   const facilitiesAreaSqFt = useWatch({
     control: form.control,
     name: "facilitiesAreaSqFt",
-    defaultValue: editRecord?.facilitiesAreaSqFt || 0,
+    defaultValue: 0,
   })
 
   const amentiesAreaSqFt = useWatch({
     control: form.control,
     name: "amentiesAreaSqFt",
-    defaultValue: editRecord?.amentiesAreaSqFt || 0,
+    defaultValue: 0,
   })
 
   const handleCheckChangedFields = () => {
@@ -369,6 +418,13 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         )
         console.log(response)
         toast.success("Master development record has been added successfully")
+      }
+
+      // Reset form after successful submission
+      if (!isEditMode) {
+        form.reset(emptyFormValues)
+        setPictures(Array(6).fill(null))
+        setAvailableCities([])
       }
 
       if (onRecordSaved) {
@@ -784,7 +840,20 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsModalOpen(false)
+                // Reset form when modal is closed
+                if (!isEditMode) {
+                  form.reset(emptyFormValues)
+                  setPictures(Array(6).fill(null))
+                  setAvailableCities([])
+                }
+              }}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button
