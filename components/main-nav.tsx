@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
 import { Menu } from "lucide-react"
 import { logoutUser } from "@/lib/auth"
+import Image from "next/image"
 
 interface MainNavProps {
   onOpenSidebar: () => void
@@ -43,7 +44,7 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
 
   // Apply class & save preference
   useEffect(() => {
-    if (darkMode === null) return // don’t run until theme is resolved
+    if (darkMode === null) return // don't run until theme is resolved
     if (darkMode) {
       document.documentElement.classList.add("dark")
       localStorage.setItem("theme", "dark")
@@ -73,13 +74,15 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
           <Switch checked={darkMode} onCheckedChange={setDarkMode} className="mr-4" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Avatar className="h-8 w-8 cursor-pointer">
-                <AvatarImage
-                  src="https://c4.wallpaperflare.com/wallpaper/900/199/830/anime-animated-wallpaper-preview.jpg"
-                  alt="Profile"
+              <div className="cursor-pointer">
+                <Image
+                  src="/afs-logo.avif"
+                  alt="AFS Logo"
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 rounded-full object-contain"
                 />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
+              </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>

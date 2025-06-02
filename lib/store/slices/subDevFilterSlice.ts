@@ -2,7 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface SubDevFilterState {
   subDevelopment?: string;
-  plotNumber?: number;
+  plotNumber?: string;
   plotPermission?: string[];
   plotStatus?: string;
   facilitiesCategories?: string[];
@@ -11,7 +11,7 @@ interface SubDevFilterState {
 
 const initialState: SubDevFilterState = {
   subDevelopment: '',
-  plotNumber: undefined,
+  plotNumber: '',
   plotPermission: [],
   plotStatus: '',
   facilitiesCategories: [],
@@ -25,7 +25,7 @@ const subDevFilterSlice = createSlice({
     setSubDevelopment(state, action: PayloadAction<string>) {
       state.subDevelopment = action.payload;
     },
-    setPlotNumber(state, action: PayloadAction<number>) {
+    setPlotNumber(state, action: PayloadAction<string>) {
       state.plotNumber = action.payload;
     },
     setPlotPermission(state, action: PayloadAction<string[]>) {

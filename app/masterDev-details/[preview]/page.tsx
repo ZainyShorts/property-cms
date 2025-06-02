@@ -1,11 +1,32 @@
 "use client"
 import React, { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Play, Pause, Maximize2, Building2, BarChart3, Warehouse, Home, Castle, Building, Hotel, Users, MapPin, Award, Clock, Tag, Grid, Layers, Activity } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  Maximize2,
+  Building2,
+  BarChart3,
+  Warehouse,
+  Home,
+  Castle,
+  Building,
+  Hotel,
+  Users,
+  MapPin,
+  Award,
+  Clock,
+  Tag,
+  Grid,
+  Layers,
+  Activity,
+} from "lucide-react"
 import { useDevelopmentReport } from "../hooks/useDevelopmentReport"
 import axios from "axios"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { FileText, Eye, Download } from 'lucide-react'
+import { FileText, Eye, Download } from "lucide-react"
 
 interface MediaItem {
   type: "image" | "video" | "youtube" | "youtube-short"
@@ -43,11 +64,13 @@ const formatDate = (dateString: string) => {
 
 const getDocumentIcon = (type: string) => {
   const iconType = type.toLowerCase()
-  if (iconType.includes('pdf')) {
+  if (iconType.includes("pdf")) {
     return <FileText className="h-5 w-5 text-red-500" />
-  } else if (iconType.includes('image') || iconType.includes('jpg') || iconType.includes('png')) {
+  } else if (iconType.includes("image") || iconType.includes("jpg") || iconType.includes("png")) {
     return <FileText className="h-5 w-5 text-blue-500" />
-  } else if (iconType.includes('doc')) {
+  } else if (iconType.includes("video") || iconType.includes("mp4") || iconType.includes("youtube")) {
+    return <Play className="h-5 w-5 text-green-500" />
+  } else if (iconType.includes("doc")) {
     return <FileText className="h-5 w-5 text-blue-600" />
   }
   return <FileText className="h-5 w-5 text-gray-500" />
@@ -116,6 +139,8 @@ function App({ params }: Props) {
     // Add media from documents
     documents.forEach((doc) => {
       const type = doc.type.toLowerCase()
+      const url = doc.documentUrl
+
       if (
         type.includes("image") ||
         type.includes("jpg") ||
@@ -129,37 +154,26 @@ function App({ params }: Props) {
           title: doc.title || "Document Image",
         })
       } else if (type.includes("video") || type.includes("mp4") || type.includes("mov") || type.includes("avi")) {
-        media.push({
-          type: "video",
-          url: doc.documentUrl,
-          title: doc.title || "Document Video",
-        })
+        // Check if it's a YouTube URL
+        if (url.includes("youtube.com") || url.includes("youtu.be")) {
+          media.push({
+            type: "youtube",
+            url: doc.documentUrl,
+            title: doc.title || "Document Video",
+          })
+        } else {
+          media.push({
+            type: "video",
+            url: doc.documentUrl,
+            title: doc.title || "Document Video",
+          })
+        }
       }
     })
 
     // If no media found, add default images
     if (media.length === 0) {
       media.push(
-        {
-          type: "image",
-          url: DEFAULT_IMAGE,
-          title: "Property Exterior View",
-        },
-        {
-          type: "youtube",
-          url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          title: "Property Tour Video",
-        },
-        {
-          type: "image",
-          url: "/placeholder.svg?height=600&width=900",
-          title: "Interior Design",
-        },
-        {
-          type: "video",
-          url: "/placeholder.mp4",
-          title: "Development Progress",
-        },
         {
           type: "image",
           url: "/placeholder.svg?height=600&width=1000",
@@ -790,10 +804,14 @@ function App({ params }: Props) {
                       {getDocumentIcon(doc.type)}
                       <div>
                         <h4 className="font-medium">{doc.title}</h4>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <div className="flex items-center">
                             <Clock className="h-3 w-3 mr-1" />
                             <span>{formatDate(doc.createdAt)}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Tag className="h-3 w-3 mr-1" />
+                            <span>Type: {doc.typeAttachment || doc.type}</span>
                           </div>
                         </div>
                       </div>

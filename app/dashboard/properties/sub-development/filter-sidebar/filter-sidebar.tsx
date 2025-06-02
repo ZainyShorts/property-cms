@@ -220,10 +220,7 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
     const { name, value } = e.target
     switch (name) {
       case "plotNumber":
-        const plotNum = value ? Number.parseInt(value, 10) : undefined
-        if (!isNaN(plotNum as number)) {
-          dispatch(setPlotNumber(plotNum as number))
-        }
+          dispatch(setPlotNumber(value))
         break
     }
   }

@@ -18,7 +18,7 @@ export default function OTPPage() {
   const [error, setError] = useState<string>("")
   const [resendDisabled, setResendDisabled] = useState<boolean>(false)
   const [countdown, setCountdown] = useState<number>(30)
-  const [redirectTimer, setRedirectTimer] = useState<number>(60) // 60-second redirect timer
+  const [redirectTimer, setRedirectTimer] = useState<number>(60)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
   const email = searchParams.get("email") || ""
@@ -51,20 +51,15 @@ export default function OTPPage() {
       setRedirectTimer(prev => {
         if (prev <= 1) {
           clearInterval(redirectInterval)
-          router.back() // Redirect back to previous page
+          router.back()
           return 0
         }
         return prev - 1
       })
     }, 1000)
 
-    // Clear interval if OTP is entered
-    if (otp.every(digit => digit !== "")) {
-      clearInterval(redirectInterval)
-    }
-
     return () => clearInterval(redirectInterval)
-  }, [otp, router])
+  }, [router])
 
   const handleChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return
@@ -73,7 +68,6 @@ export default function OTPPage() {
     newOtp[index] = value
     setOtp(newOtp)
 
-    // Move to next input if current input is filled
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
@@ -149,10 +143,10 @@ export default function OTPPage() {
     try {
       const otpString = otp.join("")
       const response = await verifyOtp(email, otpString)
-      console.log(response)
+      
       if (response.success) {
         setCookie('token', response.token, {
-          maxAge: 60 * 60 * 24, // 7 days
+          maxAge: 60 * 60 * 24,
           httpOnly: false,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
@@ -161,15 +155,14 @@ export default function OTPPage() {
         router.replace("/dashboard/properties/inventory")
       } else {
         setError(response.message || "Invalid OTP. Please try again.")
-        // Clear OTP on error
         setOtp(Array(6).fill(""))
         inputRefs.current[0]?.focus()
-        setIsLoading(true)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed. Please try again.")
+    } finally {
       setIsLoading(false)
-    } 
+    }
   }
 
   const handleResendOtp = async () => {
@@ -182,7 +175,6 @@ export default function OTPPage() {
       if (!response.success) {
         throw new Error(response.message || "Failed to resend OTP")
       }
-      // Reset redirect timer when OTP is resent
       setRedirectTimer(60)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resend OTP")
@@ -253,12 +245,11 @@ export default function OTPPage() {
                     onKeyDown={(e) => handleKeyDown(index, e)}
                     onPaste={handlePaste}
                     autoFocus={index === 0}
-                    className="h-10 w-10 md:h-16  md:w-16 text-center text-2xl font-bold bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 focus:bg-white/15 focus:border-white/40 rounded-xl"
+                    className="h-10 w-10 md:h-16 md:w-16 text-center text-2xl font-bold bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 focus:bg-white/15 focus:border-white/40 rounded-xl"
                   />
                 ))}
               </motion.div>
 
-              {/* Redirect timer display */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -289,7 +280,7 @@ export default function OTPPage() {
                   type="button"
                   onClick={handleSubmit}
                   disabled={isLoading || otp.some(digit => digit === "")}
-                  className="w-full h-14 text-base transition-all relative overflow-hidden group bg-white  border-none rounded-xl shadow-lg"
+                  className="w-full h-14 text-base transition-all relative overflow-hidden group bg-white border-none rounded-xl shadow-lg"
                 >
                   <span className="relative z-10 flex items-center justify-center gap-2 text-black font-semibold">
                     {isLoading ? (
@@ -312,7 +303,7 @@ export default function OTPPage() {
               transition={{ delay: 0.7, duration: 0.5 }}
               className="text-center w-full space-y-3"
             >
-              {/* <p className="text-sm text-white/70">
+              <p className="text-sm text-white/70">
                 Didn't receive code?{" "}
                 <Button 
                   variant="link" 
@@ -322,7 +313,7 @@ export default function OTPPage() {
                 >
                   {resendDisabled ? `Resend in ${countdown}s` : 'Resend OTP'}
                 </Button>
-              </p> */}
+              </p>
               <p className="text-sm text-white/70">
                 Wrong email?{" "}
                 <Link href="/sign-in" className="text-blue-300 hover:text-blue-200 underline-offset-4 hover:underline font-medium">

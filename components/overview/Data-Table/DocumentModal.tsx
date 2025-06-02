@@ -298,48 +298,18 @@ export default function DocumentModal({ isOpen, onClose, rowId, onDocumentSave }
             </Select>
           </div>
 
-          {isVideoType ? (
-            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "upload" | "link")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="upload">Upload File</TabsTrigger>
-                <TabsTrigger value="link">Paste Link</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="upload">
-                <div className="flex items-center justify-center">
-                  <Input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="document-upload"
-                    accept={getAcceptAttributeForType(documentType as FileType)}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-12 h-12 rounded-full p-0 flex items-center justify-center"
-                  >
-                    <Upload className="h-5 w-5" />
-                    <span className="sr-only">Upload document</span>
-                  </Button>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="link">
-                <div className="space-y-2">
-                  <Label htmlFor="video-link">Video URL</Label>
-                  <Input
-                    id="video-link"
-                    value={videoLink}
-                    onChange={handleVideoLinkChange}
-                    placeholder="Paste video link (YouTube, Vimeo, etc.)"
-                  />
-                </div>
-              </TabsContent>
-            </Tabs>
-          ) : (
+         {isVideoType ? (
+  <div className="space-y-2">
+    <Label htmlFor="video-link">Video URL</Label>
+    <Input
+      id="video-link"
+      value={videoLink}
+      onChange={handleVideoLinkChange}
+      placeholder="Paste video link (YouTube, Vimeo, etc.)"
+    />
+  </div>
+)
+ : (
             <div className="flex items-center justify-center">
               <Input
                 ref={fileInputRef}
