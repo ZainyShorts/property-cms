@@ -6,7 +6,6 @@ import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  Download,
   Filter,
   ChevronLeft,
   ChevronRight,
@@ -18,8 +17,6 @@ import {
   Check,
   ArrowLeft,
   Settings,
-  MousePointerIcon as MousePointerSquare,
-  Share2,
   ChevronDown,
 } from "lucide-react"
 import { toast } from "react-toastify"
@@ -34,7 +31,7 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog"
 import { Card, CardContent } from "@/components/ui/card"
 import { SimpleDatePicker } from "./date-picker/date-picker"
 import { ShareModal } from "../inventory/share-modal/shareModal"
-import { locationInventory, overview, facilities } from "./data/data"
+import { locationInventory, overview, facilities  , actions} from "./data/data"
 import { ImportRecordsModal } from "./import-records/importSubDev"
 import { SubDevAddRecordModal } from "./add-record/add-record"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -47,10 +44,8 @@ import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { SubDevFilterSidebar } from "./filter-sidebar/filter-sidebar"
 import { resetSubDevFilter } from "@/lib/store/slices/subDevFilterSlice"
-import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-// Define the MasterDevelopment type
 interface MasterDevelopment {
   _id: string
   roadLocation: string
@@ -171,7 +166,7 @@ export default function SubDevelopmentPage() {
 
   useEffect(() => {
     fetchRecords()
-  }, [currentPage, sortOrder, limit])
+  }, [sortOrder, limit])
 
   useEffect(() => {
     setPageInputValue(currentPage.toString())
@@ -273,7 +268,7 @@ export default function SubDevelopmentPage() {
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
     setCurrentPage(page)
-    fetchRecords("a", page)
+    pageChange(page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -348,8 +343,7 @@ export default function SubDevelopmentPage() {
 
     return result
   }
-
-  const applyFilters = () => {
+  const pageChange = (current: any) => {
     setLoading(true)
     try {
       // Create a filter object with all possible filters
@@ -367,7 +361,108 @@ export default function SubDevelopmentPage() {
 
       // Create the request data object with only non-empty values
       const requestData: Record<string, any> = {
-        page: currentPage,
+        page: current,
+        sort: sortOrder,
+        limit: limit,
+        ...cleanedFilters,
+      }
+
+      // Add date filters from the page component
+      if (startDate) {
+        // Format start date to beginning of the day
+        const formattedStartDate = new Date(startDate)
+        formattedStartDate.setHours(0, 0, 0, 0)
+        requestData.startDate = formattedStartDate.toISOString()
+      }
+
+      if (endDate) {
+        // Format end date to end of the day (23:59:59.999)
+        const formattedEndDate = new Date(endDate)
+        formattedEndDate.setHours(23, 59, 59, 999)
+        requestData.endDate = formattedEndDate.toISOString()
+      }
+
+      // Convert the request data to URL parameters
+      const params = new URLSearchParams()
+
+      // Add basic params
+      params.append("page", requestData.page.toString())
+      params.append("sort", requestData.sort)
+      params.append("limit", requestData.limit.toString())
+
+      // Add string filters
+      if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
+      if (requestData.plotNumber) params.append("plotNumber", requestData.plotNumber.toString())
+      if (filters.plotPermission?.length) {
+        filters.plotPermission.forEach((permission: string) => {
+          params.append("plotPermission", permission)
+        })
+      }
+      if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
+
+      // Add array filters
+      if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
+        requestData.facilitiesCategories.forEach((facility: string) => {
+          params.append("facilitiesCategories", facility)
+        })
+      }
+
+      if (requestData.amentiesCategories && requestData.amentiesCategories.length > 0) {
+        requestData.amentiesCategories.forEach((amenity: string) => {
+          params.append("amentiesCategories", amenity)
+        })
+      }
+
+      // Add date filters
+      if (requestData.startDate) params.append("startDate", requestData.startDate)
+      if (requestData.endDate) params.append("endDate", requestData.endDate)
+      console.log("filters", filters)
+      // Directly call the API with the filter parameters
+      axios
+        .get<ApiResponse>(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
+        )
+        .then((response) => {
+          setRecords(response.data.data)
+          setPagination({
+            totalCount: response.data.totalCount,
+            totalPages: response.data.totalPages,
+            pageNumber: response.data.pageNumber,
+          })
+        })
+        .catch((error) => {
+          console.error("Error fetching records:", error)
+          toast.error("Failed to fetch records. Please try again.")
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } catch (error) {
+      console.error("Error applying filters:", error)
+      toast.error("Failed to apply filters. Please try again.")
+      setLoading(false)
+    }
+  }
+  const applyFilters = () => {
+    setCurrentPage(1)
+    setLoading(true)
+    try {
+      // Create a filter object with all possible filters
+      const allFilters: Record<string, any> = {
+        subDevelopment: filters.subDevelopment,
+        plotNumber: filters.plotNumber,
+        plotPermission: filters.plotPermission,
+        plotStatus: filters.plotStatus,
+        facilitiesCategories: filters.facilitiesCategories,
+        amentiesCategories: filters.amentiesCategories,
+      }
+
+      // Clean the filter object to remove empty values
+      const cleanedFilters = cleanObject(allFilters)
+
+      // Create the request data object with only non-empty values
+      const requestData: Record<string, any> = {
+        page: 1,
         sort: sortOrder,
         limit: limit,
         ...cleanedFilters,
@@ -813,7 +908,17 @@ export default function SubDevelopmentPage() {
           }, {})
           return updated
         })
-      } else if (headers === "all") {
+      } else if (headers === "actions") {
+        setCheckState("actions")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = actions.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
+      } 
+       else if (headers === "all") {
         setCheckState("all")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce(
@@ -1170,6 +1275,9 @@ export default function SubDevelopmentPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "facilities")}>
                           Facilities & Amenities
+                        </DropdownMenuItem> 
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
+                          Actions
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -1311,9 +1419,21 @@ export default function SubDevelopmentPage() {
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "actions")}
                           colSpan={isSelectionMode ? 6 : 5}
-                          className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative"
                         >
                           Other Actions
+                          {checkState === "actions" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
                         </TableHead>
                       )}
                     </TableRow>
@@ -1436,7 +1556,7 @@ export default function SubDevelopmentPage() {
 
             {/* Pagination */}
             {pagination.totalPages > 0 && (
-              <div className="flex items-center justify-center p-4 border-t">
+              <div className="flex items-center justify-between p-4 border-t">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -1482,6 +1602,7 @@ export default function SubDevelopmentPage() {
                     Page {pagination.pageNumber} of {pagination.totalPages}
                   </div>
                 </div>
+                <div className="flex items-center gap-2">Total Records: {pagination.totalCount}</div>
               </div>
             )}
           </CardContent>

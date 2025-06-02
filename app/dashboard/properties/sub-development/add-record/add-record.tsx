@@ -62,7 +62,7 @@ const formSchema = z.object({
   roadLocation: z.string().optional(),
   developmentName: z.string().optional(),
   subDevelopment: z.string().min(1, "Sub development is required"),
-  plotNumber: z.coerce.number().int().positive("Plot number must be a positive integer"),
+  plotNumber: z.string().min(1,"Plot number is Required"),
   plotHeight: z.coerce.number().positive("Plot height must be positive"),
   plotPermission: z.array(z.string()).min(1, "Select at least one plot permission"),
   plotSizeSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Plot size is required"),
@@ -780,7 +780,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                 <FormItem>
                   <FormLabel>Plot Number</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" placeholder="e.g. 101" {...field} />
+                    <Input type="text" placeholder="e.g. 101-N" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

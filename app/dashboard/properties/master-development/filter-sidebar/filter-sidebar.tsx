@@ -204,7 +204,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const fetchDevelopmentNames = async (searchTerm = "") => {
     setIsSearchingDevName(true)
     try {
-      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?fields=developmentName&limit=1000`
 
       // Add search parameter if provided
       if (searchTerm) {

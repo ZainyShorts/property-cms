@@ -276,7 +276,7 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
             <Input
               id="plotNumber"
               name="plotNumber"
-              type="number"
+              type="text"
               placeholder="Enter plot number"
               value={filters.plotNumber || ""}
               onChange={handleInputChange}
@@ -300,34 +300,35 @@ export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarP
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
               )}
 
-              {/* Dropdown for sub-developments */}
-              {showDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg max-h-60 overflow-auto border">
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-2">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      <span>Loading...</span>
-                    </div>
-                  ) : subDevelopments.length > 0 ? (
-                    <div>
-                      {subDevelopments.map((subDev) => (
-                        <div
-                          key={subDev._id}
-                          className="px-4 py-2 cursor-pointer hover:bg-gray-100"
-                          onClick={() => handleSubDevSelect(subDev)}
-                        >
-                          {subDev.subDevelopment}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-2 text-center text-muted-foreground">No sub-developments found</div>
-                  )}
-                </div>
-              )}
+              {/* Dropdown for sub-developments */} 
+              <div className="mt-4">
+             <Select  onValueChange={(value) => handleSubDevSelect(subDevelopments.find((sd) => sd._id === value))}>
+  <SelectTrigger className="w-full">
+    <SelectValue placeholder={isLoading ? "Loading..." : "Select Sub-development"} />
+  </SelectTrigger>
+  <SelectContent>
+    {isLoading ? (
+      <div className="flex items-center justify-center py-6 px-4">
+        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+        <span>Loading...</span>
+      </div>
+    ) : subDevelopments.length > 0 ? (
+      subDevelopments.map((subDev) => (
+        <SelectItem key={subDev._id} value={subDev._id}>
+          {subDev.subDevelopment}
+        </SelectItem>
+      ))
+    ) : (
+      <div className="p-2 text-center text-muted-foreground text-sm">
+        No sub-developments found
+      </div>
+    )}
+  </SelectContent>
+</Select> 
+</div>
             </div>
           </div>
 

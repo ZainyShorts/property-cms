@@ -150,30 +150,25 @@ export default function MasterDevelopmentPage() {
   }
   useEffect(() => {
     fetchRecords()
-    // Calculate starting index based on current page and limit
-    setStartingIndex((currentPage - 1) * limit)
-  }, [currentPage, sortOrder, limit])
+  }, [sortOrder, limit])
 
   useEffect(() => {
-    setPageInputValue(currentPage.toString())
+    setPageInputValue(currentPage.toString()) 
+    setStartingIndex((currentPage - 1) * limit)
   }, [currentPage])
   useEffect(() => {
-    // Add newly selected records to cache
     const newCache = { ...selectedRecordsCache }
 
-    // Add current page records that are selected to the cache
     records.forEach((record) => {
       if (selectedRowsMap[record._id]) {
         newCache[record._id] = record
       } else {
-        // If a record was deselected, remove it from cache
         delete newCache[record._id]
       }
     })
 
     setSelectedRecordsCache(newCache)
   }, [selectedRowsMap, records])
-  // Update selectedRows when selectedRowsMap changes
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
@@ -263,8 +258,8 @@ export default function MasterDevelopmentPage() {
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
-    setCurrentPage(page)
-    fetchRecords("a", page)
+    setCurrentPage(page) 
+    pageChange(page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,7 +330,122 @@ export default function MasterDevelopmentPage() {
 
     return result
   }
+  const pageChange = (page : any) => { 
+       setLoading(true)
+    try {
+      // Create a filter object with all possible filters
+      const allFilters: Record<string, any> = {
+        developmentName: filters.developmentName,
+        roadLocation: filters.roadLocation,
+        locationQuality: filters.locationQuality,
+        buaAreaSqFtRange: filters.buaAreaSqFtRange,
+        country: filters.country,
+        city: filters.city,
+        totalAreaSqFtRange: filters.totalAreaSqFtRange,
+        facilitiesCategories: filters.facilitiesCategories,
+        amentiesCategories: filters.amentiesCategories,
+      }
 
+      // Clean the filter object to remove empty values
+      const cleanedFilters = cleanObject(allFilters)
+
+      // Log the cleaned filters
+      console.log("Applying filters:", cleanedFilters)
+
+      // Create the request data object with only non-empty values
+      const requestData: Record<string, any> = {
+        page: page,
+        sortOrder: sortOrder,
+        limit: limit,
+        ...cleanedFilters,
+      }
+
+      // Add date filters from the page component
+      if (startDate) {
+        // Format start date to beginning of the day
+        const formattedStartDate = new Date(startDate)
+        formattedStartDate.setHours(0, 0, 0, 0)
+        requestData.startDate = formattedStartDate.toISOString()
+        console.log("Start date:", requestData.startDate)
+      }
+
+      if (endDate) {
+        // Format end date to end of the day (23:59:59.999)
+        const formattedEndDate = new Date(endDate)
+        formattedEndDate.setHours(23, 59, 59, 999)
+        requestData.endDate = formattedEndDate.toISOString()
+        console.log("End date:", requestData.endDate)
+      }
+
+      // Log the final request data
+      console.log("API request data:", requestData)
+
+      // Convert the request data to URL parameters
+      const params = new URLSearchParams()
+
+      // Add basic params
+      params.append("page", requestData.page.toString())
+      params.append("limit", requestData.limit.toString())
+
+      // Add string filters
+      if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
+      if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
+      if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
+
+      // Add range objects as JSON strings
+      if (requestData.buaAreaSqFtRange) {
+        params.append("buaAreaSqFtRange", JSON.stringify(requestData.buaAreaSqFtRange))
+      }
+
+      if (requestData.totalAreaSqFtRange) {
+        params.append("totalAreaSqFtRange", JSON.stringify(requestData.totalAreaSqFtRange))
+      }
+
+      // Add array filters
+      if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
+        requestData.facilitiesCategories.forEach((facility: string) => {
+          params.append("facilitiesCategories", facility)
+        })
+      }
+
+      if (requestData.amentiesCategories && requestData.amentiesCategories.length > 0) {
+        requestData.amentiesCategories.forEach((amenity: string) => {
+          params.append("amentiesCategories", amenity)
+        })
+      }
+
+      // Add date filters
+      if (requestData.startDate) params.append("startDate", requestData.startDate)
+      if (requestData.endDate) params.append("endDate", requestData.endDate)
+
+      console.log("API params:", params.toString())
+
+      // Directly call the API with the filter parameters
+      axios
+        .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`)
+        .then((response) => {
+          setRecords(response.data.data)
+          setPagination({
+            totalCount: response.data.totalCount,
+            totalPages: response.data.totalPages,
+            pageNumber: response.data.pageNumber,
+          })
+          console.log("API response:", response.data)
+        })
+        .catch((error) => {
+          console.error("Error fetching records:", error)
+          toast.error("Failed to fetch records. Please try again.")
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } catch (error) {
+      console.error("Error applying filters:", error)
+      toast.error("Failed to apply filters. Please try again.")
+      setLoading(false)
+    }
+  } 
+  
   const applyFilters = () => {
     setCurrentPage(1)
     setLoading(true)
@@ -353,7 +463,6 @@ export default function MasterDevelopmentPage() {
         amentiesCategories: filters.amentiesCategories,
       }
 
-      // Clean the filter object to remove empty values
       const cleanedFilters = cleanObject(allFilters)
 
       // Log the cleaned filters
@@ -395,7 +504,9 @@ export default function MasterDevelopmentPage() {
       params.append("limit", requestData.limit.toString())
 
       // Add string filters
-      if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
+      if (requestData.developmentName) params.append("developmentName", requestData.developmentName) 
+        if (requestData.country) params.append("country", requestData.country) 
+                  if (requestData.city) params.append("city", requestData.city)
       if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
       if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
 
@@ -1451,7 +1562,7 @@ export default function MasterDevelopmentPage() {
                 </TableBody>
               </Table>
             </div>
-
+ 
             {/* Pagination - Updated to match the image */}
             {pagination.totalPages > 0 && (
               <div className="flex items-center justify-between p-4 border-t">
