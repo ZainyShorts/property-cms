@@ -96,8 +96,9 @@ interface FilterValues {
 }
 
 // Updated table headers for SubDevelopment
-const tableHeaders = [
-  { key: "_id", label: "ID" },
+const tableHeaders = [ 
+  {key : "index", label : "INDEX"},
+  { key: "_id", label: "ID" }, 
   { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
   { key: "roadLocation", label: "ROAD LOCATION" },
   { key: "subDevelopment", label: "SUB DEVELOPMENT" },
@@ -120,7 +121,8 @@ const tableHeaders = [
 
 export default function SubDevelopmentPage() {
   const { theme } = useTheme()
-  const filters = useSelector((state: any) => state.subDevFilter)
+  const filters = useSelector((state: any) => state.subDevFilter) 
+    const [startingIndex, setStartingIndex] = useState(0)
   const dispatch = useDispatch()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -169,7 +171,8 @@ export default function SubDevelopmentPage() {
   }, [sortOrder, limit])
 
   useEffect(() => {
-    setPageInputValue(currentPage.toString())
+    setPageInputValue(currentPage.toString()) 
+        setStartingIndex((currentPage - 1) * limit)
   }, [currentPage])
 
   // Update selectedRows when selectedRowsMap changes
@@ -939,7 +942,7 @@ export default function SubDevelopmentPage() {
     }
   }
 
-  const renderCellContent = (record: SubDevelopment, key: string) => {
+  const renderCellContent = (record: SubDevelopment, key: string , index: number) => {
     switch (key) {
       case "_id":
         return (
@@ -961,7 +964,9 @@ export default function SubDevelopmentPage() {
               )}
             </Button>
           </div>
-        )
+        ) 
+         case "index":
+        return <div className="flex justify-center">{startingIndex + index + 1}</div>
       case "masterDevelopment":
         return record.masterDevelopment.developmentName
       case "roadLocation":
@@ -1531,7 +1536,7 @@ export default function SubDevelopmentPage() {
                           .filter((header) => visibleColumns[header.key])
                           .map((header) => (
                             <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                              {renderCellContent(record, header.key)}
+                              {renderCellContent(record, header.key , index)}
                             </TableCell>
                           ))}
                       </TableRow>

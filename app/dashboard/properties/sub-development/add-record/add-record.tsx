@@ -62,7 +62,7 @@ const formSchema = z.object({
   roadLocation: z.string().optional(),
   developmentName: z.string().optional(),
   subDevelopment: z.string().min(1, "Sub development is required"),
-  plotNumber: z.string().min(1,"Plot number is Required"),
+  plotNumber: z.string().min(1, "Plot number is Required"),
   plotHeight: z.coerce.number().positive("Plot height must be positive"),
   plotPermission: z.array(z.string()).min(1, "Select at least one plot permission"),
   plotSizeSqFt: z.coerce.number().nonnegative("Value cannot be negative").min(0, "Plot size is required"),
@@ -111,9 +111,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     if (!editRecord?.masterDevelopment) return ""
 
     if (typeof editRecord.masterDevelopment === "object" && editRecord.masterDevelopment !== null) {
-      return editRecord.masterDevelopment._id || ""
+      const id = editRecord.masterDevelopment._id || ""
+      console.log("Master development is an object, extracted ID:", id)
+      return id
     }
 
+    console.log("Master development is a string:", editRecord.masterDevelopment)
     return editRecord.masterDevelopment as string
   }
 
@@ -188,14 +191,21 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
   // Update the useEffect to call fetchMasterDevelopments without a search term on mount
   useEffect(() => {
-    fetchMasterDevelopments()
+    // Initial load of master developments is now handled in the loadInitialData useEffect
+    // This useEffect is now only for the initial load without search term
+    if (!masterDevelopments.length) {
+      fetchMasterDevelopments()
+    }
   }, [])
 
   // Update the reset function to handle plotPermission as an array
   useEffect(() => {
     if (editRecord) {
+      const masterDevId = getMasterDevelopmentId()
+      console.log("Setting master development ID:", masterDevId)
+
       form.reset({
-        masterDevelopment: getMasterDevelopmentId(),
+        masterDevelopment: masterDevId,
         roadLocation: editRecord.roadLocation || "",
         developmentName: editRecord.developmentName || "",
         subDevelopment: editRecord.subDevelopment || "",
@@ -669,6 +679,40 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     // Clear the timeout if the component unmounts or the search term changes again
     return () => clearTimeout(timeoutId)
   }
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setIsLoading(true)
+        const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`)
+        const fetchedDevelopments = response.data.data
+        setMasterDevelopments(fetchedDevelopments)
+
+        // If we're in edit mode and have a masterDevelopment ID, make sure it's selected
+        if (editRecord && editRecord.masterDevelopment) {
+          const masterDevId = getMasterDevelopmentId()
+          console.log("Edit mode, setting master development:", masterDevId)
+
+          // Force update the form value after developments are loaded
+          form.setValue("masterDevelopment", masterDevId)
+
+          // Also update the related fields
+          const selectedDevelopment = fetchedDevelopments.find((dev) => dev._id === masterDevId)
+          if (selectedDevelopment) {
+            form.setValue("roadLocation", selectedDevelopment.roadLocation)
+            form.setValue("developmentName", selectedDevelopment.developmentName)
+          }
+        }
+      } catch (error) {
+        console.error("Error loading initial data:", error)
+        toast.error("Failed to load master developments")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadInitialData()
+  }, [editRecord, form])
 
   return (
     <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
