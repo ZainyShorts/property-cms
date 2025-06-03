@@ -170,13 +170,12 @@ const plotPermissionOptions = [
   "Bungalow",
 ]
 
-const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
+const plotStatusOptions = ["Vacant", "Pending", "Ready", "Under Construction"]
 
 export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const dispatch = useDispatch()
   const filters = useSelector((state: RootState) => state.projectFilter)
 
-  // Search states for master development
   const [masterDevSearchTerm, setMasterDevSearchTerm] = useState("")
   const [isSearchingMasterDev, setIsSearchingMasterDev] = useState(false)
   const [masterDevResults, setMasterDevResults] = useState<MasterDevelopment[]>([])
@@ -215,11 +214,11 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const fetchMasterDevelopments = async (searchTerm = "") => {
     setIsSearchingMasterDev(true)
     try {
-      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?fields=developmentName&limit=1000`
 
       // Add search parameter if provided
       if (searchTerm) {
-        url += `?developmentName=${encodeURIComponent(searchTerm)}`
+        url += `&developmentName=${encodeURIComponent(searchTerm)}`
       }
 
       const response = await axios.get(url)
@@ -242,11 +241,11 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const fetchSubDevelopments = async (searchTerm = "") => {
     setIsSearchingSubDev(true)
     try {
-      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment`
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?fields=subDevelopment&limit=1000`
 
       // Add search parameter if provided
       if (searchTerm) {
-        url += `?subDevelopment=${encodeURIComponent(searchTerm)}`
+        url += `&subDevelopment=${encodeURIComponent(searchTerm)}`
       }
 
       const response = await axios.get(url)
@@ -359,7 +358,8 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     const currentValues = filters.plotPermission || []
     const updated = checked ? [...currentValues, value] : currentValues.filter((item) => item !== value)
     dispatch(setPlotPermission(updated))
-  }
+  } 
+  
 
   const handlePlotStatusChange = (value: string) => {
     dispatch(setPlotStatus(value))

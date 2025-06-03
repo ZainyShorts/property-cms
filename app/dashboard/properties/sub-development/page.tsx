@@ -248,7 +248,7 @@ export default function SubDevelopmentPage() {
             params.append("amentiesCategories", amenity)
           })
         }
-      }
+      } 
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment?populate=masterDevelopment&${params.toString()}`,
       )
@@ -520,7 +520,6 @@ export default function SubDevelopmentPage() {
       // Add date filters
       if (requestData.startDate) params.append("startDate", requestData.startDate)
       if (requestData.endDate) params.append("endDate", requestData.endDate)
-      console.log("filters", filters)
       // Directly call the API with the filter parameters
       axios
         .get<ApiResponse>(

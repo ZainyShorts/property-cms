@@ -353,15 +353,15 @@ export function AddRecordModal({
       reset({
         masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
         subDevelopment: multiStepFormData?.subDevelopmentId || "",
-        propertyType: "Apartment",
+        propertyType: "",
         projectName: "",
-        projectQuality: "B",
-        constructionStatus: 20,
+        projectQuality: "",
+        constructionStatus: 0,
         launchDate: undefined,
         completionDate: undefined,
         salesStatus: SalesStatus.PRIMARY,
-        downPayment: 10,
-        percentOfConstruction: 50,
+        downPayment: 0,
+        percentOfConstruction: 0,
         installmentDate: undefined,
         uponCompletion: undefined,
         postHandOver: undefined,
@@ -767,7 +767,6 @@ export function AddRecordModal({
             </div>
           </div>
 
-          {/* Construction & Sales Section */}
           <div className="p-4 border rounded-lg shadow-sm">
             <h2 className="text-lg font-semibold mb-4">Construction & Sales</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1060,9 +1059,7 @@ export function AddRecordModal({
             </div>
           </div>
 
-          {/* Unit Counts Section */}
 
-          {/* Images Section */}
           <div className="p-4 border rounded-lg shadow-sm">
             <label className="block mb-2 text-lg font-semibold">Project Images</label>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-2">
@@ -1138,12 +1135,44 @@ export function AddRecordModal({
               Select up to 6 images. All images will be stored in cloud storage.
             </p>
           </div>
-
-          {/* Categories Section */}
-          <div className="grid grid-cols-1 gap-6">
+     <div className="p-4 border rounded-lg shadow-sm">
+              <label className="text-lg font-medium">Amenities Categories *</label>
+              <div className="grid grid-cols-2 gap-3 mt-3  overflow-y-auto pr-2">
+                <Controller
+                  name="amenitiesCategories"
+                  control={control}
+                  render={({ field }) => (
+                    <>
+                      {amenitiesCategoriesOptions.map((category) => (
+                        <div key={category} className="flex flex-row  items-start space-x-3 space-y-0">
+                          <Checkbox
+                            id={`amenity-${category}`}
+                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                            checked={field.value.includes(category)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                field.onChange([...field.value, category])
+                              } else {
+                                field.onChange(field.value.filter((value: string) => value !== category))
+                              }
+                            }}
+                          />
+                          <label htmlFor={`amenity-${category}`} className="font-normal">
+                            {category}
+                          </label>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                />
+              </div>
+              {errors.amenitiesCategories && (
+                <p className="text-sm text-destructive">{errors.amenitiesCategories.message}</p>
+              )}
+            </div>
             <div className="p-4 border rounded-lg shadow-sm">
               <label className="text-lg font-medium">Facilities Categories *</label>
-              <div className="grid grid-cols-2 gap-3 mt-3 max-h-[150px] overflow-y-auto pr-2">
+              <div className="grid grid-cols-2 gap-3 mt-3  overflow-y-auto pr-2">
                 <Controller
                   name="facilityCategories"
                   control={control}
@@ -1177,42 +1206,7 @@ export function AddRecordModal({
               )}
             </div>
 
-            <div className="p-4 border rounded-lg shadow-sm">
-              <label className="text-lg font-medium">Amenities Categories *</label>
-              <div className="grid grid-cols-2 gap-3 mt-3 max-h-[150px] overflow-y-auto pr-2">
-                <Controller
-                  name="amenitiesCategories"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      {amenitiesCategoriesOptions.map((category) => (
-                        <div key={category} className="flex flex-row items-start space-x-3 space-y-0">
-                          <Checkbox
-                            id={`amenity-${category}`}
-                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                            checked={field.value.includes(category)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                field.onChange([...field.value, category])
-                              } else {
-                                field.onChange(field.value.filter((value: string) => value !== category))
-                              }
-                            }}
-                          />
-                          <label htmlFor={`amenity-${category}`} className="font-normal">
-                            {category}
-                          </label>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                />
-              </div>
-              {errors.amenitiesCategories && (
-                <p className="text-sm text-destructive">{errors.amenitiesCategories.message}</p>
-              )}
-            </div>
-          </div>
+          
 
           <DialogFooter className="mt-6 pt-0">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>

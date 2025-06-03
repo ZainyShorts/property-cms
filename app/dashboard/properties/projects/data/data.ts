@@ -1,6 +1,7 @@
-export const projectDetails = ["_id","roadLocation", "masterDevelopment", "subDevelopment" , "propertyType", "projectName", "projectQuality", "facilityCategories", "amenitiesCategories"] 
+export const projectDetails = ["index","_id","roadLocation", "masterDevelopment", "subDevelopment" , "propertyType", "projectName", "projectQuality", "facilityCategories", "amenitiesCategories"] 
 export const projectStatus =  ["constructionStatus", "launchDate","completionDate","salesStatus"] 
-export const paymentPlan = ["downPayment", "percentOfConstruction", "installmentDate", "uponCompletion", "postHandOver"]  
+export const paymentPlan = ["downPayment", "percentOfConstruction", "installmentDate", "uponCompletion", "postHandOver","plotDetails"]   
+export const actions = ["attachDocument", "view", "edit", "delete"]
 
 export interface CountryData {
     id: string;

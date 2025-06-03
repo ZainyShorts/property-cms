@@ -428,7 +428,7 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
               {isEditMode ? "Edit " : ""}
@@ -552,7 +552,7 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
 
                 <h3 className="text-sm font-medium">Plot Details</h3>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 p-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="plotNumber">Plot Number *</Label>
                     <Input

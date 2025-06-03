@@ -6,13 +6,12 @@ import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
-  Download,
   Filter,
   ChevronLeft,
   ChevronRight,
   Trash2,
   Edit,
-  Info, 
+  Info,
   Eye,
   Upload,
   Copy,
@@ -21,10 +20,8 @@ import {
   Ruler,
   Layout,
   ArrowLeft,
-  MousePointerIcon as MousePointerSquare,
   Settings,
   MapPin,
-  Share2,
   ChevronDown,
 } from "lucide-react"
 import { toast } from "react-toastify"
@@ -50,7 +47,7 @@ import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sideba
 import { resetFilters } from "@/lib/store/slices/projectSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
-import { projectDetails, projectStatus, paymentPlan } from "./data/data"
+import { projectDetails, projectStatus, paymentPlan, actions } from "./data/data"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MultiStepModal, type MultiStepFormData } from "./add-record/multi-step"
 import { AddRecordModal } from "./add-record/addRecord"
@@ -79,6 +76,7 @@ interface ApiResponse {
   pageNumber: number
 }
 const tableHeaders = [
+  { key: "index", label: "INDEX" },
   { key: "_id", label: "ID" },
   { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
   { key: "subDevelopment", label: "SUB DEVELOPMENT" },
@@ -98,7 +96,7 @@ const tableHeaders = [
   { key: "uponCompletion", label: "UPON COMPLETION" },
   { key: "postHandOver", label: "POST HANDOVER" },
   { key: "plot", label: "PLOT DETAILS" },
-  { key: "attachDocument", label: "DOCUMENT" }, 
+  { key: "attachDocument", label: "DOCUMENT" },
   { key: "view", label: "VIEW" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
@@ -116,6 +114,7 @@ export default function MasterDevelopmentPage() {
   const [sortOrder, setSortOrder] = useState("desc")
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [records, setRecords] = useState<MasterDevelopment[]>([])
+  const [startingIndex, setStartingIndex] = useState(0)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editMainRecord, setEditMainRecord] = useState<any>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -155,10 +154,11 @@ export default function MasterDevelopmentPage() {
   }
   useEffect(() => {
     fetchRecords()
-  }, [currentPage, sortOrder, limit])
+  }, [sortOrder, limit])
 
   useEffect(() => {
     setPageInputValue(currentPage.toString())
+    setStartingIndex((currentPage - 1) * limit)
   }, [currentPage])
   useEffect(() => {
     const newCache = { ...selectedRecordsCache }
@@ -266,11 +266,123 @@ export default function MasterDevelopmentPage() {
       setLoading(false)
     }
   }
+  const pageChange = (page: any) => {
+    setLoading(true)
+    try {
+      const allFilters: Record<string, any> = {
+        masterDevelopment: filters.masterDevelopment,
+        subDevelopment: filters.subDevelopment,
+        propertyType: filters.propertyType,
+        projectName: filters.projectName,
+        projectQuality: filters.projectQuality,
+        launchDate: filters.launchDate,
+        completionDate: filters.completionDate,
+        uponCompletion: filters.uponCompletion,
+        installmentDate: filters.installmentDate,
+        plotNumber: filters.plotNumber,
+        plotPermission: filters.plotPermission,
+        postHandOver: filters.postHandOver,
+        salesStatus: filters.saleStatus,
+        percentOfConstruction: filters.percentOfConstruction,
+        constructionStatus: filters.constructionStatus,
+        facilitiesCategories: filters.facilitiesCategories,
+        amentiesCategories: filters.amentiesCategories,
+      }
+
+      const cleanedFilters = cleanObject(allFilters)
+
+      console.log("Applying filters:", cleanedFilters)
+
+      const requestData: Record<string, any> = {
+        page: page,
+        sortOrder: sortOrder,
+        limit: limit,
+        ...cleanedFilters,
+      }
+
+      console.log("API request data:", requestData)
+
+      const params = new URLSearchParams()
+      if (startDate) {
+        params.append("startDate", startDate.toISOString())
+      }
+
+      if (endDate) {
+        const adjustedEndDate = new Date(endDate)
+        adjustedEndDate.setHours(23, 59, 59, 999)
+        params.append("endDate", adjustedEndDate.toISOString())
+      }
+      params.append("page", requestData.page)
+      params.append("limit", requestData.limit)
+
+      if (requestData.masterDevelopment) params.append("masterDevelopment", requestData.masterDevelopment)
+      if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
+      if (requestData.propertyType) params.append("propertyType", requestData.propertyType)
+      if (requestData.projectName) params.append("projectName", requestData.projectName)
+      if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus)
+      if (requestData.percentOfConstruction) params.append("percentOfConstruction", requestData.percentOfConstruction)
+      if (requestData.launchDate) params.append("launchDate", requestData.launchDate)
+      if (requestData.completionDate) params.append("completionDate", requestData.completionDate)
+      if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
+      if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
+      if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
+      if (filters.plotPermission?.length) {
+        filters.plotPermission.forEach((permission: string) => {
+          params.append("plotPermission", permission)
+        })
+      }
+      if (requestData.plotStatus) params.append("plotStatus", requestData.plotStatus)
+
+      if (requestData.uponCompletion) params.append("uponCompletion", requestData.uponCompletion)
+
+      if (requestData.constructionStatus !== undefined)
+        params.append("constructionStatus", requestData.constructionStatus)
+
+      if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
+        requestData.facilitiesCategories.forEach((facility: string) => {
+          params.append("facilityCategories", facility)
+        })
+      }
+
+      if (requestData.amentiesCategories && requestData.amentiesCategories.length > 0) {
+        requestData.amentiesCategories.forEach((amenity: string) => {
+          params.append("amenitiesCategories", amenity)
+        })
+      }
+
+      console.log("API params:", params.toString())
+
+      axios
+        .get<ApiResponse>(
+          `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&${params}`,
+        )
+        .then((response) => {
+          setRecords(response.data.data)
+          setPagination({
+            totalCount: response.data.totalCount,
+            totalPages: response.data.totalPages,
+            pageNumber: response.data.pageNumber,
+          })
+          console.log("API response:", response.data)
+        })
+        .catch((error) => {
+          console.error("Error fetching records:", error)
+          toast.error("Failed to fetch records. Please try again.")
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } catch (error) {
+      console.error("Error applying filters:", error)
+      toast.error("Failed to apply filters. Please try again.")
+      setLoading(false)
+    }
+  }
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
     setCurrentPage(page)
-    fetchRecords("a", page)
+    pageChange(page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,6 +423,7 @@ export default function MasterDevelopmentPage() {
     dispatch(resetFilters())
     setStartDate(null)
     setEndDate(null)
+    setCurrentPage(1)
     setSortOrder("desc")
     fetchRecords("reset")
   }
@@ -345,6 +458,7 @@ export default function MasterDevelopmentPage() {
   }
 
   const applyFilters = () => {
+    setCurrentPage(1)
     setLoading(true)
     try {
       const allFilters: Record<string, any> = {
@@ -356,6 +470,7 @@ export default function MasterDevelopmentPage() {
         launchDate: filters.launchDate,
         completionDate: filters.completionDate,
         uponCompletion: filters.uponCompletion,
+        plotStatus: filters.plotStatus,
         installmentDate: filters.installmentDate,
         plotNumber: filters.plotNumber,
         plotPermission: filters.plotPermission,
@@ -372,7 +487,7 @@ export default function MasterDevelopmentPage() {
       console.log("Applying filters:", cleanedFilters)
 
       const requestData: Record<string, any> = {
-        page: currentPage,
+        page: 1,
         sortOrder: sortOrder,
         limit: limit,
         ...cleanedFilters,
@@ -397,6 +512,7 @@ export default function MasterDevelopmentPage() {
       if (requestData.subDevelopment) params.append("subDevelopment", requestData.subDevelopment)
       if (requestData.propertyType) params.append("propertyType", requestData.propertyType)
       if (requestData.projectName) params.append("projectName", requestData.projectName)
+
       if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus)
       if (requestData.percentOfConstruction) params.append("percentOfConstruction", requestData.percentOfConstruction)
       if (requestData.launchDate) params.append("launchDate", requestData.launchDate)
@@ -501,8 +617,8 @@ export default function MasterDevelopmentPage() {
     setIsDeleteModalOpen(true)
   }
 
-   const handleAttachDocument = (recordId: string) => {
-   setSelectedRowId(recordId)
+  const handleAttachDocument = (recordId: string) => {
+    setSelectedRowId(recordId)
     setIsDocumentModalOpen(true)
   }
 
@@ -588,6 +704,15 @@ export default function MasterDevelopmentPage() {
           }, {})
           return updated
         })
+      } else if (headers === "actions") {
+        setCheckState("actions")
+        setVisibleColumns((prev) => {
+          const updated = Object.keys(prev).reduce((acc: any, key) => {
+            acc[key] = actions.includes(key)
+            return acc
+          }, {})
+          return updated
+        })
       } else if (headers === "all") {
         setCheckState("all")
         setVisibleColumns((prev) => {
@@ -609,7 +734,7 @@ export default function MasterDevelopmentPage() {
     }
   }
 
-  const renderCellContent = (record: any, key: string) => {
+  const renderCellContent = (record: any, key: string, index: any) => {
     switch (key) {
       case "_id":
         return (
@@ -632,6 +757,8 @@ export default function MasterDevelopmentPage() {
             </Button>
           </div>
         )
+      case "index":
+        return <div className="flex justify-center">{startingIndex + index + 1}</div>
       case "masterDevelopment":
         return record.masterDevelopment.developmentName
       case "subDevelopment":
@@ -940,20 +1067,20 @@ export default function MasterDevelopmentPage() {
             <Upload className="h-4 w-4 mr-1" />
             Attach
           </Button>
-        ) 
-             case "view":
-                          return (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
-          onClick={() => window.open(`/project-details/${record._id}`, '_blank')}
-                              disabled={isAttachingDocument}
-                            >
-                              <Eye  className="h-4 w-4 mr-1" />
-                              View
-                            </Button> 
-                          )
+        )
+      case "view":
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+            onClick={() => window.open(`/project-details/${record._id}`, "_blank")}
+            disabled={isAttachingDocument}
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            View
+          </Button>
+        )
       case "edit":
         return (
           <Button
@@ -1255,10 +1382,10 @@ export default function MasterDevelopmentPage() {
               <Upload size={18} />
               Import Records
             </Button>
-            <Button variant="outline" onClick={handleExport} className="gap-2">
+            {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
-            </Button>
+            </Button> */}
             <>
               <Button className="gap-2" onClick={() => setIsMultiStepModalOpen(true)}>
                 Add record
@@ -1390,12 +1517,15 @@ export default function MasterDevelopmentPage() {
                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "paymentPlan")}>
                           Payment Plan
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
+                          Other Actions
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
                 </div>
 
-                {!isSelectionMode ? (
+                {/* {!isSelectionMode ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -1448,7 +1578,7 @@ export default function MasterDevelopmentPage() {
                       Share
                     </Button>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -1459,7 +1589,7 @@ export default function MasterDevelopmentPage() {
                       {(checkState === "projectDetails" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "projectDetails")}
-                          colSpan={isSelectionMode ? 9 : 9}
+                          colSpan={isSelectionMode ? 10 : 10}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
                         >
                           Project Details
@@ -1503,7 +1633,7 @@ export default function MasterDevelopmentPage() {
                       {(checkState === "paymentPlan" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "paymentPlan")}
-                          colSpan={isSelectionMode ? 5 : 5}
+                          colSpan={isSelectionMode ? 6 : 6}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-orange-500 to-orange-400 border-r border-border relative"
                         >
                           Project Payment Plan
@@ -1526,9 +1656,21 @@ export default function MasterDevelopmentPage() {
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "actions")}
                           colSpan={isSelectionMode ? 6 : 5}
-                          className="text-center font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border"
+                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative"
                         >
                           Other Actions
+                          {checkState === "actions" && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleColumnVisibility("a", "all")
+                              }}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
+                            >
+                              <ArrowLeft className="w-4 h-4" />
+                              Back
+                            </button>
+                          )}
                         </TableHead>
                       )}
                     </TableRow>
@@ -1566,7 +1708,7 @@ export default function MasterDevelopmentPage() {
                             header.key === "totalAreaSqFt" && "w-[150px]",
                             header.key === "facilityCategories" && "w-[120px]",
                             header.key === "amenitiesCategories" && "w-[120px]",
-                            header.key === "attachDocument" && "w-[120px]", 
+                            header.key === "attachDocument" && "w-[120px]",
                             header.key === "view" && "w-[100px]",
                             header.key === "edit" && "w-[100px]",
                             header.key === "delete" && "w-[100px]",
@@ -1621,7 +1763,7 @@ export default function MasterDevelopmentPage() {
                           .filter((header) => visibleColumns[header.key])
                           .map((header) => (
                             <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                              {renderCellContent(record, header.key)}
+                              {renderCellContent(record, header.key, index)}
                             </TableCell>
                           ))}
                       </TableRow>
@@ -1646,7 +1788,7 @@ export default function MasterDevelopmentPage() {
 
             {/* Pagination - Updated to match the image */}
             {pagination.totalPages > 0 && (
-              <div className="flex items-center justify-center p-4 border-t">
+              <div className="flex items-center justify-between p-4 border-t">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -1692,6 +1834,7 @@ export default function MasterDevelopmentPage() {
                     Page {pagination.pageNumber} of {pagination.totalPages}
                   </div>
                 </div>
+                <div className="flex items-center gap-2">Total Records: {pagination.totalCount}</div>
               </div>
             )}
           </CardContent>
