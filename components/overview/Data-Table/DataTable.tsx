@@ -39,7 +39,7 @@ import { ChevronDown } from "lucide-react"
 import { Checkbox as UICheckbox } from "@/components/ui/checkbox"
 
 // Define categories for column grouping
-const projectDetails = ["_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
+const projectDetails = ["index","_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
 
 const unitDetails = [
   "unitNumber",
@@ -65,11 +65,13 @@ interface PropertyDataTableProps {
   data?: any[]
   page?: number
   setPage: (page: number) => void
-  Count: number
+  Count: number 
+  startingIndex : any
   onDelete?: (id: string) => void
   onShare?: (data: any) => void
   onEdit?: (row: any) => void
-  totalPages?: any
+  totalPages?: any 
+  totalRecord?:any
   onAttachDocument?: (id: string) => void
   loading?: boolean
   selectedRows?: string[]
@@ -93,7 +95,8 @@ function PropertyDataTable({
   Count,
   onDelete,
   totalPages,
-  onShare,
+  onShare, 
+  startingIndex,
   selectedRows = [],
   setSelectedColumns = () => {},
   setSelectedRows = () => {},
@@ -113,7 +116,7 @@ function PropertyDataTable({
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [checkState, setCheckState] = useState<string>("all")
   const [isAttachingDocument, setIsAttachingDocument] = useState(false)
-  const router = useRouter()
+  const router = useRouter() 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [recordDelete, setRecordToDelete] = useState<any>("")
   // Add a new state to track if columns have been modified via settings wheel
@@ -123,7 +126,9 @@ function PropertyDataTable({
 
   // Table headers configuration
   const tableHeaders = [
-    // Project Details
+    // Project Details  
+    
+    { key: "index", label: "INDEX" },
     { key: "_id", label: "ID" },
     { key: "roadLocation", label: "LOCATION NAME" },
     { key: "developmentName", label: "DEVELOPMENT NAME" },
@@ -369,7 +374,7 @@ function PropertyDataTable({
   }, [setSelectedColumns])
 
   const renderCellContent = useCallback(
-    (record: any, key: string) => {
+    (record: any, key: string , index : any) => {
       switch (key) {
         case "_id":
           return (
@@ -391,7 +396,9 @@ function PropertyDataTable({
                 )}
               </Button>
             </div>
-          )
+          ) 
+           case "index":
+        return <div className="flex justify-center">{startingIndex + index + 1}</div>
         case "plotSizeSqFt":
         case "BuaSqFt":
         case "originalPrice":
@@ -593,7 +600,7 @@ function PropertyDataTable({
         {/* Main toolbar */}
         <div className="p-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
-            {!isSelectionMode ? (
+            {/* {!isSelectionMode ? (
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -607,7 +614,7 @@ function PropertyDataTable({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            ) : null}
+            ) : null} */}
             <div className="flex items-center gap-2">
               <Switch checked={showHeaderCategories} onCheckedChange={setShowHeaderCategories} id="show-headers" />
               <label htmlFor="show-headers" className="text-sm cursor-pointer">
@@ -645,12 +652,12 @@ function PropertyDataTable({
             </div>
           </div>
           {/* Add an export button in the main toolbar when columns are modified but not in selection mode */}
-          {!isSelectionMode && columnsModified && (
+          {/* {!isSelectionMode && columnsModified && (
             <Button variant="default" size="sm" onClick={logSelectedData} className="h-8 gap-1.5 ml-auto">
               <ClipboardCheck className="h-3.5 w-3.5" />
               Export Visible Columns
             </Button>
-          )}
+          )} */}
           {/* Add settings wheel dropdown here */} 
           {!isSelectionMode && 
           <DropdownMenu>
@@ -941,7 +948,7 @@ function PropertyDataTable({
                         .filter((header) => visibleColumns[header.key])
                         .map((header) => (
                           <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                            {renderCellContent(record, header.key)}
+                            {renderCellContent(record, header.key , index)}
                           </TableCell>
                         ))}
                     </TableRow>
@@ -967,112 +974,72 @@ function PropertyDataTable({
 
         {/* Pagination */}
         <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-sm text-muted-foreground">{data.length} records</span>
+<div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => goToPage(page - 1)}
+    disabled={page === 1}
+    className="h-8 w-8 p-0"
+  >
+    <ChevronLeft className="h-4 w-4" />
+  </Button>
 
-          <div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(page - 1)}
-              disabled={page === 1}
-              className="hover:bg-muted h-8 w-8 p-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
+  {totalPages <= 3 ? (
+    // If 3 or fewer pages, show all page numbers
+    Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+      <Button
+        key={pageNumber}
+        variant={page === pageNumber ? "default" : "outline"}
+        size="sm"
+        onClick={() => goToPage(pageNumber)}
+        className={`min-w-7 sm:min-w-8 ${page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+      >
+        {pageNumber}
+      </Button>
+    ))
+  ) : (
+    // If more than 3 pages, show input fields
+    <div className="flex items-center gap-1">
+      <input
+        type="number"
+        min="1"
+        defaultValue={page}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            const newPage = Math.min(Math.max(1, parseInt(e.target.value) || 1), totalPages);
+            goToPage(newPage);
+            e.target.value = newPage; // Update input with validated value
+          }
+        }}
+        onBlur={(e) => {
+          e.target.value = page; // Reset to current page if not submitted
+        }}
+        className="w-12 h-8 px-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-center"
+      />
+      <span className="text-sm text-muted-foreground">/</span>
+      <div className="w-12 h-8 px-2 text-sm border rounded-md bg-muted flex items-center justify-center">
+        {totalPages}
+      </div>
+    </div>
+  )}
 
-            {totalPages <= 3 ? (
-              // If 3 or fewer pages, show all page numbers
-              Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
-                <Button
-                  key={pageNumber}
-                  variant={page === pageNumber ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => goToPage(pageNumber)}
-                  className={`min-w-7 sm:min-w-8 ${page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                >
-                  {pageNumber}
-                </Button>
-              ))
-            ) : (
-              // If more than 3 pages, show simplified pagination
-              <>
-                {/* Always show page 1 */}
-                <Button
-                  variant={page === 1 ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => goToPage(1)}
-                  className={`min-w-7 sm:min-w-8 ${page === 1 ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                >
-                  1
-                </Button>
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => goToPage(page + 1)}
+    disabled={page === totalPages || totalPages === 0}
+    className="hover:bg-muted h-8 w-8 p-0"
+  >
+    <ChevronRight className="h-4 w-4" />
+  </Button>
 
-                {/* Show ellipsis if current page > 3 */}
-                {page > 3 && <span className="px-2 text-muted-foreground">...</span>}
+  <span className="text-sm text-muted-foreground ml-2">
+    Page {page} of {totalPages || 1}
+  </span>
+</div>
+                    <span className="text-sm text-muted-foreground">{Count} records</span>
 
-                {/* Show current page and surrounding pages */}
-                {page > 2 && page < totalPages - 1 && (
-                  <>
-                    {page > 3 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => goToPage(page - 1)}
-                        className="min-w-7 sm:min-w-8 hover:bg-muted hidden sm:inline-flex"
-                      >
-                        {page - 1}
-                      </Button>
-                    )}
-
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="min-w-7 sm:min-w-8 bg-primary text-primary-foreground"
-                    >
-                      {page}
-                    </Button>
-
-                    {page < totalPages - 2 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => goToPage(page + 1)}
-                        className="min-w-7 sm:min-w-8 hover:bg-muted hidden sm:inline-flex"
-                      >
-                        {page + 1}
-                      </Button>
-                    )}
-                  </>
-                )}
-
-                {/* Show ellipsis if current page < totalPages - 2 */}
-                {page < totalPages - 2 && <span className="px-2 text-muted-foreground">...</span>}
-
-                {/* Always show last page */}
-                <Button
-                  variant={page === totalPages ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => goToPage(totalPages)}
-                  className={`min-w-7 sm:min-w-8 ${page === totalPages ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-                >
-                  {totalPages}
-                </Button>
-              </>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => goToPage(page + 1)}
-              disabled={page === totalPages || totalPages === 0}
-              className="hover:bg-muted h-8 w-8 p-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-
-            <span className="text-sm text-muted-foreground ml-2">
-              Page {page} of {totalPages || 1}
-            </span>
-          </div>
         </div>
       </div>
       <DeleteConfirmationModal

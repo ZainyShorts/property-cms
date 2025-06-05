@@ -81,9 +81,11 @@ export default function PropertiesPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([])
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
   const [propertyType, setPropertyType] = useState("")
-  const [pendingSearchFilter, setPendingSearchFilter] = useState("")
+  const [pendingSearchFilter, setPendingSearchFilter] = useState("")  
+  const [startingIndex, setStartingIndex] = useState(0)
   const [selectedRecordsCache, setSelectedRecordsCache] = useState<Record<string, any>>({})
-  const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false) 
+  const limit = 10;
   const dispatch = useDispatch()
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   const [shareModalOpen, setShareModalOpen] = useState(false)
@@ -147,7 +149,8 @@ export default function PropertiesPage() {
       )
     } else {
       fetchProperties({ sortBy: "createdAt", sortOrder: sortOrder }, currentPage)
-    }
+    } 
+        setStartingIndex((currentPage - 1) * limit)
   }, [sortOrder, currentPage])
 
   const transformedData = properties.map((property: any) => ({
@@ -636,7 +639,8 @@ export default function PropertiesPage() {
             toggleRow={toggleRow}
             totalPages={totalPages}
             toggleColumns={toggleColumns}
-            Count={totalCount}
+            Count={totalCount} 
+            startingIndex={startingIndex}
             setSelectedRowsMap={setSelectedRowsMap}
             setIsSelectionMode={setIsSelectionMode}
             selectedRowsMap={selectedRowsMap}
