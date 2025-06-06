@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { File, Plus, Minus, X, Search, Loader2 } from "lucide-react"
+import { File, Plus, Minus, Loader2 } from "lucide-react"
 import axios from "axios"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -20,339 +20,104 @@ interface AddPropertyModalProps {
   fetchRecords?: () => void
 }
 
-const propertyTypes = {
-  Townhouse: "Townhouse",
-  Education: "Education",
+const unitTypes = {
+  Studio: "Studio",
   Office: "Office",
   Shop: "Shop",
-  Nursery: "Nursery",
+  Bedroom: "Bedroom",
 }
 
-const propertySections = {
-  locationDetails: {
-    title: "Location Details",
-    fields: {
-      roadLocation: { label: "Road Location", type: "text", placeholder: "Required" },
-      developmentName: { label: "Development Name", type: "text", placeholder: "Required" },
-    },
-  },
-  subDevelopment: {
-    title: "Sub Development",
-    fields: {
-      subDevelopment: { label: "Sub Development (optional)", type: "text", placeholder: "Optional" },
-    },
-  },
-  projectDetails: {
-    title: "Project Details",
-    fields: {
-      projectName: { label: "Project Name", type: "text", placeholder: "Required" },
-      propertyType: { label: "Property Type", type: "select", options: propertyTypes, placeholder: "Required" },
-      propertyHeight: { label: "Property Height", type: "text", placeholder: "Required" },
-      projectLocation: { label: "Project Location", type: "text", placeholder: "Required" },
-    },
-  },
-  unitDetails: {
-    title: "Unit Details",
-    fields: {
-      unitNumber: { label: "Unit Number", type: "text", placeholder: "Optional" },
-      bedrooms: { label: "Bedrooms", type: "number", placeholder: "Optional" },
-      unitLandSize: { label: "Unit Land Size", type: "number", placeholder: "Optional" },
-      unitBUA: { label: "Unit BUA", type: "number", placeholder: "Optional" },
-      unitLocation: { label: "Unit Location", type: "text", placeholder: "Optional" },
-      unitView: { label: "Unit View", type: "array", placeholder: "Optional" },
-    },
-  },
-  availability: {
-    title: "Availability",
-    fields: {
-      purpose: { label: "Purpose", type: "text", placeholder: "Required" },
-      vacancyStatus: { label: "Vacancy Status", type: "text", placeholder: "Optional" },
-      primaryPrice: { label: "Primary Price", type: "number", placeholder: "Optional" },
-      resalePrice: { label: "Resale Price", type: "number", placeholder: "Required" },
-      premiumLoss: { label: "Premium / Loss", type: "number", placeholder: "Required" },
-      rent: { label: "Rent", type: "number", placeholder: "Optional" },
-      noOfCheques: { label: "No of Cheques", type: "number", placeholder: "Optional" },
-    },
-  },
-  propertyImages: {
-    title: "Property Images",
-    fields: {
-      propertyImages: { label: "Property Images", type: "images", placeholder: "Select up to 6 images" },
-    },
-  },
+const unitPurposes = {
+  Rent: "Rent",
+  Sell: "Sell",
+  Manage: "Manage",
+  Develop: "Develop",
+  Valuation: "Valuation",
+  Hold: "Hold",
+  Pending: "Pending",
 }
 
 export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
-
   const [dataForm, setDataForm] = useState<Record<string, any>>({})
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, boolean>>({})
-  const [isListed, setIsListed] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
-  const [projects, setProjects] = useState<any[]>([])
-  const [selectedProject, setSelectedProject] = useState<any>(null)
   const [loading, setLoading] = useState<boolean>(false)
-  const [projectSearchTerm, setProjectSearchTerm] = useState("")
-  const [isSearching, setIsSearching] = useState(false)
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const [showProjectResults, setShowProjectResults] = useState(false)
-  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
-
-  const unitTypes = {
-    Studio: "Studio",
-    Office: "Office",
-    Shop: "Shop",
-    Bedroom: "Bedroom",
-  }
-
-  // Fetch projects on component mount
-  useEffect(() => {
-    fetchProjects()
-  }, [])
 
   // Handle property editing initialization
   useEffect(() => {
-    if (propertyToEdit && !initialLoadComplete) {
+    if (propertyToEdit) {
       console.log("Initializing edit mode with data:", propertyToEdit)
       setIsEditing(true)
 
       // Initialize form data from propertyToEdit
       setDataForm({
-        project: propertyToEdit.project?._id || "",
-        unitType: propertyToEdit.unitType || "",
-        subDevelopment:
-          propertyToEdit?.project?.subDevelopment?.subDevelopment || propertyToEdit.subDevelopmentName || "",
-        masterDevelopment:
-          propertyToEdit?.project?.masterDevelopment?.developmentName || propertyToEdit.developmentName || "",
         unitNumber: propertyToEdit.unitNumber || "",
         unitHeight: propertyToEdit.unitHeight || "",
         unitInternalDesign: propertyToEdit.unitInternalDesign || "",
         unitExternalDesign: propertyToEdit.unitExternalDesign || "",
-        plotSizeSqFt: typeof propertyToEdit.plotSizeSqFt === "number" ? propertyToEdit.plotSizeSqFt : 0,
-        BuaSqFt: typeof propertyToEdit.BuaSqFt === "number" ? propertyToEdit.BuaSqFt : 0,
-        noOfBedRooms: propertyToEdit.noOfBedRooms || "",
+        plotSizeSqFt: typeof propertyToEdit.plotSizeSqFt === "number" ? propertyToEdit.plotSizeSqFt : "",
+        BuaSqFt: typeof propertyToEdit.BuaSqFt === "number" ? propertyToEdit.BuaSqFt : "",
+        noOfBedRooms: typeof propertyToEdit.noOfBedRooms === "number" ? propertyToEdit.noOfBedRooms : "",
+        unitType: propertyToEdit.unitType || "",
+        rentedAt: propertyToEdit.rentedAt || "",
+        rentedTill: propertyToEdit.rentedTill || "",
         unitView: propertyToEdit.unitView || [],
         unitPurpose: propertyToEdit.unitPurpose || "",
         listingDate: propertyToEdit.listingDate || "",
-        chequeFrequency: propertyToEdit.chequeFrequency || "",
-        rentalPrice: typeof propertyToEdit.rentalPrice === "number" ? propertyToEdit.rentalPrice : 0,
-        salePrice: typeof propertyToEdit.salePrice === "number" ? propertyToEdit.salePrice : 0,
-        rentedAt: propertyToEdit.rentedAt || "",
-        rentedTill: propertyToEdit.rentedTill || "",
-        vacantOn: propertyToEdit.vacantOn || "",
-        originalPrice: typeof propertyToEdit.originalPrice === "number" ? propertyToEdit.originalPrice : 0,
-        paidTODevelopers:
-          typeof propertyToEdit.paidTODevelopers === "number"
-            ? propertyToEdit.paidTODevelopers
-            : propertyToEdit.paidTODevelopers
-              ? Number(propertyToEdit.paidTODevelopers)
-              : 0,
+        purchasePrice: typeof propertyToEdit.purchasePrice === "number" ? propertyToEdit.purchasePrice : "",
+        marketPrice: typeof propertyToEdit.marketPrice === "number" ? propertyToEdit.marketPrice : "",
+        askingPrice: typeof propertyToEdit.askingPrice === "number" ? propertyToEdit.askingPrice : "",
+        premiumAndLoss: typeof propertyToEdit.premiumAndLoss === "number" ? propertyToEdit.premiumAndLoss : "",
+        marketRent: typeof propertyToEdit.marketRent === "number" ? propertyToEdit.marketRent : "",
+        askingRent: typeof propertyToEdit.askingRent === "number" ? propertyToEdit.askingRent : "",
+        paidTODevelopers: typeof propertyToEdit.paidTODevelopers === "number" ? propertyToEdit.paidTODevelopers : "",
         payableTODevelopers:
-          typeof propertyToEdit.payableTODevelopers === "number"
-            ? propertyToEdit.payableTODevelopers
-            : propertyToEdit.payableTODevelopers
-              ? Number(propertyToEdit.payableTODevelopers)
-              : 0,
-        premiumAndLoss: typeof propertyToEdit.premiumAndLoss === "number" ? propertyToEdit.premiumAndLoss : 0,
+          typeof propertyToEdit.payableTODevelopers === "number" ? propertyToEdit.payableTODevelopers : "",
       })
 
       if (propertyToEdit.pictures && propertyToEdit.pictures.length > 0) {
         setSelectedImages(propertyToEdit.pictures)
       }
-
-      // Handle flat data structure for project information
-      const handleProjectSearch = async () => {
-        // If we have a projectName but no project._id, search for the project
-        if (propertyToEdit.projectName && !propertyToEdit.project?._id) {
-          setProjectSearchTerm(propertyToEdit.projectName)
-          setIsSearching(true)
-
-          try {
-            // Search for the project by name
-            const url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&projectName=${encodeURIComponent(propertyToEdit.projectName)}`
-            const response = await axios.get(url)
-
-            if (response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-              // Find the exact match or the closest match
-              const exactMatch = response.data.data.find(
-                (p: any) => p.projectName.toLowerCase() === propertyToEdit.projectName.toLowerCase(),
-              )
-
-              const projectData = exactMatch || response.data.data[0]
-              setSelectedProject(projectData)
-
-              // Update form data with the found project
-              setDataForm((prev) => ({
-                ...prev,
-                project: projectData._id,
-                masterDevelopment:
-                  projectData.masterDevelopment?.developmentName || propertyToEdit.developmentName || "",
-                subDevelopment: projectData.subDevelopment?.subDevelopment || propertyToEdit.subDevelopmentName || "",
-              }))
-
-              // Also update the projects list to include this project
-              setProjects(response.data.data)
-            } else {
-              // If no project found, create a temporary project object for display
-              const tempProject = {
-                _id: "", // This will be updated when user selects a real project
-                projectName: propertyToEdit.projectName,
-                masterDevelopment: { developmentName: propertyToEdit.developmentName || "" },
-                subDevelopment: { subDevelopment: propertyToEdit.subDevelopmentName || "" },
-              }
-              setSelectedProject(tempProject)
-            }
-          } catch (error) {
-            console.error("Error searching for project:", error)
-            // Create a temporary project object for display
-            const tempProject = {
-              _id: "",
-              projectName: propertyToEdit.projectName,
-              masterDevelopment: { developmentName: propertyToEdit.developmentName || "" },
-              subDevelopment: { subDevelopment: propertyToEdit.subDevelopmentName || "" },
-            }
-            setSelectedProject(tempProject)
-            toast.error("Failed to load project details, using available data")
-          } finally {
-            setIsSearching(false)
-            setInitialLoadComplete(true)
-          }
-        }
-        // If we have a project._id, fetch the project details
-        else if (propertyToEdit.project && propertyToEdit.project._id) {
-          try {
-            const response = await axios.get(
-              `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${propertyToEdit.project._id}?populate=subDevelopment,masterDevelopment`,
-            )
-
-            if (response.data && response.data.data) {
-              const projectData = response.data.data
-              setSelectedProject(projectData)
-              setProjectSearchTerm(projectData.projectName || "")
-            }
-          } catch (error) {
-            console.error("Error fetching project details:", error)
-            // If API call fails, still set the project from the propertyToEdit data
-            if (propertyToEdit.project) {
-              setSelectedProject(propertyToEdit.project)
-              setProjectSearchTerm(propertyToEdit.project.projectName || "")
-            }
-            toast.error("Failed to load project details, using available data")
-          } finally {
-            setInitialLoadComplete(true)
-          }
-        } else {
-          setInitialLoadComplete(true)
-        }
-      }
-
-      handleProjectSearch()
     } else if (propertyToEdit === null) {
       resetForm()
     }
   }, [propertyToEdit])
-
-  // Update master and sub development when project changes
-  useEffect(() => {
-    if (selectedProject) {
-      setDataForm((prev) => ({
-        ...prev,
-        project: selectedProject._id,
-        masterDevelopment: selectedProject.masterDevelopment?.developmentName || "",
-        subDevelopment: selectedProject.subDevelopment?.subDevelopment || "",
-      }))
-    }
-  }, [selectedProject])
 
   const resetForm = () => {
     setDataForm({})
     setSelectedImages([])
     setArrayInputs({})
     setErrors({})
-    setIsListed(false)
     setIsEditing(false)
     setImagesToDelete([])
-    setSelectedProject(null)
-    setProjectSearchTerm("")
-    setIsSearching(false)
-    setInitialLoadComplete(false)
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-      searchTimeoutRef.current = null
-    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
     const { value } = e.target
     setDataForm((prev) => ({
       ...prev,
-      [fieldKey]: type === "number" ? Number(value) : value,
+      [fieldKey]: type === "number" ? (value === "" ? "" : Number(value)) : value,
     }))
   }
 
   const handleSelectChange = (value: string, fieldKey: string) => {
-    if (fieldKey === "project") {
-      const project = projects.find((p) => p._id === value)
-      setSelectedProject(project)
-      if (project) {
-        setProjectSearchTerm(project.projectName || "")
-      }
-    }
+    setDataForm((prev) => {
+      const newData = { ...prev, [fieldKey]: value }
 
-    setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
-  }
-
-  const handleProjectSearch = (searchTerm: string) => {
-    setProjectSearchTerm(searchTerm)
-
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current)
-    }
-
-    // Set searching state
-    setIsSearching(true)
-    setShowProjectResults(true)
-
-    // Set a new timeout for debouncing
-    searchTimeoutRef.current = setTimeout(() => {
-      fetchProjects(searchTerm)
-    }, 300) // 300ms debounce time
-  }
-
-  const fetchProjects = async (searchTerm = "") => {
-    setIsSearching(true)
-    try {
-      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment`
-
-      // Add search parameter if provided
-      if (searchTerm) {
-        url += `&projectName=${encodeURIComponent(searchTerm)}`
+      // Clear noOfBedRooms if unitType is not "Bedroom"
+      if (fieldKey === "unitType" && value !== "Bedroom") {
+        newData.noOfBedRooms = ""
       }
 
-      const response = await axios.get(url)
-
-      if (response.data && Array.isArray(response.data.data)) {
-        setProjects(response.data.data)
-      } else {
-        setProjects([])
-        console.error("Invalid response format:", response.data)
-      }
-    } catch (error) {
-      console.error("Error fetching projects:", error)
-      setProjects([])
-      toast.error("Failed to load projects. Please try again.")
-    } finally {
-      setIsSearching(false)
-    }
+      return newData
+    })
   }
 
   const uploadImageToAWS = async (file: File, setUploadProgress: (progress: number) => void): Promise<any> => {
     try {
-      const formData = new FormData()
-      formData.append("file", file)
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/signed-url?fileName=${file.name}&contentType=${file.type}`,
         {
@@ -408,17 +173,14 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
   const validateForm = () => {
     const newErrors: Record<string, boolean> = {}
 
-    if (!dataForm.project) newErrors.project = true
-    if (!dataForm.unitNumber) newErrors.unitNumber = true
+    // Required fields
     if (!dataForm.unitPurpose) newErrors.unitPurpose = true
-    if (!dataForm.originalPrice) newErrors.originalPrice = true
-    if (!dataForm.salePrice) newErrors.salePrice = true
+    if (!dataForm.unitNumber) newErrors.unitNumber = true
+    if (!dataForm.unitType) newErrors.unitType = true
 
     setErrors(newErrors)
 
-    // If there are errors, scroll to the first error
     if (Object.keys(newErrors).length > 0) {
-      // Use setTimeout to ensure the DOM has updated with error messages
       setTimeout(() => {
         const firstErrorElement = document.querySelector(".border-destructive")
         if (firstErrorElement) {
@@ -432,42 +194,33 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
 
   const handleSubmit = async () => {
     if (!validateForm()) {
-      // Don't show toast, just scroll to the first error
       return
     }
     setLoading(true)
 
-    // If we have a temporary project (no _id), show an error
-    if (isEditing && !dataForm.project) {
-      toast.error("Please select a valid project before updating")
-      setLoading(false)
-      return
-    }
-
     const finalData = {
-      project: dataForm.project || "",
       unitNumber: dataForm.unitNumber || "",
-      unitType: dataForm.unitType || "",
       unitHeight: dataForm.unitHeight || "",
       unitInternalDesign: dataForm.unitInternalDesign || "",
       unitExternalDesign: dataForm.unitExternalDesign || "",
       plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
       BuaSqFt: dataForm.BuaSqFt ? Number(dataForm.BuaSqFt) : 0,
-      noOfBedRooms: dataForm.unitType === "Bedroom" ? dataForm.noOfBedRooms || "" : "",
-      unitView: dataForm.unitView || [],
-      pictures: selectedImages,
-      unitPurpose: dataForm.unitPurpose || "",
-      listingDate: dataForm.listingDate || "",
-      chequeFrequency: dataForm.chequeFrequency || "",
-      rentalPrice: dataForm.rentalPrice ? Number(dataForm.rentalPrice) : 0,
-      salePrice: dataForm.salePrice ? Number(dataForm.salePrice) : 0,
+      noOfBedRooms: dataForm.unitType === "Bedroom" && dataForm.noOfBedRooms ? Number(dataForm.noOfBedRooms) : 0,
+      unitType: dataForm.unitType || "",
       rentedAt: dataForm.rentedAt || "",
       rentedTill: dataForm.rentedTill || "",
-      vacantOn: dataForm.vacantOn || "",
-      originalPrice: dataForm.originalPrice ? Number(dataForm.originalPrice) : 0,
+      unitView: dataForm.unitView || [],
+      unitPurpose: dataForm.unitPurpose || "",
+      listingDate: dataForm.listingDate || "",
+      purchasePrice: dataForm.purchasePrice ? Number(dataForm.purchasePrice) : 0,
+      marketPrice: dataForm.marketPrice ? Number(dataForm.marketPrice) : 0,
+      askingPrice: dataForm.askingPrice ? Number(dataForm.askingPrice) : 0,
+      premiumAndLoss: dataForm.premiumAndLoss ? Number(dataForm.premiumAndLoss) : 0,
+      marketRent: dataForm.marketRent ? Number(dataForm.marketRent) : 0,
+      askingRent: dataForm.askingRent ? Number(dataForm.askingRent) : 0,
+      pictures: selectedImages,
       paidTODevelopers: dataForm.paidTODevelopers ? Number(dataForm.paidTODevelopers) : 0,
       payableTODevelopers: dataForm.payableTODevelopers ? Number(dataForm.payableTODevelopers) : 0,
-      premiumAndLoss: dataForm.premiumAndLoss ? Number(dataForm.premiumAndLoss) : 0,
     }
 
     try {
@@ -475,7 +228,6 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       if (isEditing) {
         const updatedData = { ...finalData }
 
-        // Process any images marked for deletion
         if (imagesToDelete.length > 0) {
           const deletePromises = imagesToDelete.map((imageKey) => deleteFromAWS(imageKey))
           await Promise.all(deletePromises)
@@ -514,18 +266,15 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     const files = e.target.files
     if (!files) return
 
-    // Limit to remaining slots available (max 6 images)
     const remainingSlots = 6 - selectedImages.length
     const filesToUpload = Array.from(files).slice(0, remainingSlots)
 
     if (filesToUpload.length === 0) return
 
-    // Show loading toast
     const loadingToastId = toast.loading("Uploading image...")
 
     try {
       const uploadPromises = filesToUpload.map(async (file) => {
-        // Upload to AWS and get URL
         const result = await uploadImageToAWS(file, (progress) => {
           // Progress handling if needed
         })
@@ -540,10 +289,9 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
 
       setSelectedImages((prev) => {
         const combined = [...prev, ...uploadedImages.map((img) => img.url)]
-        return combined.slice(0, 6) // Ensure max 6 images
+        return combined.slice(0, 6)
       })
 
-      // Store image keys in the form data
       setDataForm((prev) => ({
         ...prev,
         propertyImageKeys: [...(prev.propertyImageKeys || []), ...uploadedImages.map((img) => img.key)],
@@ -559,41 +307,26 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
   }
 
   const removeImage = async (index: number) => {
-    // Get the image key to delete
     const imageKeys = dataForm.propertyImageKeys || []
     const imageKey = imageKeys[index]
 
     if (isEditing && imageKey) {
-      // In editing mode, just mark for deletion and remove from preview
       setImagesToDelete((prev) => [...prev, imageKey])
-
-      // Remove from state
       setSelectedImages((prev) => prev.filter((_, i) => i !== index))
-
-      // Remove from form data
       setDataForm((prev) => ({
         ...prev,
-        propertyImageKeys: prev.propertyImageKeys.filter((_: string, i: number) => i !== index),
+        propertyImageKeys: prev.propertyImageKeys?.filter((_: string, i: number) => i !== index) || [],
       }))
-
       toast.success("Image removed from preview")
     } else if (imageKey) {
       try {
-        // Show loading toast
         const loadingToastId = toast.loading("Deleting image...")
-
-        // Delete from AWS
         await deleteFromAWS(imageKey)
-
-        // Remove from state
         setSelectedImages((prev) => prev.filter((_, i) => i !== index))
-
-        // Remove from form data
         setDataForm((prev) => ({
           ...prev,
-          propertyImageKeys: prev.propertyImageKeys.filter((_: string, i: number) => i !== index),
+          propertyImageKeys: prev.propertyImageKeys?.filter((_: string, i: number) => i !== index) || [],
         }))
-
         toast.dismiss(loadingToastId)
         toast.success("Image deleted successfully")
       } catch (error) {
@@ -627,42 +360,6 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     }))
   }
 
-  // Add this useEffect for cleanup
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  // Add click outside handler to close project results
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node
-      const searchInput = document.getElementById("projectSearch")
-      if (searchInput && !searchInput.contains(target)) {
-        setShowProjectResults(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
-  // Calculate premium/loss automatically
-  useEffect(() => {
-    if (dataForm.salePrice && dataForm.originalPrice) {
-      const premium = Number(dataForm.salePrice) - Number(dataForm.originalPrice)
-      setDataForm((prev) => ({
-        ...prev,
-        premiumAndLoss: premium,
-      }))
-    }
-  }, [dataForm.salePrice, dataForm.originalPrice])
-
   return (
     <Dialog
       open={isOpen}
@@ -673,7 +370,7 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         }
       }}
     >
-      <DialogContent className="lg:max-w-5xl bg-background text-foreground">
+      <DialogContent className="lg:max-w-4xl bg-background text-foreground">
         <DialogHeader>
           <div className="flex items-center space-x-2">
             <DialogTitle className="text-2xl font-bold">{isEditing ? "Edit Property" : "Add Property"}</DialogTitle>
@@ -682,110 +379,12 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] pr-4 p-2 overflow-y-auto scrollbar-hide">
           <div className="space-y-8 p-2">
-            {/* Project Selection */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Project Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="projectSearch">Project</Label>
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Input
-                        id="projectSearch"
-                        placeholder="Search projects..."
-                        value={projectSearchTerm}
-                        onChange={(e) => handleProjectSearch(e.target.value)}
-                        className={`w-full pl-10 ${errors.project ? "border-destructive" : ""}`}
-                        autoComplete="off"
-                      />
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Search className="h-4 w-4" />
-                      </div>
-                      {isSearching && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                        </div>
-                      )}
-                    </div>
-
-                    <Select
-                      value={dataForm.project || ""}
-                      onValueChange={(value) => handleSelectChange(value, "project")}
-                      disabled={isSearching}
-                    >
-                      <SelectTrigger className={`w-full ${errors.project ? "border-destructive" : ""}`}>
-                        <SelectValue placeholder="Select a project" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projects.length > 0 ? (
-                          projects.map((project) => (
-                            <SelectItem key={project._id} value={project._id}>
-                              {project.projectName}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="px-3 py-4 text-center text-muted-foreground">
-                            {isSearching ? "Searching..." : "No projects found"}
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedProject && (
-                      <div className="flex items-center justify-between p-2 bg-muted rounded-md">
-                        <span>Selected: {selectedProject.projectName}</span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedProject(null)
-                            setProjectSearchTerm("")
-                            setDataForm((prev) => ({
-                              ...prev,
-                              project: "",
-                              masterDevelopment: "",
-                              masterDevelopmentName: "",
-                              subDevelopment: "",
-                              subDevelopmentName: "",
-                            }))
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                  {errors.project && <p className="text-sm text-destructive">Project is required</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="masterDevelopment">Master Development</Label>
-                  <Input
-                    id="masterDevelopment"
-                    value={selectedProject?.masterDevelopment?.developmentName || dataForm.masterDevelopment || ""}
-                    disabled
-                    className="bg-input border-input opacity-70"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="subDevelopment">Sub Development</Label>
-                  <Input
-                    id="subDevelopment"
-                    value={selectedProject?.subDevelopment?.subDevelopment || dataForm.subDevelopment || ""}
-                    disabled
-                    className="bg-input border-input opacity-70"
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Unit Details */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Unit Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="unitNumber">Unit Number</Label>
+                  <Label htmlFor="unitNumber">Unit Number *</Label>
                   <Input
                     id="unitNumber"
                     name="unitNumber"
@@ -798,15 +397,60 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unitHeight">Unit Height (ft)</Label>
+                  <Label htmlFor="unitType">Unit Type *</Label>
+                  <Select
+                    value={dataForm.unitType || ""}
+                    onValueChange={(value) => handleSelectChange(value, "unitType")}
+                  >
+                    <SelectTrigger
+                      id="unitType"
+                      className={`bg-input border-input ${errors.unitType ? "border-destructive" : ""}`}
+                    >
+                      <SelectValue placeholder="Select unit type..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {Object.entries(unitTypes).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.unitType && <p className="text-sm text-destructive">Unit type is required</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unitPurpose">Unit Purpose *</Label>
+                  <Select
+                    value={dataForm.unitPurpose || ""}
+                    onValueChange={(value) => handleSelectChange(value, "unitPurpose")}
+                  >
+                    <SelectTrigger
+                      id="unitPurpose"
+                      className={`bg-input border-input ${errors.unitPurpose ? "border-destructive" : ""}`}
+                    >
+                      <SelectValue placeholder="Select purpose..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover border-border">
+                      {Object.entries(unitPurposes).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.unitPurpose && <p className="text-sm text-destructive">Unit purpose is required</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unitHeight">Unit Height</Label>
                   <Input
                     id="unitHeight"
                     name="unitHeight"
                     value={dataForm.unitHeight || ""}
-                    onChange={(e) => handleChange(e, "unitHeight", "number")}
-                    type="number"
+                    onChange={(e) => handleChange(e, "unitHeight", "text")}
                     className="bg-input border-input"
-                    placeholder="e.g., 12"
+                    placeholder="e.g., 12 ft"
                   />
                 </div>
 
@@ -860,32 +504,7 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="unitType">Unit Type</Label>
-                  <Select
-                    value={dataForm.unitType || ""}
-                    onValueChange={(value) => {
-                      handleSelectChange(value, "unitType")
-                      // Clear bedrooms if not bedroom type
-                      if (value !== "BEDROOM") {
-                        setDataForm((prev) => ({ ...prev, noOfBedRooms: "" }))
-                      }
-                    }}
-                  >
-                    <SelectTrigger id="unitType" className="bg-input border-input">
-                      <SelectValue placeholder="Select unit type..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {Object.entries(unitTypes).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Conditional Bedrooms field - only show when BEDROOM is selected */}
+                {/* Conditional Bedrooms field - only show when Bedroom is selected */}
                 {dataForm.unitType === "Bedroom" && (
                   <div className="space-y-2">
                     <Label htmlFor="noOfBedRooms">Number of Bedrooms</Label>
@@ -926,6 +545,164 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                         </div>
                       ))}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rental Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Rental Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rentedAt">Rented At</Label>
+                  <Input
+                    id="rentedAt"
+                    name="rentedAt"
+                    type="date"
+                    value={dataForm.rentedAt || ""}
+                    onChange={(e) => handleChange(e, "rentedAt", "text")}
+                    className="bg-input border-input"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rentedTill">Rented Till</Label>
+                  <Input
+                    id="rentedTill"
+                    name="rentedTill"
+                    type="date"
+                    value={dataForm.rentedTill || ""}
+                    onChange={(e) => handleChange(e, "rentedTill", "text")}
+                    className="bg-input border-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Pricing Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="listingDate">Listing Date</Label>
+                  <Input
+                    id="listingDate"
+                    name="listingDate"
+                    type="date"
+                    value={dataForm.listingDate || ""}
+                    onChange={(e) => handleChange(e, "listingDate", "text")}
+                    className="bg-input border-input"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="purchasePrice">Purchase Price</Label>
+                  <Input
+                    id="purchasePrice"
+                    name="purchasePrice"
+                    type="number"
+                    value={dataForm.purchasePrice || ""}
+                    onChange={(e) => handleChange(e, "purchasePrice", "number")}
+                    className="bg-input border-input"
+                    placeholder="Enter purchase price"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="marketPrice">Market Price</Label>
+                  <Input
+                    id="marketPrice"
+                    name="marketPrice"
+                    type="number"
+                    value={dataForm.marketPrice || ""}
+                    onChange={(e) => handleChange(e, "marketPrice", "number")}
+                    className="bg-input border-input"
+                    placeholder="Enter market price"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="askingPrice">Asking Price</Label>
+                  <Input
+                    id="askingPrice"
+                    name="askingPrice"
+                    type="number"
+                    value={dataForm.askingPrice || ""}
+                    onChange={(e) => handleChange(e, "askingPrice", "number")}
+                    className="bg-input border-input"
+                    placeholder="Enter asking price"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="premiumAndLoss">Premium/Loss</Label>
+                  <Input
+                    id="premiumAndLoss"
+                    name="premiumAndLoss"
+                    type="number"
+                    value={dataForm.premiumAndLoss || ""}
+                    onChange={(e) => handleChange(e, "premiumAndLoss", "number")}
+                    className="bg-input border-input"
+                    placeholder="Enter premium/loss"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="marketRent">Market Rent</Label>
+                  <Input
+                    id="marketRent"
+                    name="marketRent"
+                    type="number"
+                    value={dataForm.marketRent || ""}
+                    onChange={(e) => handleChange(e, "marketRent", "number")}
+                    className="bg-input border-input"
+                    placeholder="Enter market rent"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="askingRent">Asking Rent</Label>
+                  <Input
+                    id="askingRent"
+                    name="askingRent"
+                    type="number"
+                    value={dataForm.askingRent || ""}
+                    onChange={(e) => handleChange(e, "askingRent", "number")}
+                    className="bg-input border-input"
+                    placeholder="Enter asking rent"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Developer Payments */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Developer Payments</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="paidTODevelopers">Paid to Developers</Label>
+                  <Input
+                    id="paidTODevelopers"
+                    name="paidTODevelopers"
+                    value={dataForm.paidTODevelopers || ""}
+                    onChange={(e) => handleChange(e, "paidTODevelopers", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="Amount paid to developers"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="payableTODevelopers">Payable to Developers</Label>
+                  <Input
+                    id="payableTODevelopers"
+                    name="payableTODevelopers"
+                    value={dataForm.payableTODevelopers || ""}
+                    onChange={(e) => handleChange(e, "payableTODevelopers", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="Amount payable to developers"
+                  />
                 </div>
               </div>
             </div>
@@ -971,196 +748,6 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
               <p className="text-sm text-zinc-500">Select up to 6 images</p>
             </div>
 
-            {/* Pricing & Availability */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Pricing & Availability</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="unitPurpose">Unit Purpose</Label>
-                  <Select
-                    value={dataForm.unitPurpose || ""}
-                    onValueChange={(value) => handleSelectChange(value, "unitPurpose")}
-                  >
-                    <SelectTrigger
-                      id="unitPurpose"
-                      className={`bg-input border-input ${errors.unitPurpose ? "border-destructive" : ""}`}
-                    >
-                      <SelectValue placeholder="Select purpose..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover border-border">
-                      {Object.entries({
-                        Rent: "Rent",
-                        Sell: "Sell",
-                        Manage: "Manage",
-                        Develop: "Develop",
-                        Valuation: "Valuation",
-                        Hold: "Hold",
-                        Pending: "Pending",
-                      }).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.unitPurpose && <p className="text-sm text-destructive">Unit purpose is required</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="listingDate">Listing Date</Label>
-                  <Input
-                    id="listingDate"
-                    name="listingDate"
-                    type="date"
-                    value={dataForm.listingDate || ""}
-                    onChange={(e) => handleChange(e, "listingDate", "text")}
-                    className="bg-input border-input"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="chequeFrequency">Cheque Frequency</Label>
-                  <Input
-                    id="chequeFrequency"
-                    name="chequeFrequency"
-                    value={dataForm.chequeFrequency || ""}
-                    onChange={(e) => handleChange(e, "chequeFrequency", "text")}
-                    className="bg-input border-input"
-                    placeholder="e.g., Quarterly"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="rentalPrice">Rental Price</Label>
-                  <Input
-                    id="rentalPrice"
-                    name="rentalPrice"
-                    type="number"
-                    value={dataForm.rentalPrice || ""}
-                    onChange={(e) => handleChange(e, "rentalPrice", "number")}
-                    className="bg-input border-input"
-                    placeholder="Enter rental price"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="salePrice">Sale Price</Label>
-                  <Input
-                    id="salePrice"
-                    name="salePrice"
-                    type="number"
-                    value={dataForm.salePrice || ""}
-                    onChange={(e) => handleChange(e, "salePrice", "number")}
-                    className="bg-input border-input"
-                    placeholder="Enter sale price"
-                  />
-                  {errors.salePrice && <p className="text-sm text-destructive">Sale Price is required</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="originalPrice">Original Price</Label>
-                  <Input
-                    id="originalPrice"
-                    name="originalPrice"
-                    type="number"
-                    value={dataForm.originalPrice || ""}
-                    onChange={(e) => handleChange(e, "originalPrice", "number")}
-                    className="bg-input border-input"
-                    placeholder="Enter original price"
-                  />
-
-                  {errors.originalPrice && <p className="text-sm text-destructive">Original Price is required</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="premiumAndLoss">Premium/Loss</Label>
-                  <Input
-                    id="premiumAndLoss"
-                    name="premiumAndLoss"
-                    type="number"
-                    value={dataForm.premiumAndLoss || ""}
-                    disabled
-                    className="bg-input border-input opacity-70"
-                    placeholder="Calculated automatically"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Dates */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Important Dates</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="rentedAt">Rented At</Label>
-                  <Input
-                    id="rentedAt"
-                    name="rentedAt"
-                    type="date"
-                    value={dataForm.rentedAt || ""}
-                    onChange={(e) => handleChange(e, "rentedAt", "text")}
-                    className="bg-input border-input"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="rentedTill">Rented Till</Label>
-                  <Input
-                    id="rentedTill"
-                    name="rentedTill"
-                    type="date"
-                    value={dataForm.rentedTill || ""}
-                    onChange={(e) => handleChange(e, "rentedTill", "text")}
-                    className="bg-input border-input"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="vacantOn">Vacant On</Label>
-                  <Input
-                    id="vacantOn"
-                    name="vacantOn"
-                    type="date"
-                    value={dataForm.vacantOn || ""}
-                    onChange={(e) => handleChange(e, "vacantOn", "text")}
-                    className="bg-input border-input"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Developer Payments */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Developer Payments</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="paidTODevelopers">Paid to Developers</Label>
-                  <Input
-                    id="paidTODevelopers"
-                    name="paidTODevelopers"
-                    value={dataForm.paidTODevelopers || ""}
-                    onChange={(e) => handleChange(e, "paidTODevelopers", "number")}
-                    type="number"
-                    className="bg-input border-input"
-                    placeholder="Amount paid to developers"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="payableTODevelopers">Payable to Developers</Label>
-                  <Input
-                    id="payableTODevelopers"
-                    name="payableTODevelopers"
-                    value={dataForm.payableTODevelopers || ""}
-                    onChange={(e) => handleChange(e, "payableTODevelopers", "number")}
-                    type="number"
-                    className="bg-input border-input"
-                    placeholder="Amount payable to developers"
-                  />
-                </div>
-              </div>
-            </div>
-
             <Button
               onClick={handleSubmit}
               type="submit"
@@ -1174,47 +761,5 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         </ScrollArea>
       </DialogContent>
     </Dialog>
-  )
-}
-
-export function PropertySection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">{title}</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{children}</div>
-    </div>
-  )
-}
-
-export function SelectField({
-  label,
-  fieldKey,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  fieldKey: string
-  options: Record<string, string>
-  value: string
-  onChange: (value: string) => void
-}) {
-  const id = label.toLowerCase().replace(/\s+/g, "-")
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={fieldKey}>{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger id={fieldKey} className="bg-input border-input">
-          <SelectValue placeholder="Select..." />
-        </SelectTrigger>
-        <SelectContent className="bg-popover border-border">
-          {Object.entries(options).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   )
 }

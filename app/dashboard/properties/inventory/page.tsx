@@ -110,7 +110,7 @@ export default function PropertiesPage() {
           limit: 10,
           page: page !== undefined ? page : currentPage,
         }
-
+         console.log('final',finalParams);
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
           {
@@ -293,49 +293,119 @@ export default function PropertiesPage() {
     return cleaned
   }
 
-  const handleApplyFilters = () => {
-    const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
+const handleApplyFilters = () => {
+  const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
-    const dateFilters = {
-      ...(startDate && { startDate: startDate.toISOString() }),
-      ...(endDate && { endDate: endDate.toISOString() }),
-    }
-
-    const propertyTypeFilter = propertyType ? { propertyType } : {}
-    const cleanedSidebarFilters = cleanFilters(sidebarFilters)
-
-    const queryParams = {
-      ...cleanedSidebarFilters,
-      ...searchFilterObj,
-      ...dateFilters,
-      ...propertyTypeFilter,
-      ...(rangeFilters.minBed &&
-        rangeFilters.maxBed && {
-          bedroomsMin: Number.parseInt(rangeFilters.minBed),
-          bedroomsMax: Number.parseInt(rangeFilters.maxBed),
-        }),
-      ...(rangeFilters.minPrimaryPrice &&
-        rangeFilters.maxPrimaryPrice && {
-          primaryPriceMin: Number.parseInt(rangeFilters.minPrimaryPrice),
-          primaryPriceMax: Number.parseInt(rangeFilters.maxPrimaryPrice),
-        }),
-      ...(rangeFilters.minRent &&
-        rangeFilters.maxRent && {
-          rentMin: Number.parseInt(rangeFilters.minRent),
-          rentMax: Number.parseInt(rangeFilters.maxRent),
-        }),
-      ...(rangeFilters.minResalePrice &&
-        rangeFilters.maxResalePrice && {
-          resalePriceMin: Number.parseInt(rangeFilters.minResalePrice),
-          resalePriceMax: Number.parseInt(rangeFilters.maxResalePrice),
-        }),
-      sortBy: "createdAt",
-      sortOrder: sortOrder,
-    }
-    setSearchFilter(queryParams)
-    setCurrentPage(1) // Reset to page 1 when applying filters
-    fetchProperties(queryParams, 1) // Pass o1 as the page number
+  const dateFilters = {
+    ...(startDate && { startDate: startDate.toISOString() }),
+    ...(endDate && { endDate: endDate.toISOString() }),
   }
+
+  const propertyTypeFilter = propertyType ? { propertyType } : {}
+  const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+
+  const queryParams = {
+    ...cleanedSidebarFilters,
+    ...searchFilterObj,
+    ...dateFilters,
+    ...propertyTypeFilter,
+    
+    // Number of Bedrooms Range
+    ...(rangeFilters.minBed &&
+      rangeFilters.maxBed && {
+        bedroomsMin: Number.parseInt(rangeFilters.minBed),
+        bedroomsMax: Number.parseInt(rangeFilters.maxBed),
+      }),
+    
+    // Plot Size Range
+    ...(sidebarFilters.plotSizeSqFt?.min &&
+      sidebarFilters.plotSizeSqFt?.max && {
+        plotSizeSqFtMin: sidebarFilters.plotSizeSqFt.min,
+        plotSizeSqFtMax: sidebarFilters.plotSizeSqFt.max,
+      }),
+    
+    // BUA Range
+    ...(sidebarFilters.BuaSqFt?.min &&
+      sidebarFilters.BuaSqFt?.max && {
+        BuaSqFtMin: sidebarFilters.BuaSqFt.min,
+        BuaSqFtMax: sidebarFilters.BuaSqFt.max,
+      }),
+    
+    // Number of Bedrooms Range (from sidebar filters)
+    ...(sidebarFilters.noOfBedRooms?.min &&
+      sidebarFilters.noOfBedRooms?.max && {
+        noOfBedRoomsMin: sidebarFilters.noOfBedRooms.min,
+        noOfBedRoomsMax: sidebarFilters.noOfBedRooms.max,
+      }),
+    
+    // Purchase Price Range
+    ...(sidebarFilters.purchasePriceRange?.min &&
+      sidebarFilters.purchasePriceRange?.max && {
+        purchasePriceMin: sidebarFilters.purchasePriceRange.min,
+        purchasePriceMax: sidebarFilters.purchasePriceRange.max,
+      }),
+    
+    ...(sidebarFilters.marketPriceRange?.min &&
+      sidebarFilters.marketPriceRange?.max && {
+        marketPriceMin: sidebarFilters.marketPriceRange.min,
+        marketPriceMax: sidebarFilters.marketPriceRange.max,
+      }),
+    
+    // Asking Price Range
+    ...(sidebarFilters.askingPriceRange?.min &&
+      sidebarFilters.askingPriceRange?.max && {
+        askingPriceMin: sidebarFilters.askingPriceRange.min,
+        askingPriceMax: sidebarFilters.askingPriceRange.max,
+      }),
+    
+    // Market Rent Range
+    ...(sidebarFilters.marketRentRange?.min &&
+      sidebarFilters.marketRentRange?.max && {
+        marketRentMin: sidebarFilters.marketRentRange.min,
+        marketRentMax: sidebarFilters.marketRentRange.max,
+      }),
+    
+    // Asking Rent Range
+    ...(sidebarFilters.askingRentRange?.min &&
+      sidebarFilters.askingRentRange?.max && {
+        askingRentMin: sidebarFilters.askingRentRange.min,
+        askingRentMax: sidebarFilters.askingRentRange.max,
+      }),
+    
+    // Premium and Loss Range
+    ...(sidebarFilters.premiumAndLossRange?.min &&
+      sidebarFilters.premiumAndLossRange?.max && {
+        premiumAndLossMin: sidebarFilters.premiumAndLossRange.min,
+        premiumAndLossMax: sidebarFilters.premiumAndLossRange.max,
+      }),
+    
+    // Legacy range filters (keeping for backward compatibility)
+    ...(rangeFilters.minPrimaryPrice &&
+      rangeFilters.maxPrimaryPrice && {
+        primaryPriceMin: Number.parseInt(rangeFilters.minPrimaryPrice),
+        primaryPriceMax: Number.parseInt(rangeFilters.maxPrimaryPrice),
+      }),
+    
+    ...(rangeFilters.minRent &&
+      rangeFilters.maxRent && {
+        rentMin: Number.parseInt(rangeFilters.minRent),
+        rentMax: Number.parseInt(rangeFilters.maxRent),
+      }),
+    
+    ...(rangeFilters.minResalePrice &&
+      rangeFilters.maxResalePrice && {
+        resalePriceMin: Number.parseInt(rangeFilters.minResalePrice),
+        resalePriceMax: Number.parseInt(rangeFilters.maxResalePrice),
+      }),
+    
+    sortBy: "createdAt",
+    sortOrder: sortOrder,
+  }
+  
+  setSearchFilter(queryParams)
+  setCurrentPage(1) // Reset to page 1 when applying filters
+  fetchProperties(queryParams, 1) // Pass 1 as the page number
+}
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchValue = event.target.value
