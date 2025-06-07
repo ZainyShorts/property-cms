@@ -25,7 +25,7 @@ const unitTypes = {
   Studio: "Studio",
   Office: "Office",
   Shop: "Shop",
-  Bedroom: "Bedroom",
+  BedRoom: "BedRoom",
 }
 
 const unitPurposes = {
@@ -335,7 +335,7 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
       const newData = { ...prev, [fieldKey]: value }
 
       // Clear noOfBedRooms if unitType is not "Bedroom"
-      if (fieldKey === "unitType" && value !== "Bedroom") {
+      if (fieldKey === "unitType" && value !== "BedRoom") {
         newData.noOfBedRooms = ""
       }
 
@@ -403,7 +403,10 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
     // Required fields
     if (!dataForm.unitPurpose) newErrors.unitPurpose = true
     if (!dataForm.unitNumber) newErrors.unitNumber = true
-    if (!dataForm.unitType) newErrors.unitType = true
+    if (!dataForm.unitType) newErrors.unitType = true 
+    if (dataForm.unitType === 'BedRoom') { 
+      if (!dataForm.noOfBedRooms) newErrors.noOfBedRooms = true
+    }
 
     setErrors(newErrors)
 
@@ -432,7 +435,7 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
       unitExternalDesign: dataForm.unitExternalDesign || "",
       plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
       BuaSqFt: dataForm.BuaSqFt ? Number(dataForm.BuaSqFt) : 0,
-      noOfBedRooms: dataForm.unitType === "Bedroom" && dataForm.noOfBedRooms ? Number(dataForm.noOfBedRooms) : 0,
+      noOfBedRooms: dataForm.unitType === "BedRoom" && dataForm.noOfBedRooms ? Number(dataForm.noOfBedRooms) : 0,
       unitType: dataForm.unitType || "",
       rentedAt: dataForm.rentedAt || "",
       rentedTill: dataForm.rentedTill || "",
@@ -837,7 +840,7 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
                 </div>
 
                 {/* Conditional Bedrooms field - only show when Bedroom is selected */}
-                {dataForm.unitType === "Bedroom" && (
+                {dataForm.unitType === "BedRoom" && (
                   <div className="space-y-2">
                     <Label htmlFor="noOfBedRooms">Number of Bedrooms</Label>
                     <Input
@@ -849,8 +852,10 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
                       className="bg-input border-input"
                       placeholder="e.g., 2"
                     />
+                                  {errors.noOfBedRooms && <p className="text-sm text-destructive">BedRooms are required</p>}
                   </div>
-                )}
+                )} 
+
 
                 <div className="space-y-2">
                   <Label htmlFor="unitView">Unit View</Label>

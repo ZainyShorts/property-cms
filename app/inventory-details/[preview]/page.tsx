@@ -80,45 +80,32 @@ interface PropertyData {
     installmentDate: string
     uponCompletion: string
     postHandOver: string
-    shops: string
-    offices: string
-    studios: string
-    oneBr: string
-    twoBr: string
-    threeBr: string
-    fourBr: string
-    fiveBr: string
-    sixBr: string
-    sevenBr: string
-    eightBr: string
-    total: number
-    sold: number
-    available: number
     pictures: string[]
     createdAt: string
     updatedAt: string
   }
   unitNumber: string
-  unitHeight: number
+  unitHeight: string
   unitInternalDesign: string
   unitExternalDesign: string
   plotSizeSqFt: number
   BuaSqFt: number
-  noOfBedRooms: string
+  noOfBedRooms: number
   unitView: string[]
   pictures: string[]
   unitPurpose: string
   listingDate: string
-  chequeFrequency: string
-  rentalPrice: number
-  salePrice: number
+  unitType: string
+  marketPrice: number
+  askingPrice: number
+  askingRent: number
+  marketRent: number
   rentedAt: string
   rentedTill: string
-  vacantOn: string
-  originalPrice: number
-  paidTODevelopers: string
-  payableTODevelopers: string
+  paidTODevelopers: number
+  payableTODevelopers: number
   premiumAndLoss: number
+  purchasePrice: number
   createdAt: string
   updatedAt: string
 }
@@ -139,26 +126,26 @@ interface MediaItem {
   url: string
   title: string
 }
- 
-function PropertySkeleton() { 
+
+function PropertySkeleton() {
   const [darkMode, setDarkMode] = useState(false) // defaults to light mode
-    
-      // On mount, check for stored theme preference (default to light)
-      useEffect(() => {
-        const storedTheme = localStorage.getItem("theme")
-        if (storedTheme === "dark") {
-          setDarkMode(true)
-        }
-      }, []) 
-        useEffect(() => {
-          if (darkMode) {
-            document.documentElement.classList.add("dark")
-            localStorage.setItem("theme", "dark")
-          } else {
-            document.documentElement.classList.remove("dark")
-            localStorage.setItem("theme", "light")
-          }
-        }, [darkMode])
+
+  // On mount, check for stored theme preference (default to light)
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("theme")
+    if (storedTheme === "dark") {
+      setDarkMode(true)
+    }
+  }, [])
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark")
+      localStorage.setItem("theme", "dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+      localStorage.setItem("theme", "light")
+    }
+  }, [darkMode])
   return (
     <div className="min-h-screen bg-background animate-pulse">
       <div className="container mx-auto px-4 py-8">
@@ -521,8 +508,9 @@ export default function PropertyDetail({ params }: Props) {
   }
 
   const formatCurrency = (value: number | string) => {
-    if (!value) return "N/A"
+    if (!value || value === 0) return "N/A"
     const numValue = typeof value === "string" ? Number.parseFloat(value) : value
+    if (isNaN(numValue)) return "N/A"
     return new Intl.NumberFormat("en-AE", { style: "currency", currency: "AED" }).format(numValue)
   }
 
@@ -587,37 +575,13 @@ export default function PropertyDetail({ params }: Props) {
               )}
             </div>
 
-            {/* Property Title Overlay */}
-            <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-6 text-white">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
-                  {propertyData.project.salesStatus}
-                </Badge>
-                <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
-                  {propertyData.project.propertyType}
-                </Badge>
-                <Badge variant="outline" className="bg-primary/20 text-white border-primary/30">
-                  {propertyData.noOfBedRooms}
-                </Badge>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">{propertyData.project.projectName}</h1>
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="h-4 w-4" />
-                <span>
-                  {propertyData.project.masterDevelopment.roadLocation},{" "}
-                  {propertyData.project.masterDevelopment.developmentName}
-                </span>
-              </div>
-              {propertyData.project.subDevelopment && (
-                <div className="flex items-center gap-2 text-sm mt-1">
-                  <Landmark className="h-4 w-4" />
-                  <span>{propertyData.project.subDevelopment.subDevelopment}</span>
-                </div>
-              )}
+            {/* Media counter - moved to top right */}
+            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
+              {mediaItems.length} Media
             </div>
 
             {/* Action buttons */}
-            <div className="absolute top-4 right-4 flex gap-2">
+            <div className="absolute top-4 right-36 flex gap-2">
               <Button
                 variant="secondary"
                 size="icon"
@@ -718,8 +682,14 @@ export default function PropertyDetail({ params }: Props) {
                     <div className="grid grid-cols-2 sm:grid-cols-4 bg-transparent">
                       <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-r border-b dark:border-border">
                         <BedDouble className="h-6 w-6 text-primary" />
-                        <span className="text-lg font-semibold">{propertyData.noOfBedRooms}</span>
-                        <span className="text-xs text-muted-foreground">Bed Rooms</span>
+                        <span className="text-lg font-semibold">
+                          {propertyData.unitType === "BedRoom"
+                            ? propertyData.noOfBedRooms || "N/A"
+                            : propertyData.unitType || "N/A"}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {propertyData.unitType === "BedRoom" ? "Bed Rooms" : "Unit Type"}
+                        </span>
                       </div>
                       <div className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-b sm:border-r dark:border-border">
                         <HousePlus className="h-6 w-6 text-primary" />
@@ -929,23 +899,17 @@ export default function PropertyDetail({ params }: Props) {
                   <CardContent className="p-6 pt-0">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">Sale Price</div>
-                        <div className="text-md font-normal text-primary">{formatCurrency(propertyData.salePrice)}</div>
+                        <div className="text-sm text-muted-foreground">Market Price</div>
+                        <div className="text-md font-normal text-primary">
+                          {propertyData.marketPrice ? formatCurrency(propertyData.marketPrice) : "N/A"}
+                        </div>
                       </div>
 
                       <div className="flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">Original Price</div>
-                        <div className="text-md font-normal">{formatCurrency(propertyData.originalPrice)}</div>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">Rental Price</div>
-                        <div className="text-md font-normal">{formatCurrency(propertyData.rentalPrice)}</div>
-                      </div>
-
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm text-muted-foreground">Premium/Loss</div>
-                        <div className="text-md font-normal">{formatCurrency(propertyData.premiumAndLoss)}</div>
+                        <div className="text-sm text-muted-foreground">Asking Price</div>
+                        <div className="text-md font-normal">
+                          {propertyData.askingPrice ? formatCurrency(propertyData.askingPrice) : "N/A"}
+                        </div>
                       </div>
 
                       <Separator className="dark:bg-border" />
@@ -1096,20 +1060,8 @@ export default function PropertyDetail({ params }: Props) {
                         <span className="font-medium">{formatDate(propertyData.listingDate)}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                      <Banknote className="h-5 w-5 text-primary" />
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Cheque Frequency</span>
-                        <span className="font-medium">{propertyData.chequeFrequency}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                      <div>
-                        <span className="text-xs text-muted-foreground block">Rental Price</span>
-                        <span className="font-medium">{formatCurrency(propertyData.rentalPrice)}</span>
-                      </div>
-                    </div>
+                
+                  
                   </div>
 
                   <Separator />
@@ -1131,13 +1083,7 @@ export default function PropertyDetail({ params }: Props) {
                           <span className="font-medium">{formatDate(propertyData.rentedTill)}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Hourglass className="h-5 w-5 text-primary" />
-                        <div>
-                          <span className="text-xs text-muted-foreground block">Vacant On</span>
-                          <span className="font-medium">{formatDate(propertyData.vacantOn)}</span>
-                        </div>
-                      </div>
+                   
                     </div>
                   </div>
                 </CardContent>
@@ -1160,24 +1106,22 @@ export default function PropertyDetail({ params }: Props) {
                     <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-5 w-5 text-primary" />
-                        <span>Sale Price</span>
+                        <span>Market Price</span>
                       </div>
-                      <span className="font-semibold text-lg">{formatCurrency(propertyData.salePrice)}</span>
+                      <span className="font-semibold text-lg">
+                        {propertyData.marketPrice ? formatCurrency(propertyData.marketPrice) : "N/A"}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-5 w-5 text-primary" />
-                        <span>Original Price</span>
+                        <span>Asking Price</span>
                       </div>
-                      <span className="font-semibold text-lg">{formatCurrency(propertyData.originalPrice)}</span>
+                      <span className="font-semibold text-lg">
+                        {propertyData.askingPrice ? formatCurrency(propertyData.askingPrice) : "N/A"}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <DollarSign className="h-5 w-5 text-primary" />
-                        <span>Rental Price</span>
-                      </div>
-                      <span className="font-semibold text-lg">{formatCurrency(propertyData.rentalPrice)}</span>
-                    </div>
+                 
                     <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-5 w-5 text-primary" />
@@ -1189,31 +1133,7 @@ export default function PropertyDetail({ params }: Props) {
 
                   <Separator />
 
-                  <div className="space-y-4">
-                    <h3 className="font-semibold">Price per Square Foot</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Ruler className="h-5 w-5 text-primary" />
-                          <span>Sale Price per sqft</span>
-                        </div>
-                        <span className="font-semibold">
-                          {propertyData.BuaSqFt ? formatCurrency(propertyData.salePrice / propertyData.BuaSqFt) : "N/A"}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <Ruler className="h-5 w-5 text-primary" />
-                          <span>Rental Price per sqft</span>
-                        </div>
-                        <span className="font-semibold">
-                          {propertyData.BuaSqFt
-                            ? formatCurrency(propertyData.rentalPrice / propertyData.BuaSqFt)
-                            : "N/A"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                 
                 </CardContent>
               </Card>
 
@@ -1247,7 +1167,6 @@ export default function PropertyDetail({ params }: Props) {
                   <div className="space-y-4">
                     <h3 className="font-semibold">Rental Details</h3>
                     <div className="grid grid-cols-2 gap-4">
-                   
                       <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
                         <Tag className="h-5 w-5 text-primary" />
                         <div>

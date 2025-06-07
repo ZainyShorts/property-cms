@@ -4,11 +4,11 @@ import type React from "react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover" 
-import {Upload , Download} from "lucide-react" 
-import { useState } from "react" 
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Upload } from "lucide-react"
+import { useState } from "react"
 import { ImportRecordsModal } from "@/app/dashboard/properties/inventory/importmodal/import-modal"
-import { ChevronDown, ChevronRight, Filter, CalendarIcon, Trash2, FileDown } from "lucide-react"
+import { ChevronDown, ChevronRight, Filter, CalendarIcon, Trash2 } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { format } from "date-fns"
 import Link from "next/link"
@@ -29,33 +29,35 @@ interface FilterBarProps {
   breadcrumbs: BreadcrumbItem[]
   onAddButton?: () => void
   onFilter: () => void
-  onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void 
+  onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void
   setPage: () => void
   onFilterChange?: (key: string, value: string) => void
   showDatePickers?: boolean
   onApplyFilters: () => void
   startDate?: Date | null
-  endDate?: Date | null 
-  
+  endDate?: Date | null
+
   onStartDateChange?: (date: Date | null) => void
   onEndDateChange?: (date: Date | null) => void
   onClear?: () => void
   selectedOptions: Record<string, string>
   setSelectedOptions: React.Dispatch<React.SetStateAction<Record<string, string>>>
   onExport?: () => void
+  limit?: number // Add limit prop
+  setLimit?: (limit: number) => void // Add setLimit prop
 }
 
 export function FilterBar({
   filters,
   breadcrumbs,
   onAddButton,
-  onFilter, 
-  selectedRows, 
-  setSelectedColumns,  
+  onFilter,
+  selectedRows,
+  setSelectedColumns,
   setSelectedRows,
-  selectedColumns,   
+  selectedColumns,
   fetchRecords,
-  setIsSelectionMode, 
+  setIsSelectionMode,
   isSelectionMode,
   onSearch,
   onFilterChange,
@@ -64,22 +66,26 @@ export function FilterBar({
   startDate,
   endDate,
   onStartDateChange,
-  onEndDateChange, 
+  onEndDateChange,
   setPage,
   onClear,
   selectedOptions,
   setSelectedOptions,
   onExport,
-}: any) { 
-    const [isImportModalOpen, setIsImportModalOpen] = useState(false)
-  
+  limit = 10, // Default limit
+  setLimit, // setLimit function
+}: any) {
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+
   const handleOptionSelect = (key: string, value: string) => {
     setSelectedOptions((prev) => ({ ...prev, [key]: value }))
     if (onFilterChange) {
       onFilterChange(key, value)
     }
-  } 
-  
+  }
+
+  // Add limit options
+  const limitOptions = ["10", "20", "30", "50"]
 
   return (
     <div className="space-y-4">
@@ -101,34 +107,51 @@ export function FilterBar({
                 ))}
               </ol>
             </nav>
-            <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto"> 
-              {/* {onExport && 
-              <Button
-                variant="default"
-                className="flex items-center gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
-                onClick={onExport}
-              >
-                <FileDown className="cursor-pointer" />
-                Export
-              </Button> 
-              }  */}
-                <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
-                            <Upload size={18} />
-                            Import Records
-                          </Button>
-                          {/* <Button variant="outline" onClick={onExport} className="gap-2">
-                            <Download size={18} />
-                            {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
-                          </Button> */}
-              {onAddButton && 
-              <Button
-                variant="default"
-                className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
-                onClick={onAddButton}
-              >
-                Add record
+            <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
+              <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+                <Upload size={18} />
+                Import Records
               </Button>
-               }
+
+              {/* Add Limit Dropdown here */}
+             <DropdownMenu>
+  <DropdownMenuTrigger asChild>
+    <Button
+      variant="outline"
+      className="gap-2 text-foreground hover:text-foreground hover:bg-muted"
+    >
+      {`Show ${limit}`}
+      <ChevronDown className="h-4 w-4" />
+    </Button>
+  </DropdownMenuTrigger>
+  <DropdownMenuContent className="bg-white text-foreground dark:bg-zinc-900">
+    {limitOptions.map((option, optionIndex) => (
+      <DropdownMenuItem
+        key={optionIndex}
+        onSelect={() => {
+          const newLimit = Number.parseInt(option)
+          if (setLimit) {
+            setLimit(newLimit)
+          }
+          handleOptionSelect("limit", option)
+        }}
+      >
+        {`Show ${option}`}
+      </DropdownMenuItem>
+    ))}
+  </DropdownMenuContent>
+</DropdownMenu>
+
+
+              {onAddButton && (
+                <Button
+                  variant="default"
+                  className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
+                  onClick={onAddButton}
+                >
+                  Add record
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -154,62 +177,61 @@ export function FilterBar({
             </DropdownMenu>
           ))}
 
-{showDatePickers && (
-  <>
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-        >
-          {startDate ? format(startDate, "PPP") : "Start Date"}
-          <CalendarIcon className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={startDate || undefined}
-          onSelect={(date) => onStartDateChange?.(date || null)}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
+          {showDatePickers && (
+            <>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    {startDate ? format(startDate, "PPP") : "Start Date"}
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={startDate || undefined}
+                    onSelect={(date) => onStartDateChange?.(date || null)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
 
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
-        >
-          {endDate ? format(endDate, "PPP") : "End Date"}
-          <CalendarIcon className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode="single"
-          selected={endDate || undefined}
-          onSelect={(date) => {
-            if (date) {
-              // Set time to 23:59:59.999 for end date
-              const endOfDay = new Date(date);
-              endOfDay.setHours(23, 59, 59, 999);
-              onEndDateChange?.(endOfDay);
-            } else {
-              onEndDateChange?.(null);
-            }
-          }}
-          initialFocus
-        />
-      </PopoverContent>
-    </Popover>
-  </>
-)}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    {endDate ? format(endDate, "PPP") : "End Date"}
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={endDate || undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        // Set time to 23:59:59.999 for end date
+                        const endOfDay = new Date(date)
+                        endOfDay.setHours(23, 59, 59, 999)
+                        onEndDateChange?.(endOfDay)
+                      } else {
+                        onEndDateChange?.(null)
+                      }
+                    }}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
 
           <div className="w-full sm:w-auto sm:ml-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-3 sm:mt-0">
             <TooltipProvider>
-           
               <div className="flex items-center gap-2 sm:gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -235,20 +257,19 @@ export function FilterBar({
             </TooltipProvider>
             <Button
               className="gap-2 bg-black text-white dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:hover:text-black hover:text-foreground hover:bg-muted"
-              onClick={()=>  onApplyFilters()}
+              onClick={() => onApplyFilters()}
               variant="default"
             >
               Apply Filters
             </Button>
-          </div> 
-           <ImportRecordsModal
-                  isOpen={isImportModalOpen}
-                  onClose={() => setIsImportModalOpen(false)}
-                  fetchRecords={fetchRecords}
-                />
+          </div>
+          <ImportRecordsModal
+            isOpen={isImportModalOpen}
+            onClose={() => setIsImportModalOpen(false)}
+            fetchRecords={fetchRecords}
+          />
         </div>
       </div>
     </div>
   )
 }
-

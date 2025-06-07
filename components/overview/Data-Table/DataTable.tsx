@@ -13,7 +13,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  MousePointerIcon as MousePointerSquare,
   X,
   ClipboardCheck,
   Upload,
@@ -23,7 +22,6 @@ import {
   Edit,
   Settings,
 } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-toastify"
 import { useRouter } from "next/navigation"
@@ -39,25 +37,34 @@ import { ChevronDown } from "lucide-react"
 import { Checkbox as UICheckbox } from "@/components/ui/checkbox"
 
 // Define categories for column grouping
-const projectDetails = ["index","_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
+const projectDetails = ["index", "_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
 
 const unitDetails = [
   "unitNumber",
   "unitHeight",
   "unitInternalDesign",
   "unitExternalDesign",
-  "plotSizeSqFt", 
+  "plotSizeSqFt",
   "unitType",
   "BuaSqFt",
   "noOfBedRooms",
   "unitView",
 ]
 
-const availability = ["unitPurpose", "listingDate", "chequeFrequency", "rentalPrice", "salePrice"]
+const availability = ["unitPurpose", "listingDate"]
 
-const unitTenancyDetails = ["rentedAt", "rentedTill", "vacantOn"]
+const unitTenancyDetails = ["rentedAt", "rentedTill"]
 
-const paymentDetails = ["originalPrice", "paidTODevelopers", "payableTODevelopers", "premiumAndLoss"]
+const paymentDetails = [
+  "purchasePrice",
+  "marketPrice",
+  "askingPrice",
+  "marketRent",
+  "askingRent",
+  "paidTODevelopers",
+  "payableTODevelopers",
+  "premiumAndLoss",
+]
 
 const actions = ["edit", "attachDocument", "view"]
 
@@ -65,13 +72,13 @@ interface PropertyDataTableProps {
   data?: any[]
   page?: number
   setPage: (page: number) => void
-  Count: number 
-  startingIndex : any
+  Count: number
+  startingIndex: any
   onDelete?: (id: string) => void
   onShare?: (data: any) => void
   onEdit?: (row: any) => void
-  totalPages?: any 
-  totalRecord?:any
+  totalPages?: any
+  totalRecord?: any
   onAttachDocument?: (id: string) => void
   loading?: boolean
   selectedRows?: string[]
@@ -95,7 +102,7 @@ function PropertyDataTable({
   Count,
   onDelete,
   totalPages,
-  onShare, 
+  onShare,
   startingIndex,
   selectedRows = [],
   setSelectedColumns = () => {},
@@ -116,7 +123,7 @@ function PropertyDataTable({
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [checkState, setCheckState] = useState<string>("all")
   const [isAttachingDocument, setIsAttachingDocument] = useState(false)
-  const router = useRouter() 
+  const router = useRouter()
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [recordDelete, setRecordToDelete] = useState<any>("")
   // Add a new state to track if columns have been modified via settings wheel
@@ -126,49 +133,36 @@ function PropertyDataTable({
 
   // Table headers configuration
   const tableHeaders = [
-    // Project Details  
-    
     { key: "index", label: "INDEX" },
     { key: "_id", label: "ID" },
     { key: "roadLocation", label: "LOCATION NAME" },
     { key: "developmentName", label: "DEVELOPMENT NAME" },
     { key: "subDevelopmentName", label: "SUB DEVELOPMENT" },
     { key: "projectName", label: "PROJECT NAME" },
-
-    // Unit Details
     { key: "unitNumber", label: "UNIT NUMBER" },
     { key: "unitHeight", label: "UNIT HEIGHT" },
     { key: "unitInternalDesign", label: "INTERNAL DESIGN" },
     { key: "unitExternalDesign", label: "EXTERNAL DESIGN" },
     { key: "plotSizeSqFt", label: "PLOT SIZE (SQ. FT)" },
     { key: "BuaSqFt", label: "BUA (SQ. FT)" },
-    { key: "noOfBedRooms", label: "BED ROOMS" }, 
-    {key : "unitType" , label : "UNIT TYPE"},
+    { key: "noOfBedRooms", label: "BED ROOMS" },
+    { key: "unitType", label: "UNIT TYPE" },
     { key: "unitView", label: "UNIT VIEW" },
-
-    // Availability
     { key: "unitPurpose", label: "PURPOSE" },
     { key: "listingDate", label: "LISTING DATE" },
-    { key: "chequeFrequency", label: "CHEQUE FREQUENCY" },
-    { key: "rentalPrice", label: "RENTAL PRICE" },
-    { key: "salePrice", label: "SALE PRICE" },
-
-    // Unit Tenancy Details
     { key: "rentedAt", label: "RENTED AT" },
     { key: "rentedTill", label: "RENTED TILL" },
-    { key: "vacantOn", label: "VACANT ON" },
-
-    // Payment Details
-    { key: "originalPrice", label: "ORIGINAL PRICE" },
+    { key: "purchasePrice", label: "PURCHASE PRICE" },
+    { key: "marketPrice", label: "MARKET PRICE" },
+    { key: "askingPrice", label: "ASKING PRICE" },
+    { key: "marketRent", label: "MARKET RENT" },
+    { key: "askingRent", label: "ASKING RENT" },
     { key: "paidTODevelopers", label: "PAID TO DEVELOPERS" },
     { key: "payableTODevelopers", label: "PAYABLE TO DEVELOPERS" },
     { key: "premiumAndLoss", label: "PREMIUM / LOSS" },
-
-    // Actions
     { key: "attachDocument", label: "DOCUMENT" },
     { key: "view", label: "VIEW" },
     { key: "edit", label: "EDIT" },
-    // { key: "delete", label: "DELETE" },
   ]
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
@@ -374,7 +368,7 @@ function PropertyDataTable({
   }, [setSelectedColumns])
 
   const renderCellContent = useCallback(
-    (record: any, key: string , index : any) => {
+    (record: any, key: string, index: any) => {
       switch (key) {
         case "_id":
           return (
@@ -396,20 +390,22 @@ function PropertyDataTable({
                 )}
               </Button>
             </div>
-          ) 
-           case "index":
-        return <div className="flex justify-center">{startingIndex + index + 1}</div>
+          )
+        case "index":
+          return <div className="flex justify-center">{startingIndex + index + 1}</div>
         case "plotSizeSqFt":
         case "BuaSqFt":
-        case "originalPrice":
-        case "rentalPrice": 
+        case "purchasePrice":
+        case "marketPrice":
+        case "askingPrice":
+        case "marketRent":
+        case "askingRent":
         case "unitType":
-        case "salePrice":
         case "unitNumber":
         case "paidTODevelopers":
         case "payableTODevelopers":
         case "premiumAndLoss":
-          return record[key] ? record[key].toLocaleString() : "-"
+          return record[key] ? record[key].toLocaleString() : "N/A"
         case "attachDocument":
           return (
             <div className="flex justify-center">
@@ -516,10 +512,9 @@ function PropertyDataTable({
         case "listingDate":
         case "rentedAt":
         case "rentedTill":
-        case "vacantOn":
           const value = record[key]
           if (value === "") return "N/A"
-          if (!value) return "-"
+          if (!value) return "N/A"
           const date = new Date(value)
           return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString()
 
@@ -658,52 +653,52 @@ function PropertyDataTable({
               Export Visible Columns
             </Button>
           )} */}
-          {/* Add settings wheel dropdown here */} 
-          {!isSelectionMode && 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Toggle columns</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
-              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {tableHeaders.map((header) => (
-                <DropdownMenuItem
-                  key={header.key}
-                  className="flex items-center gap-2"
-                  onSelect={(e) => e.preventDefault()}
-                >
-                  <div className="flex items-center space-x-2">
-                    <UICheckbox
-                      id={`column-${header.key}`}
-                      checked={visibleColumns[header.key]}
-                      onCheckedChange={(checked) => {
-                        setVisibleColumns((prev) => {
-                          const updated = {
-                            ...prev,
-                            [header.key]: !!checked,
-                          }
-                          // Set columnsModified to true when any column visibility changes
-                          setColumnsModified(true)
-                          return updated
-                        })
-                      }}
-                    />
-                    <label
-                      htmlFor={`column-${header.key}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      {header.label}
-                    </label>
-                  </div>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          }
+          {/* Add settings wheel dropdown here */}
+          {!isSelectionMode && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Settings className="h-4 w-4" />
+                  <span className="sr-only">Toggle columns</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 max-h-[70vh] overflow-y-auto">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {tableHeaders.map((header) => (
+                  <DropdownMenuItem
+                    key={header.key}
+                    className="flex items-center gap-2"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <div className="flex items-center space-x-2 ">
+                      <UICheckbox
+                        id={`column-${header.key}`}
+                        checked={visibleColumns[header.key]}
+                        onCheckedChange={(checked) => {
+                          setVisibleColumns((prev) => {
+                            const updated = {
+                              ...prev,
+                              [header.key]: !!checked,
+                            }
+                            // Set columnsModified to true when any column visibility changes
+                            setColumnsModified(true)
+                            return updated
+                          })
+                        }}
+                      />
+                      <label
+                        htmlFor={`column-${header.key}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {header.label}
+                      </label>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         <div className="overflow-x-auto thin-scrollbar sm:mx-0">
@@ -883,13 +878,13 @@ function PropertyDataTable({
                           header.key === "unitView" && "w-[100px]",
                           header.key === "unitPurpose" && "w-[100px]",
                           header.key === "listingDate" && "w-[120px]",
-                          header.key === "chequeFrequency" && "w-[150px]",
-                          header.key === "rentalPrice" && "w-[120px]",
-                          header.key === "salePrice" && "w-[120px]",
                           header.key === "rentedAt" && "w-[120px]",
                           header.key === "rentedTill" && "w-[120px]",
-                          header.key === "vacantOn" && "w-[120px]",
-                          header.key === "originalPrice" && "w-[120px]",
+                          header.key === "purchasePrice" && "w-[120px]",
+                          header.key === "marketPrice" && "w-[120px]",
+                          header.key === "askingPrice" && "w-[120px]",
+                          header.key === "marketRent" && "w-[120px]",
+                          header.key === "askingRent" && "w-[120px]",
                           header.key === "paidTODevelopers" && "w-[150px]",
                           header.key === "payableTODevelopers" && "w-[150px]",
                           header.key === "premiumAndLoss" && "w-[120px]",
@@ -948,7 +943,7 @@ function PropertyDataTable({
                         .filter((header) => visibleColumns[header.key])
                         .map((header) => (
                           <TableCell key={`${record._id}-${header.key}`} className="text-center">
-                            {renderCellContent(record, header.key , index)}
+                            {renderCellContent(record, header.key, index)}
                           </TableCell>
                         ))}
                     </TableRow>
@@ -974,72 +969,71 @@ function PropertyDataTable({
 
         {/* Pagination */}
         <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
-<div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => goToPage(page - 1)}
-    disabled={page === 1}
-    className="h-8 w-8 p-0"
-  >
-    <ChevronLeft className="h-4 w-4" />
-  </Button>
+          <div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
 
-  {totalPages <= 3 ? (
-    // If 3 or fewer pages, show all page numbers
-    Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
-      <Button
-        key={pageNumber}
-        variant={page === pageNumber ? "default" : "outline"}
-        size="sm"
-        onClick={() => goToPage(pageNumber)}
-        className={`min-w-7 sm:min-w-8 ${page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
-      >
-        {pageNumber}
-      </Button>
-    ))
-  ) : (
-    // If more than 3 pages, show input fields
-    <div className="flex items-center gap-1">
-      <input
-        type="number"
-        min="1"
-        defaultValue={page}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            const newPage = Math.min(Math.max(1, parseInt(e.target.value) || 1), totalPages);
-            goToPage(newPage);
-            e.target.value = newPage; // Update input with validated value
-          }
-        }}
-        onBlur={(e) => {
-          e.target.value = page; // Reset to current page if not submitted
-        }}
-        className="w-12 h-8 px-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-center"
-      />
-      <span className="text-sm text-muted-foreground">/</span>
-      <div className="w-12 h-8 px-2 text-sm border rounded-md bg-muted flex items-center justify-center">
-        {totalPages}
-      </div>
-    </div>
-  )}
+            {totalPages <= 3 ? (
+              // If 3 or fewer pages, show all page numbers
+              Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                <Button
+                  key={pageNumber}
+                  variant={page === pageNumber ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => goToPage(pageNumber)}
+                  className={`min-w-7 sm:min-w-8 ${page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  {pageNumber}
+                </Button>
+              ))
+            ) : (
+              // If more than 3 pages, show input fields
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min="1"
+                  defaultValue={page}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const newPage = Math.min(Math.max(1, Number.parseInt(e.target.value) || 1), totalPages)
+                      goToPage(newPage)
+                      e.target.value = newPage // Update input with validated value
+                    }
+                  }}
+                  onBlur={(e) => {
+                    e.target.value = page // Reset to current page if not submitted
+                  }}
+                  className="w-12 h-8 px-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-primary text-center"
+                />
+                <span className="text-sm text-muted-foreground">/</span>
+                <div className="w-12 h-8 px-2 text-sm border rounded-md bg-muted flex items-center justify-center">
+                  {totalPages}
+                </div>
+              </div>
+            )}
 
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => goToPage(page + 1)}
-    disabled={page === totalPages || totalPages === 0}
-    className="hover:bg-muted h-8 w-8 p-0"
-  >
-    <ChevronRight className="h-4 w-4" />
-  </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages || totalPages === 0}
+              className="hover:bg-muted h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
 
-  <span className="text-sm text-muted-foreground ml-2">
-    Page {page} of {totalPages || 1}
-  </span>
-</div>
-                    <span className="text-sm text-muted-foreground">{Count} records</span>
-
+            <span className="text-sm text-muted-foreground ml-2">
+              Page {page} of {totalPages || 1}
+            </span>
+          </div>
+          <span className="text-sm text-muted-foreground">{Count} records</span>
         </div>
       </div>
       <DeleteConfirmationModal

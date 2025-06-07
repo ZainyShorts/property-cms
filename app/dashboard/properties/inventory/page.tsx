@@ -32,7 +32,7 @@ const filter = [
 
 const breadcrumbs = [
   { label: "Properties", href: "/dashboard/properties/inventory" },
-  { label: "inventory", href: "/dashboard/properties/inventory" },
+  { label: "Inventory", href: "/dashboard/properties/inventory" },
 ]
 
 const tableHeaders = [
@@ -47,17 +47,18 @@ const tableHeaders = [
   "plotSizeSqFt",
   "BuaSqFt",
   "unitNumber",
+  "unitType",
   "noOfBedRooms",
   "unitView",
   "unitPurpose",
   "listingDate",
-  "chequeFrequency",
-  "rentalPrice",
-  "salePrice",
   "rentedAt",
   "rentedTill",
-  "vacantOn",
-  "originalPrice",
+  "purchasePrice",
+  "marketPrice",
+  "askingPrice",
+  "marketRent",
+  "askingRent",
   "paidTODevelopers",
   "payableTODevelopers",
   "premiumAndLoss",
@@ -81,11 +82,14 @@ export default function PropertiesPage() {
   const [selectedRows, setSelectedRows] = useState<string[]>([])
   const [selectedColumns, setSelectedColumns] = useState<string[]>([])
   const [propertyType, setPropertyType] = useState("")
-  const [pendingSearchFilter, setPendingSearchFilter] = useState("")  
+  const [pendingSearchFilter, setPendingSearchFilter] = useState("")
   const [startingIndex, setStartingIndex] = useState(0)
   const [selectedRecordsCache, setSelectedRecordsCache] = useState<Record<string, any>>({})
-  const [exportModalOpen, setExportModalOpen] = useState(false) 
-  const limit = 10;
+  const [exportModalOpen, setExportModalOpen] = useState(false)
+
+  // Add limit state with default value 10
+  const [limit, setLimit] = useState(10)
+
   const dispatch = useDispatch()
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   const [shareModalOpen, setShareModalOpen] = useState(false)
@@ -107,18 +111,17 @@ export default function PropertiesPage() {
         const finalParams = {
           ...filterObj, // Spread the filter object contents
           ...restParams, // Include other params
-          limit: 10,
+          limit: limit, // Use dynamic limit instead of hardcoded 10
           page: page !== undefined ? page : currentPage,
         }
-         console.log('final',finalParams);
+        console.log("final", finalParams)
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
           {
             params: finalParams,
-          }, 
-
-        ) 
-        console.log('res',response);
+          },
+        )
+        console.log("res", response)
 
         if (response.data) {
           setProperties(response.data.data || [])
@@ -134,7 +137,7 @@ export default function PropertiesPage() {
         setLoading(false)
       }
     },
-    [currentPage],
+    [currentPage, limit], // Add limit to dependencies
   )
 
   useEffect(() => {
@@ -149,9 +152,9 @@ export default function PropertiesPage() {
       )
     } else {
       fetchProperties({ sortBy: "createdAt", sortOrder: sortOrder }, currentPage)
-    } 
-        setStartingIndex((currentPage - 1) * limit)
-  }, [sortOrder, currentPage])
+    }
+    setStartingIndex((currentPage - 1) * limit) // Use dynamic limit
+  }, [sortOrder, currentPage, limit]) // Add limit to dependencies
 
   const transformedData = properties.map((property: any) => ({
     _id: property._id || "N/A",
@@ -164,24 +167,22 @@ export default function PropertiesPage() {
     unitExternalDesign: property.unitExternalDesign || "N/A",
     plotSizeSqFt: property.plotSizeSqFt || "N/A",
     BuaSqFt: property.BuaSqFt || "N/A",
-    unitNumber: property.unitNumber || "N/A", 
-    unitType : property.unitType || "N/A",
+    unitNumber: property.unitNumber || "N/A",
+    unitType: property.unitType || "N/A",
     noOfBedRooms: property.noOfBedRooms || "N/A",
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
     unitPurpose: property.unitPurpose || "N/A",
     listingDate: property.listingDate || "N/A",
-    chequeFrequency: property.chequeFrequency || "N/A",
-    rentalPrice: property.rentalPrice || "N/A",
-    salePrice: property.salePrice || "N/A",
     rentedAt: property.rentedAt || "N/A",
     rentedTill: property.rentedTill || "N/A",
-    vacantOn: property.vacantOn || "N/A",
-    originalPrice: property.originalPrice || "N/A",
+    purchasePrice: property.purchasePrice || "N/A",
+    marketPrice: property.marketPrice || "N/A",
+    askingPrice: property.askingPrice || "N/A",
+    marketRent: property.marketRent || "N/A",
+    askingRent: property.askingRent || "N/A",
     paidTODevelopers: property.paidTODevelopers || "N/A",
     payableTODevelopers: property.payableTODevelopers || "N/A",
-    premiumAndLoss:
-      property.premiumAndLoss ||
-      (property.salePrice && property.originalPrice ? property.salePrice - property.originalPrice : "N/A"),
+    premiumAndLoss: property.premiumAndLoss || "N/A",
   }))
 
   const toggleRow = (id: string) => {
@@ -248,6 +249,11 @@ export default function PropertiesPage() {
       setSortOrder(value === "Newest" ? "desc" : "asc")
     } else if (key === "propertiesManaged") {
       setPropertyType(value)
+    } else if (key === "limit") {
+      // Handle limit change
+      const newLimit = Number.parseInt(value)
+      setLimit(newLimit)
+      setCurrentPage(1) // Reset to first page when limit changes
     }
   }
 
@@ -293,119 +299,87 @@ export default function PropertiesPage() {
     return cleaned
   }
 
-const handleApplyFilters = () => {
-  const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
+  const handleApplyFilters = () => {
+    const searchFilterObj = pendingSearchFilter ? { _id: pendingSearchFilter } : {}
 
-  const dateFilters = {
-    ...(startDate && { startDate: startDate.toISOString() }),
-    ...(endDate && { endDate: endDate.toISOString() }),
+    const dateFilters = {
+      ...(startDate && { startDate: startDate.toISOString() }),
+      ...(endDate && { endDate: endDate.toISOString() }),
+    }
+
+    const propertyTypeFilter = propertyType ? { propertyType } : {}
+    const cleanedSidebarFilters = cleanFilters(sidebarFilters)
+
+    const queryParams = {
+      ...cleanedSidebarFilters,
+      ...searchFilterObj,
+      ...dateFilters,
+      ...propertyTypeFilter,
+
+      // Plot Size Range
+      ...(sidebarFilters.plotSizeSqFt?.min &&
+        sidebarFilters.plotSizeSqFt?.max && {
+          plotSizeSqFtMin: sidebarFilters.plotSizeSqFt.min,
+          plotSizeSqFtMax: sidebarFilters.plotSizeSqFt.max,
+        }),
+
+      // BUA Range
+      ...(sidebarFilters.BuaSqFt?.min &&
+        sidebarFilters.BuaSqFt?.max && {
+          BuaSqFtMin: sidebarFilters.BuaSqFt.min,
+          BuaSqFtMax: sidebarFilters.BuaSqFt.max,
+        }),
+
+      // Number of Bedrooms Range
+      ...(sidebarFilters.noOfBedRooms?.min &&
+        sidebarFilters.noOfBedRooms?.max && {
+          noOfBedRoomsMin: sidebarFilters.noOfBedRooms.min,
+          noOfBedRoomsMax: sidebarFilters.noOfBedRooms.max,
+        }),
+
+      // Purchase Price Range
+      ...(sidebarFilters.purchasePriceRange?.min &&
+        sidebarFilters.purchasePriceRange?.max && {
+          purchasePriceMin: sidebarFilters.purchasePriceRange.min,
+          purchasePriceMax: sidebarFilters.purchasePriceRange.max,
+        }),
+
+      // Market Price Range
+      ...(sidebarFilters.marketPriceRange?.min &&
+        sidebarFilters.marketPriceRange?.max && {
+          marketPriceMin: sidebarFilters.marketPriceRange.min,
+          marketPriceMax: sidebarFilters.marketPriceRange.max,
+        }),
+
+      // Asking Price Range
+      ...(sidebarFilters.askingPriceRange?.min &&
+        sidebarFilters.askingPriceRange?.max && {
+          askingPriceMin: sidebarFilters.askingPriceRange.min,
+          askingPriceMax: sidebarFilters.askingPriceRange.max,
+        }),
+
+      // Market Rent Range
+      ...(sidebarFilters.marketRentRange?.min &&
+        sidebarFilters.marketRentRange?.max && {
+          marketRentMin: sidebarFilters.marketRentRange.min,
+          marketRentMax: sidebarFilters.marketRentRange.max,
+        }),
+
+      // Asking Rent Range
+      ...(sidebarFilters.askingRentRange?.min &&
+        sidebarFilters.askingRentRange?.max && {
+          askingRentMin: sidebarFilters.askingRentRange.min,
+          askingRentMax: sidebarFilters.askingRentRange.max,
+        }),
+
+      sortBy: "createdAt",
+      sortOrder: sortOrder,
+    }
+
+    setSearchFilter(queryParams)
+    setCurrentPage(1)
+    fetchProperties(queryParams, 1)
   }
-
-  const propertyTypeFilter = propertyType ? { propertyType } : {}
-  const cleanedSidebarFilters = cleanFilters(sidebarFilters)
-
-  const queryParams = {
-    ...cleanedSidebarFilters,
-    ...searchFilterObj,
-    ...dateFilters,
-    ...propertyTypeFilter,
-    
-    // Number of Bedrooms Range
-    ...(rangeFilters.minBed &&
-      rangeFilters.maxBed && {
-        bedroomsMin: Number.parseInt(rangeFilters.minBed),
-        bedroomsMax: Number.parseInt(rangeFilters.maxBed),
-      }),
-    
-    // Plot Size Range
-    ...(sidebarFilters.plotSizeSqFt?.min &&
-      sidebarFilters.plotSizeSqFt?.max && {
-        plotSizeSqFtMin: sidebarFilters.plotSizeSqFt.min,
-        plotSizeSqFtMax: sidebarFilters.plotSizeSqFt.max,
-      }),
-    
-    // BUA Range
-    ...(sidebarFilters.BuaSqFt?.min &&
-      sidebarFilters.BuaSqFt?.max && {
-        BuaSqFtMin: sidebarFilters.BuaSqFt.min,
-        BuaSqFtMax: sidebarFilters.BuaSqFt.max,
-      }),
-    
-    // Number of Bedrooms Range (from sidebar filters)
-    ...(sidebarFilters.noOfBedRooms?.min &&
-      sidebarFilters.noOfBedRooms?.max && {
-        noOfBedRoomsMin: sidebarFilters.noOfBedRooms.min,
-        noOfBedRoomsMax: sidebarFilters.noOfBedRooms.max,
-      }),
-    
-    // Purchase Price Range
-    ...(sidebarFilters.purchasePriceRange?.min &&
-      sidebarFilters.purchasePriceRange?.max && {
-        purchasePriceMin: sidebarFilters.purchasePriceRange.min,
-        purchasePriceMax: sidebarFilters.purchasePriceRange.max,
-      }),
-    
-    ...(sidebarFilters.marketPriceRange?.min &&
-      sidebarFilters.marketPriceRange?.max && {
-        marketPriceMin: sidebarFilters.marketPriceRange.min,
-        marketPriceMax: sidebarFilters.marketPriceRange.max,
-      }),
-    
-    // Asking Price Range
-    ...(sidebarFilters.askingPriceRange?.min &&
-      sidebarFilters.askingPriceRange?.max && {
-        askingPriceMin: sidebarFilters.askingPriceRange.min,
-        askingPriceMax: sidebarFilters.askingPriceRange.max,
-      }),
-    
-    // Market Rent Range
-    ...(sidebarFilters.marketRentRange?.min &&
-      sidebarFilters.marketRentRange?.max && {
-        marketRentMin: sidebarFilters.marketRentRange.min,
-        marketRentMax: sidebarFilters.marketRentRange.max,
-      }),
-    
-    // Asking Rent Range
-    ...(sidebarFilters.askingRentRange?.min &&
-      sidebarFilters.askingRentRange?.max && {
-        askingRentMin: sidebarFilters.askingRentRange.min,
-        askingRentMax: sidebarFilters.askingRentRange.max,
-      }),
-    
-    // Premium and Loss Range
-    ...(sidebarFilters.premiumAndLossRange?.min &&
-      sidebarFilters.premiumAndLossRange?.max && {
-        premiumAndLossMin: sidebarFilters.premiumAndLossRange.min,
-        premiumAndLossMax: sidebarFilters.premiumAndLossRange.max,
-      }),
-    
-    // Legacy range filters (keeping for backward compatibility)
-    ...(rangeFilters.minPrimaryPrice &&
-      rangeFilters.maxPrimaryPrice && {
-        primaryPriceMin: Number.parseInt(rangeFilters.minPrimaryPrice),
-        primaryPriceMax: Number.parseInt(rangeFilters.maxPrimaryPrice),
-      }),
-    
-    ...(rangeFilters.minRent &&
-      rangeFilters.maxRent && {
-        rentMin: Number.parseInt(rangeFilters.minRent),
-        rentMax: Number.parseInt(rangeFilters.maxRent),
-      }),
-    
-    ...(rangeFilters.minResalePrice &&
-      rangeFilters.maxResalePrice && {
-        resalePriceMin: Number.parseInt(rangeFilters.minResalePrice),
-        resalePriceMax: Number.parseInt(rangeFilters.maxResalePrice),
-      }),
-    
-    sortBy: "createdAt",
-    sortOrder: sortOrder,
-  }
-  
-  setSearchFilter(queryParams)
-  setCurrentPage(1) // Reset to page 1 when applying filters
-  fetchProperties(queryParams, 1) // Pass 1 as the page number
-}
 
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     const searchValue = event.target.value
@@ -449,10 +423,10 @@ const handleApplyFilters = () => {
     }
   }
 
-  const handleUpdate = (property: any) => { 
+  const handleUpdate = (property: any) => {
     // const originalProperty = properties.find((p) => p._id === property._id)
     // console.log('prpertyto edit',property);
-    setPropertyToEdit( property)
+    setPropertyToEdit(property)
     setAddPropertyModalOpen(true)
     setDataChanged(false)
   }
@@ -546,7 +520,7 @@ const handleApplyFilters = () => {
             params: {
               sortBy: "createdAt",
               sortOrder: "asc",
-              limit: 10,
+              limit: limit, // Use dynamic limit
             },
           },
         )
@@ -598,7 +572,7 @@ const handleApplyFilters = () => {
             }),
           sortBy: "createdAt",
           sortOrder: "asc",
-          limit: 10,
+          limit: limit, // Use dynamic limit
         }
 
         const response = await axios.get(
@@ -633,6 +607,7 @@ const handleApplyFilters = () => {
     setPropertyType("")
     setPendingSearchFilter("")
     setSelectedOptions({})
+    setLimit(10) // Reset limit to default
 
     fetchProperties({
       sortBy: "createdAt",
@@ -700,6 +675,8 @@ const handleApplyFilters = () => {
         selectedOptions={selectedOptions}
         setSelectedOptions={setSelectedOptions}
         onExport={handleExport}
+        limit={limit} // Pass limit to FilterBar
+        setLimit={setLimit} // Pass setLimit to FilterBar
       />
       <main className="container mx-auto md:px-4 py-6">
         {transformedData.length > 0 ? (
@@ -709,7 +686,7 @@ const handleApplyFilters = () => {
             toggleRow={toggleRow}
             totalPages={totalPages}
             toggleColumns={toggleColumns}
-            Count={totalCount} 
+            Count={totalCount}
             startingIndex={startingIndex}
             setSelectedRowsMap={setSelectedRowsMap}
             setIsSelectionMode={setIsSelectionMode}

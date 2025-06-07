@@ -87,6 +87,38 @@ interface PriceRange {
   premiumMax: number
 }
 
+interface APIResponse {
+  success: boolean
+  masterDevelopment: string
+  subDevelopment: string
+  project: string
+  projectQuality: string
+  constructionStatus: number
+  salesStatus: string
+  plotPermission: string[]
+  plotHeight: string
+  plotSizeSqFt: string
+  plotBUASqFt: string
+  launchDate: string
+  completionDate: string
+  downPayment: number
+  installmentDate: string
+  uponCompletion: string
+  postHandOver: string
+  facilityCategories: string[]
+  amenitiesCategories: string[]
+  inventory: Record<string, number>
+  availability: Record<string, number>
+  priceRange: Record<
+    string,
+    {
+      marketPrice: { min: number; max: number }
+      askingPrice: { min: number; max: number }
+      premium: { min: number; max: number }
+    }
+  >
+}
+
 export default function PropertyDetail({ params }: Props) {
   const [currentMediaIndex, setCurrentMediaIndex] = useState<number>(0)
   const [propertyData, setPropertyData] = useState<PropertyData | null>(null)
@@ -166,9 +198,7 @@ export default function PropertyDetail({ params }: Props) {
 
         // Fetch property data with populated fields, documents, and unit details in parallel
         const [propertyResponse, documentsResponse, unitResponse] = await Promise.all([
-          axios.get(
-            `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${params.preview}?populate=subDevelopment,masterDevelopment`,
-          ),
+          axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/report/${params.preview}`),
           axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/byRefId/${params.preview}`),
           axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?projectID=${params.preview}`),
         ])
@@ -480,132 +510,6 @@ export default function PropertyDetail({ params }: Props) {
 
     return purposes
   }
-  const calculateAvailableInventory = () => {
-    const inventory = {
-      Shop: 0,
-      Offices: 0,
-      Studios: 0,
-      "1 BR": 0,
-      "2 BR": 0,
-      "3 BR": 0,
-      "4 BR": 0,
-      "5 BR": 0,
-      "6 BR": 0,
-      "7 BR": 0,
-      "8 BR": 0,
-    }
-
-    if (unitDetails && unitDetails.length > 0) {
-      unitDetails.forEach((unit) => {
-        // Only count units with purpose Sell or Rent
-        if (unit.unitPurpose === "Sell" || unit.unitPurpose === "Rent") {
-          if (unit.noOfBedRooms) {
-            const key = `${unit.noOfBedRooms} BR`
-            if (inventory.hasOwnProperty(key)) {
-              inventory[key]++
-            }
-          }
-        }
-      })
-    }
-
-    return inventory
-  }
-
-  const calculateInventory = () => {
-    const inventory = {
-      Shop: 1,
-      Offices: 1,
-      Studios: 1,
-      "1 BR": 0,
-      "2 BR": 0,
-      "3 BR": 0,
-      "4 BR": 0,
-      "5 BR": 0,
-      "6 BR": 0,
-      "7 BR": 0,
-      "8 BR": 0,
-    }
-
-    if (unitDetails && unitDetails.length > 0) {
-      unitDetails.forEach((unit) => {
-        if (unit.noOfBedRooms) {
-          const key = `${unit.noOfBedRooms} BR`
-          if (inventory.hasOwnProperty(key)) {
-            inventory[key]++
-          }
-        }
-      })
-    }
-
-    return inventory
-  }
-
-  const calculatePriceRanges = () => {
-    const priceRanges: Record<string, PriceRange> = {
-      Studio: { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "1 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "2 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "3 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "4 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "5 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "6 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "7 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-      "8 BR": { originalMin: 0, originalMax: 0, sellingMin: 0, sellingMax: 0, premiumMin: 0, premiumMax: 0 },
-    }
-
-    if (unitDetails && unitDetails.length > 0) {
-      // Group units by bedroom count
-      const unitsByBedroom: Record<string, any[]> = {}
-
-      unitDetails.forEach((unit) => {
-        if (unit.noOfBedRooms) {
-          const key = `${unit.noOfBedRooms} BR`
-          if (!unitsByBedroom[key]) {
-            unitsByBedroom[key] = []
-          }
-          unitsByBedroom[key].push(unit)
-        }
-      })
-
-      // Calculate price ranges for each bedroom type
-      Object.entries(unitsByBedroom).forEach(([bedroomType, units]) => {
-        if (!priceRanges[bedroomType]) return // ✅ Avoids TypeError
-
-        if (units.length > 0) {
-          const originalPrices = units.map((unit) => unit.originalPrice || 0).filter((price) => price > 0)
-          const sellingPrices = units.map((unit) => unit.salePrice || 0).filter((price) => price > 0)
-
-          if (originalPrices.length > 0) {
-            priceRanges[bedroomType].originalMin = Math.min(...originalPrices)
-            priceRanges[bedroomType].originalMax = Math.max(...originalPrices)
-          }
-
-          if (sellingPrices.length > 0) {
-            priceRanges[bedroomType].sellingMin = Math.min(...sellingPrices)
-            priceRanges[bedroomType].sellingMax = Math.max(...sellingPrices)
-          }
-
-          // Calculate premium/loss
-          units.forEach((unit) => {
-            if (unit.originalPrice && unit.sellingPrice) {
-              const premium = unit.sellingPrice - unit.originalPrice
-
-              if (!priceRanges[bedroomType].premiumMin || premium < priceRanges[bedroomType].premiumMin) {
-                priceRanges[bedroomType].premiumMin = premium
-              }
-
-              if (!priceRanges[bedroomType].premiumMax || premium > priceRanges[bedroomType].premiumMax) {
-                priceRanges[bedroomType].premiumMax = premium
-              }
-            }
-          })
-        }
-      })
-    }
-
-    return priceRanges
-  }
 
   const countAmenities = () => {
     const amenitiesCount: Record<string, number> = {}
@@ -658,8 +562,35 @@ export default function PropertyDetail({ params }: Props) {
 
   const masterDevelopment = propertyData.masterDevelopment || {}
   const subDevelopment = propertyData.subDevelopment || {}
-  const priceRanges = calculatePriceRanges()
+  const getPriceRangesFromAPI = () => {
+    // If we have API response with priceRange, use it directly
+    if (propertyData?.priceRange) {
+      return propertyData.priceRange
+    }
+
+    // Fallback to empty structure if no API data
+    const emptyRange = {
+      marketPrice: { min: 0, max: 0 },
+      askingPrice: { min: 0, max: 0 },
+      premium: { min: 0, max: 0 },
+    }
+
+    return {
+      Studio: emptyRange,
+      "1 BR": emptyRange,
+      "2 BR": emptyRange,
+      "3 BR": emptyRange,
+      "4 BR": emptyRange,
+      "5 BR": emptyRange,
+      "6 BR": emptyRange,
+      "7 BR": emptyRange,
+      "8 BR": emptyRange,
+    }
+  }
+  const priceRanges = getPriceRangesFromAPI()
   const amenitiesCount = countAmenities()
+  const inventory = propertyData?.inventory || {}
+  const availability = propertyData?.availability || {}
 
   const togglePlayPause = () => {
     if (!videoRef.current) return
@@ -944,7 +875,7 @@ export default function PropertyDetail({ params }: Props) {
                       <Building className="h-6 w-6" />
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Master Development</div>
-                    <div className="font-medium">{masterDevelopment?.developmentName || "N/A"}</div>
+                    <div className="font-medium">{propertyData.masterDevelopment || "N/A"}</div>
                   </div>
 
                   <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
@@ -952,7 +883,7 @@ export default function PropertyDetail({ params }: Props) {
                       <Building2 className="h-6 w-6" />
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Sub Development</div>
-                    <div className="font-medium">{subDevelopment?.subDevelopment || "N/A"}</div>
+                    <div className="font-medium">{propertyData.subDevelopment || "N/A"}</div>
                   </div>
 
                   <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
@@ -960,7 +891,7 @@ export default function PropertyDetail({ params }: Props) {
                       <LayoutGrid className="h-6 w-6" />
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Project</div>
-                    <div className="font-medium">{propertyData.projectName}</div>
+                    <div className="font-medium">{propertyData.project}</div>
                   </div>
 
                   <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
@@ -1020,10 +951,10 @@ export default function PropertyDetail({ params }: Props) {
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Plot Permission</div>
                     <div className="font-medium">
-                      {subDevelopment?.plotPermission ? (
+                      {propertyData?.plotPermission ? (
                         <Badge variant="secondary" className="cursor-help" onClick={handleShowPermissions}>
-                          {Array.isArray(subDevelopment.plotPermission)
-                            ? `${subDevelopment.plotPermission.length} Permissions`
+                          {Array.isArray(propertyData.plotPermission)
+                            ? `${propertyData.plotPermission.length} Permissions`
                             : "1 Permission"}
                         </Badge>
                       ) : (
@@ -1037,7 +968,7 @@ export default function PropertyDetail({ params }: Props) {
                       <ArrowRight className="h-6 w-6 rotate-90" />
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Height</div>
-                      {subDevelopment?.plotHeight ? `${subDevelopment.plotHeight} sq ft` : "N/A"}
+                    {propertyData?.plotHeight ? `${propertyData.plotHeight} sq ft` : "N/A"}
                   </div>
 
                   <div className="flex flex-col items-center justify-center py-4 px-2 text-center border-r border-b border-gray-200 dark:border-gray-800 last:border-r-0">
@@ -1046,7 +977,7 @@ export default function PropertyDetail({ params }: Props) {
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Plot Size</div>
                     <div className="font-medium">
-                      {subDevelopment?.plotSizeSqFt ? `${subDevelopment.plotSizeSqFt} sq ft` : "N/A"}
+                      {propertyData?.plotSizeSqFt ? `${propertyData.plotSizeSqFt} sq ft` : "N/A"}
                     </div>
                   </div>
 
@@ -1056,7 +987,7 @@ export default function PropertyDetail({ params }: Props) {
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">BUA</div>
                     <div className="font-medium">
-                      {subDevelopment?.plotBUASqFt ? `${subDevelopment.plotBUASqFt} sq ft` : "N/A"}
+                      {propertyData?.plotBUASqFt ? `${propertyData.plotBUASqFt} sq ft` : "N/A"}
                     </div>
                   </div>
 
@@ -1092,7 +1023,7 @@ export default function PropertyDetail({ params }: Props) {
           <CardContent className="p-4 sm:p-6">
             <div className="w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 xl:grid-cols-11">
-                {Object.entries(calculateInventory()).map(([type, count], index) => {
+                {Object.entries(inventory).map(([type, count], index) => {
                   // Determine which icon to use based on the type
                   let Icon
                   switch (type) {
@@ -1146,7 +1077,7 @@ export default function PropertyDetail({ params }: Props) {
           <CardContent className="p-4 sm:p-6">
             <div className="w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-black">
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 xl:grid-cols-11">
-                {Object.entries(calculateAvailableInventory()).map(([type, count], index) => {
+                {Object.entries(availability).map(([type, count], index) => {
                   // Determine which icon to use based on the type
                   let Icon
                   switch (type) {
@@ -1219,13 +1150,13 @@ export default function PropertyDetail({ params }: Props) {
                         className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
                         colSpan={2}
                       >
-                        Original Price
+                        Asking Price
                       </th>
                       <th
                         className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
                         colSpan={2}
                       >
-                        Selling Price
+                        Market Price
                       </th>
                       <th
                         className="p-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300 border-b"
@@ -1260,22 +1191,22 @@ export default function PropertyDetail({ params }: Props) {
                       <tr key={type} className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 font-medium">{type}</td>
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
-                          {range.originalMin > 0 ? range.originalMin.toLocaleString() : "0"}
+                          {range.askingPrice?.min > 0 ? range.askingPrice.min.toLocaleString() : "0"}
                         </td>
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
-                          {range.originalMax > 0 ? range.originalMax.toLocaleString() : "0"}
+                          {range.askingPrice?.max > 0 ? range.askingPrice.max.toLocaleString() : "0"}
                         </td>
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
-                          {range.sellingMin > 0 ? range.sellingMin.toLocaleString() : "0"}
+                          {range.marketPrice?.min > 0 ? range.marketPrice.min.toLocaleString() : "0"}
                         </td>
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
-                          {range.sellingMax > 0 ? range.sellingMax.toLocaleString() : "0"}
+                          {range.marketPrice?.max > 0 ? range.marketPrice.max.toLocaleString() : "0"}
                         </td>
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
-                          {range.premiumMin !== 0 ? range.premiumMin.toLocaleString() : "0"}
+                          {range.premium?.min !== 0 ? range.premium.min.toLocaleString() : "0"}
                         </td>
                         <td className="p-3 border-b border-gray-100 dark:border-gray-800 text-center">
-                          {range.premiumMax !== 0 ? range.premiumMax.toLocaleString() : "0"}
+                          {range.premium?.max !== 0 ? range.premium.max.toLocaleString() : "0"}
                         </td>
                       </tr>
                     ))}
@@ -1371,79 +1302,6 @@ export default function PropertyDetail({ params }: Props) {
         </Card>
 
         {/* Project Timeline */}
-        <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
-          <CardHeader className="bg-gradient-to-r from-primary/20 to-transparent pb-2">
-            <CardTitle className="text-2xl font-bold flex items-center gap-2">
-              <Calendar className="h-6 w-6 text-primary" />
-              Project Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6">
-            <div className="bg-gray-50 dark:bg-gray-900/10 rounded-lg p-6">
-              <div className="space-y-6">
-                <div className="relative pl-8 pb-6 border-l-2 border-primary/30">
-                  <div className="absolute -left-3 top-0">
-                    <div
-                      className={`${new Date(propertyData.createdAt) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
-                    >
-                      {new Date(propertyData.createdAt) < new Date() ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-lg">Project Announcement</h4>
-                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
-                      {formatDate(propertyData.createdAt)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative pl-8 pb-6 border-l-2 border-primary/30">
-                  <div className="absolute -left-3 top-0">
-                    <div
-                      className={`${new Date(propertyData.launchDate) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
-                    >
-                      {new Date(propertyData.launchDate) < new Date() ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-lg">Launch Date</h4>
-                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
-                      {formatDate(propertyData.launchDate)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative pl-8">
-                  <div className="absolute -left-3 top-0">
-                    <div
-                      className={`${new Date(propertyData.completionDate) < new Date() ? "bg-primary text-white" : "bg-gray-200 dark:bg-gray-700 border-2 border-primary"} rounded-full p-1`}
-                    >
-                      {new Date(propertyData.completionDate) < new Date() ? (
-                        <CheckCircle2 className="h-4 w-4" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-primary" />
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-lg">Expected Completion</h4>
-                    <p className="text-amber-600 dark:text-amber-500 font-medium mt-1">
-                      {formatDate(propertyData.completionDate)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Features & Amenities */}
         <Card className="mb-8 overflow-hidden border-none shadow-lg bg-white dark:bg-black">
