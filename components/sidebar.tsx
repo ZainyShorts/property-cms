@@ -38,7 +38,7 @@ const sidebarItems = [
   { title: "Reviews", icon: ClipboardList, items: ["Overview"], enabled: false },
   { title: "Contracts", icon: Contact, items: ["Overview"], enabled: false },
   { title: "Invoices", icon: Contact, items: ["Overview"], enabled: false },
-  { title: "Maintainance Requests", icon: Contact, items: ["Overview", "Maintainance Request Gallery"], enabled: false },
+  { title: "Maintainance Request", icon: Contact, items: ["Overview", "Maintainance Request Gallery"], enabled: false },
 ]
 
 export function Sidebar({ isOpen = true, onClose = () => {} }) {

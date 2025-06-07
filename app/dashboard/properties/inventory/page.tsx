@@ -31,8 +31,8 @@ const filter = [
 ]
 
 const breadcrumbs = [
-  { label: "Properties", href: "/dashboard/properties/overview" },
-  { label: "Overview", href: "/dashboard/properties/overview" },
+  { label: "Properties", href: "/dashboard/properties/inventory" },
+  { label: "inventory", href: "/dashboard/properties/inventory" },
 ]
 
 const tableHeaders = [

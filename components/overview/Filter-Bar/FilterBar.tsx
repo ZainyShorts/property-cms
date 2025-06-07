@@ -116,10 +116,10 @@ export function FilterBar({
                             <Upload size={18} />
                             Import Records
                           </Button>
-                          <Button variant="outline" onClick={onExport} className="gap-2">
+                          {/* <Button variant="outline" onClick={onExport} className="gap-2">
                             <Download size={18} />
                             {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
-                          </Button>
+                          </Button> */}
               {onAddButton && 
               <Button
                 variant="default"

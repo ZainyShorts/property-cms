@@ -1,16 +1,17 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { File, Plus, Minus, Loader2 } from "lucide-react"
+import { File, Plus, Minus, Loader2, Search, X } from "lucide-react"
 import axios from "axios"
 import { toast } from "react-toastify"
+import useSWR from "swr"
 import "react-toastify/dist/ReactToastify.css"
 
 interface AddPropertyModalProps {
@@ -37,7 +38,34 @@ const unitPurposes = {
   Pending: "Pending",
 }
 
-export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const res = await fetch(url)
+
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`)
+  }
+
+  return res.json() as Promise<T>
+}
+
+// Helper function to check if value is "N/A" or similar
+const isNAValue = (value: any): boolean => {
+  if (typeof value === "string") {
+    const normalizedValue = value.toLowerCase().trim()
+    return normalizedValue === "n/a" || normalizedValue === "na" || normalizedValue === "not available"
+  }
+  return false
+}
+
+// Helper function to get clean value (empty string if N/A, otherwise the value)
+const getCleanValue = (value: any, defaultValue: any = ""): any => {
+  if (isNAValue(value)) {
+    return defaultValue
+  }
+  return value || defaultValue
+}
+
+export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps)  {
   const [dataForm, setDataForm] = useState<Record<string, any>>({})
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({})
@@ -46,45 +74,235 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [loading, setLoading] = useState<boolean>(false)
 
+  // Project search states
+  const [projects, setProjects] = useState<any[]>([])
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [projectSearchTerm, setProjectSearchTerm] = useState("")
+  const [isSearching, setIsSearching] = useState(false)
+  const [showProjectResults, setShowProjectResults] = useState(false)
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false)
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const { data, error } = useSWR<any>("/api/me", fetcher)
+
+  useEffect(() => {
+    if (data) console.log("data →", data)
+    if (error) console.error("error →", error)
+  }, [data, error])
+
+  // Fetch projects on component mount
+  useEffect(() => {
+    fetchProjects()
+  }, [])
+
+  const fetchProjects = async (searchTerm = "") => {
+    setIsSearching(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `&projectName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setProjects(response.data.data)
+      } else {
+        setProjects([])
+        console.error("Invalid response format:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error)
+      setProjects([])
+      toast.error("Failed to load projects. Please try again.")
+    } finally {
+      setIsSearching(false)
+    }
+  }
+
+  const handleProjectSearch = (searchTerm: string) => {
+    setProjectSearchTerm(searchTerm)
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearching(true)
+    setShowProjectResults(true)
+
+    // Set a new timeout for debouncing
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchProjects(searchTerm)
+    }, 300) // 300ms debounce time
+  }
+
   // Handle property editing initialization
   useEffect(() => {
-    if (propertyToEdit) {
+    if (propertyToEdit && !initialLoadComplete) {
       console.log("Initializing edit mode with data:", propertyToEdit)
       setIsEditing(true)
 
-      // Initialize form data from propertyToEdit
+      // Initialize form data from propertyToEdit with N/A handling
       setDataForm({
-        unitNumber: propertyToEdit.unitNumber || "",
-        unitHeight: propertyToEdit.unitHeight || "",
-        unitInternalDesign: propertyToEdit.unitInternalDesign || "",
-        unitExternalDesign: propertyToEdit.unitExternalDesign || "",
-        plotSizeSqFt: typeof propertyToEdit.plotSizeSqFt === "number" ? propertyToEdit.plotSizeSqFt : "",
-        BuaSqFt: typeof propertyToEdit.BuaSqFt === "number" ? propertyToEdit.BuaSqFt : "",
-        noOfBedRooms: typeof propertyToEdit.noOfBedRooms === "number" ? propertyToEdit.noOfBedRooms : "",
-        unitType: propertyToEdit.unitType || "",
-        rentedAt: propertyToEdit.rentedAt || "",
-        rentedTill: propertyToEdit.rentedTill || "",
-        unitView: propertyToEdit.unitView || [],
-        unitPurpose: propertyToEdit.unitPurpose || "",
-        listingDate: propertyToEdit.listingDate || "",
-        purchasePrice: typeof propertyToEdit.purchasePrice === "number" ? propertyToEdit.purchasePrice : "",
-        marketPrice: typeof propertyToEdit.marketPrice === "number" ? propertyToEdit.marketPrice : "",
-        askingPrice: typeof propertyToEdit.askingPrice === "number" ? propertyToEdit.askingPrice : "",
-        premiumAndLoss: typeof propertyToEdit.premiumAndLoss === "number" ? propertyToEdit.premiumAndLoss : "",
-        marketRent: typeof propertyToEdit.marketRent === "number" ? propertyToEdit.marketRent : "",
-        askingRent: typeof propertyToEdit.askingRent === "number" ? propertyToEdit.askingRent : "",
-        paidTODevelopers: typeof propertyToEdit.paidTODevelopers === "number" ? propertyToEdit.paidTODevelopers : "",
+        project: propertyToEdit.project?._id || "",
+        unitNumber: getCleanValue(propertyToEdit.unitNumber),
+        unitHeight: getCleanValue(propertyToEdit.unitHeight),
+        unitInternalDesign: getCleanValue(propertyToEdit.unitInternalDesign),
+        unitExternalDesign: getCleanValue(propertyToEdit.unitExternalDesign),
+        plotSizeSqFt:
+          typeof propertyToEdit.plotSizeSqFt === "number"
+            ? propertyToEdit.plotSizeSqFt
+            : getCleanValue(propertyToEdit.plotSizeSqFt, ""),
+        BuaSqFt:
+          typeof propertyToEdit.BuaSqFt === "number"
+            ? propertyToEdit.BuaSqFt
+            : getCleanValue(propertyToEdit.BuaSqFt, ""),
+        noOfBedRooms:
+          typeof propertyToEdit.noOfBedRooms === "number"
+            ? propertyToEdit.noOfBedRooms
+            : getCleanValue(propertyToEdit.noOfBedRooms, ""),
+        unitType: getCleanValue(propertyToEdit.unitType),
+        rentedAt: getCleanValue(propertyToEdit.rentedAt),
+        rentedTill: getCleanValue(propertyToEdit.rentedTill),
+        unitView: Array.isArray(propertyToEdit.unitView) ? propertyToEdit.unitView : [],
+        unitPurpose: getCleanValue(propertyToEdit.unitPurpose),
+        listingDate: getCleanValue(propertyToEdit.listingDate),
+        purchasePrice:
+          typeof propertyToEdit.purchasePrice === "number"
+            ? propertyToEdit.purchasePrice
+            : getCleanValue(propertyToEdit.purchasePrice, ""),
+        marketPrice:
+          typeof propertyToEdit.marketPrice === "number"
+            ? propertyToEdit.marketPrice
+            : getCleanValue(propertyToEdit.marketPrice, ""),
+        askingPrice:
+          typeof propertyToEdit.askingPrice === "number"
+            ? propertyToEdit.askingPrice
+            : getCleanValue(propertyToEdit.askingPrice, ""),
+        premiumAndLoss:
+          typeof propertyToEdit.premiumAndLoss === "number"
+            ? propertyToEdit.premiumAndLoss
+            : getCleanValue(propertyToEdit.premiumAndLoss, ""),
+        marketRent:
+          typeof propertyToEdit.marketRent === "number"
+            ? propertyToEdit.marketRent
+            : getCleanValue(propertyToEdit.marketRent, ""),
+        askingRent:
+          typeof propertyToEdit.askingRent === "number"
+            ? propertyToEdit.askingRent
+            : getCleanValue(propertyToEdit.askingRent, ""),
+        paidTODevelopers:
+          typeof propertyToEdit.paidTODevelopers === "number"
+            ? propertyToEdit.paidTODevelopers
+            : getCleanValue(propertyToEdit.paidTODevelopers, ""),
         payableTODevelopers:
-          typeof propertyToEdit.payableTODevelopers === "number" ? propertyToEdit.payableTODevelopers : "",
+          typeof propertyToEdit.payableTODevelopers === "number"
+            ? propertyToEdit.payableTODevelopers
+            : getCleanValue(propertyToEdit.payableTODevelopers, ""),
       })
 
       if (propertyToEdit.pictures && propertyToEdit.pictures.length > 0) {
         setSelectedImages(propertyToEdit.pictures)
       }
+
+      // Handle flat data structure for project information
+      const handleProjectSearch = async () => {
+        // If we have a projectName but no project._id, search for the project
+        if (propertyToEdit.projectName && !propertyToEdit.project?._id) {
+          setProjectSearchTerm(getCleanValue(propertyToEdit.projectName))
+          setIsSearching(true)
+
+          try {
+            // Search for the project by name
+            const url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?populate=subDevelopment,masterDevelopment&projectName=${encodeURIComponent(propertyToEdit.projectName)}`
+            const response = await axios.get(url)
+
+            if (response.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
+              // Find the exact match or the closest match
+              const exactMatch = response.data.data.find(
+                (p: any) => p.projectName.toLowerCase() === propertyToEdit.projectName.toLowerCase(),
+              )
+
+              const projectData = exactMatch || response.data.data[0]
+              setSelectedProject(projectData)
+
+              // Update form data with the found project
+              setDataForm((prev) => ({
+                ...prev,
+                project: projectData._id,
+              }))
+
+              // Also update the projects list to include this project
+              setProjects(response.data.data)
+            } else {
+              // If no project found, create a temporary project object for display
+              const tempProject = {
+                _id: "", // This will be updated when user selects a real project
+                projectName: getCleanValue(propertyToEdit.projectName),
+              }
+              setSelectedProject(tempProject)
+            }
+          } catch (error) {
+            console.error("Error searching for project:", error)
+            // Create a temporary project object for display
+            const tempProject = {
+              _id: "",
+              projectName: getCleanValue(propertyToEdit.projectName),
+            }
+            setSelectedProject(tempProject)
+            toast.error("Failed to load project details, using available data")
+          } finally {
+            setIsSearching(false)
+            setInitialLoadComplete(true)
+          }
+        }
+        // If we have a project._id, fetch the project details
+        else if (propertyToEdit.project && propertyToEdit.project._id) {
+          try {
+            const response = await axios.get(
+              `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${propertyToEdit.project._id}?populate=subDevelopment,masterDevelopment`,
+            )
+
+            if (response.data && response.data.data) {
+              const projectData = response.data.data
+              setSelectedProject(projectData)
+              setProjectSearchTerm(getCleanValue(projectData.projectName))
+            }
+          } catch (error) {
+            console.error("Error fetching project details:", error)
+            // If API call fails, still set the project from the propertyToEdit data
+            if (propertyToEdit.project) {
+              setSelectedProject(propertyToEdit.project)
+              setProjectSearchTerm(getCleanValue(propertyToEdit.project.projectName))
+            }
+            toast.error("Failed to load project details, using available data")
+          } finally {
+            setInitialLoadComplete(true)
+          }
+        } else {
+          setInitialLoadComplete(true)
+        }
+      }
+
+      handleProjectSearch()
     } else if (propertyToEdit === null) {
       resetForm()
     }
   }, [propertyToEdit])
+
+  // Update master and sub development when project changes
+  useEffect(() => {
+    if (selectedProject) {
+      setDataForm((prev) => ({
+        ...prev,
+        project: selectedProject._id,
+      }))
+    }
+  }, [selectedProject])
 
   const resetForm = () => {
     setDataForm({})
@@ -93,17 +311,26 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     setErrors({})
     setIsEditing(false)
     setImagesToDelete([])
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
-    const { value } = e.target
-    setDataForm((prev) => ({
-      ...prev,
-      [fieldKey]: type === "number" ? (value === "" ? "" : Number(value)) : value,
-    }))
+    setSelectedProject(null)
+    setProjectSearchTerm("")
+    setIsSearching(false)
+    setInitialLoadComplete(false)
+    setShowProjectResults(false)
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+      searchTimeoutRef.current = null
+    }
   }
 
   const handleSelectChange = (value: string, fieldKey: string) => {
+    if (fieldKey === "project") {
+      const project = projects.find((p) => p._id === value)
+      setSelectedProject(project)
+      if (project) {
+        setProjectSearchTerm(project.projectName || "")
+      }
+    }
+
     setDataForm((prev) => {
       const newData = { ...prev, [fieldKey]: value }
 
@@ -221,6 +448,7 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       pictures: selectedImages,
       paidTODevelopers: dataForm.paidTODevelopers ? Number(dataForm.paidTODevelopers) : 0,
       payableTODevelopers: dataForm.payableTODevelopers ? Number(dataForm.payableTODevelopers) : 0,
+      project: dataForm.project || "",
     }
 
     try {
@@ -360,6 +588,36 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     }))
   }
 
+  // Add cleanup useEffect
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Add click outside handler to close project results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      const searchInput = document.getElementById("projectSearch")
+      if (searchInput && !searchInput.contains(target)) {
+        setShowProjectResults(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
+    const value = type === "number" ? Number(e.target.value) : e.target.value
+    setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
+  }
+
   return (
     <Dialog
       open={isOpen}
@@ -379,6 +637,80 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         </DialogHeader>
         <ScrollArea className="max-h-[80vh] pr-4 p-2 overflow-y-auto scrollbar-hide">
           <div className="space-y-8 p-2">
+            {/* Project Selection */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Project Information</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="projectSearch">Project</Label>
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Input
+                        id="projectSearch"
+                        placeholder="Search projects..."
+                        value={projectSearchTerm}
+                        onChange={(e) => handleProjectSearch(e.target.value)}
+                        className={`w-full pl-10 ${errors.project ? "border-destructive" : ""}`}
+                        autoComplete="off"
+                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        <Search className="h-4 w-4" />
+                      </div>
+                      {isSearching && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Select
+                      value={dataForm.project || ""}
+                      onValueChange={(value) => handleSelectChange(value, "project")}
+                      disabled={isSearching}
+                    >
+                      <SelectTrigger className={`w-full ${errors.project ? "border-destructive" : ""}`}>
+                        <SelectValue placeholder="Select a project" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {projects.length > 0 ? (
+                          projects.map((project) => (
+                            <SelectItem key={project._id} value={project._id}>
+                              {project.projectName}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-3 py-4 text-center text-muted-foreground">
+                            {isSearching ? "Searching..." : "No projects found"}
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedProject && (
+                      <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                        <span>Selected: {selectedProject.projectName}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProject(null)
+                            setProjectSearchTerm("")
+                            setDataForm((prev) => ({
+                              ...prev,
+                              project: "",
+                            }))
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {errors.project && <p className="text-sm text-destructive">Project is required</p>}
+                </div>
+              </div>
+            </div>
+
             {/* Unit Details */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Unit Details</h3>
@@ -763,3 +1095,5 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     </Dialog>
   )
 }
+
+export default AddPropertyModal

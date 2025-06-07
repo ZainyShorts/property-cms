@@ -143,7 +143,7 @@ function PropertyDataTable({
     { key: "plotSizeSqFt", label: "PLOT SIZE (SQ. FT)" },
     { key: "BuaSqFt", label: "BUA (SQ. FT)" },
     { key: "noOfBedRooms", label: "BED ROOMS" }, 
-    {key : "unitType" , label : "Unit Type"},
+    {key : "unitType" , label : "UNIT TYPE"},
     { key: "unitView", label: "UNIT VIEW" },
 
     // Availability
