@@ -6,7 +6,10 @@ interface projectFilterState {
   propertyType?: string;
   projectName?: string;
   projectQuality?: string;
-  constructionStatus?: any;
+  constructionStatus?: any;  
+  duringConstruction? : any; 
+  commission? : any; 
+  height? : any;
   facilitiesCategories?: string[];
   amentiesCategories?: string[];
   launchDate? : string;  
@@ -65,6 +68,15 @@ const projectFilterSlice = createSlice({
     }, 
     setSaleStatus: (state, action: PayloadAction<string>) => {
       state.saleStatus = action.payload;
+    }, 
+     setHeight: (state, action: PayloadAction<string>) => {
+      state.height = action.payload;
+    }, 
+    setCommission : (state, action: PayloadAction<string>) => {
+      state.commission = action.payload;
+    }, 
+     setDuringConstruction : (state, action: PayloadAction<string>) => {
+      state.duringConstruction = action.payload;
     },
     setConstructionStatus: (state, action: PayloadAction<number>) => {
       state.constructionStatus = action.payload;
@@ -119,7 +131,10 @@ export const {
   setFacilitiesCategories,
   setAmentiesCategories,
   setStartDate,
-  setEndDate, 
+  setEndDate,  
+  setDuringConstruction, 
+  setHeight, 
+  setCommission,
   setpercentOfConstruction,
   resetFilters,  
   setCompletionDate,  

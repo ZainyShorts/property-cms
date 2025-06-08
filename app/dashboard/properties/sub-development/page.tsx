@@ -690,7 +690,7 @@ export default function SubDevelopmentPage() {
           record.subDevelopment,
           record.plotNumber,
           record.plotHeight,
-          record.plotPermission.length,
+          record.plotPermission?.length,
           record.plotSizeSqFt,
           record.plotBUASqFt,
           record.plotStatus,
@@ -976,7 +976,7 @@ export default function SubDevelopmentPage() {
             <HoverCardTrigger asChild>
               <div className="flex items-center justify-center gap-2 cursor-pointer">
                 <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
-                  {record.plotPermission.length}
+                  {record.plotPermission?.length}
                 </Badge>
                 <Info className="h-4 w-4 text-muted-foreground" />
               </div>
@@ -985,11 +985,11 @@ export default function SubDevelopmentPage() {
               <div className="p-4">
                 <h4 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300 flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-blue-500"></div>
-                  Plot Permissions ({record.plotPermission.length})
+                  Plot Permissions ({record.plotPermission?.length})
                 </h4>
-                {record.plotPermission.length > 0 ? (
+                {record.plotPermission?.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
-                    {record.plotPermission.map((permission, idx) => (
+                    {record.plotPermission?.map((permission, idx) => (
                       <Badge
                         key={idx}
                         variant="outline"
@@ -1152,10 +1152,10 @@ export default function SubDevelopmentPage() {
                 <SelectItem value="100">100 rows</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+            {/* <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
-            </Button>
+            </Button> */}
             {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}

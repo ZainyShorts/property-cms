@@ -5,37 +5,7 @@ import type React from "react"
 import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import axios from "axios"
-import {
-  Mail,
-  Phone,
-  MapPin,
-  BedDouble,
-  ChevronLeft,
-  ChevronRight,
-  Tag,
-  Heart,
-  Share2,
-  Calendar,
-  Building,
-  Home,
-  Landmark,
-  DollarSign,
-  CheckCircle2,
-  UserRound,
-  PlusIcon as HousePlus,
-  Ruler,
-  Paintbrush,
-  LayoutGrid,
-  CalendarRange,
-  Banknote,
-  Hourglass,
-  FileText,
-  Download,
-  Eye,
-  Clock,
-  Play,
-  Pause,
-} from "lucide-react"
+import { Mail, Phone, MapPin, BedDouble, ChevronLeft, ChevronRight, Tag, Heart, Share2, Calendar, Building, Home, Landmark, DollarSign, CheckCircle2, UserRound, PlusIcon as HousePlus, Ruler, Paintbrush, LayoutGrid, CalendarRange, Banknote, Hourglass, FileText, Download, Eye, Clock, Play, Pause } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -1122,6 +1092,33 @@ export default function PropertyDetail({ params }: Props) {
                       </span>
                     </div>
                  
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                        <span>Market Rent</span>
+                      </div>
+                      <span className="font-semibold text-lg">
+                        {propertyData.marketRent ? formatCurrency(propertyData.marketRent) : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                        <span>Asking Rent</span>
+                      </div>
+                      <span className="font-semibold text-lg">
+                        {propertyData.askingRent ? formatCurrency(propertyData.askingRent) : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <DollarSign className="h-5 w-5 text-primary" />
+                        <span>Purchase Price</span>
+                      </div>
+                      <span className="font-semibold text-lg">
+                        {propertyData.purchasePrice ? formatCurrency(propertyData.purchasePrice) : "N/A"}
+                      </span>
+                    </div>
                     <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-5 w-5 text-primary" />

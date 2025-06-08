@@ -19,9 +19,12 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 enum SalesStatus {
-  PRIMARY = "Primary",
-  OFF_PLANN_RESALE = "Off Plan Resale",
-  RESALE = "Resale",
+   PRIMARY = 'Primary',
+  PEDING = 'Pending',
+  RESALE = 'Resale',
+  PRIMARY_RESALE = 'Primary Resale',
+  OFF_PLANN_RESALE = 'Off Plan Resale',
+  PRIMARYPLUSOFFPLANRESALE = 'Primary + Off Plan Resale',
 }
 
 enum PlotPermission {
@@ -56,6 +59,9 @@ interface FormValues {
   completionDate: Date | undefined
   salesStatus: string
   downPayment: number | string
+  height?: number | string
+  commission?: number | string
+  duringConstruction?: number | string
   percentOfConstruction: number | string
   installmentDate: Date | undefined
   uponCompletion: Date | undefined
@@ -138,6 +144,9 @@ export function AddRecordModal({
       completionDate: undefined,
       salesStatus: SalesStatus.PRIMARY,
       downPayment: 10,
+      height: "",
+      commission: "",
+      duringConstruction: "",
       percentOfConstruction: 50,
       installmentDate: undefined,
       uponCompletion: undefined,
@@ -311,6 +320,9 @@ export function AddRecordModal({
 
       setValue("salesStatus", editRecord.salesStatus || SalesStatus.PRIMARY)
       setValue("downPayment", editRecord.downPayment || 10)
+      setValue("height", editRecord.height || "")
+      setValue("commission", editRecord.commission || "")
+      setValue("duringConstruction", editRecord.duringConstruction || "")
 
       // Categories
       setValue("facilityCategories", editRecord.facilityCategories || [])
@@ -361,6 +373,9 @@ export function AddRecordModal({
         completionDate: undefined,
         salesStatus: SalesStatus.PRIMARY,
         downPayment: 0,
+        height: "",
+        commission: "",
+        duringConstruction: "",
         percentOfConstruction: 0,
         installmentDate: undefined,
         uponCompletion: undefined,
@@ -395,7 +410,10 @@ export function AddRecordModal({
     setPlotDetails(updatedPlotDetails)
     setIsPlotModalOpen(false)
   }
-
+ const convertEmptyToZero = (value: any) => {
+        if (value === "") return 0
+        return value
+      }
   const onSubmit = async (data: any) => {
     console.log(`Form submission started for ${isEditMode ? "edit" : "create"}`)
     setIsSubmitting(true)
@@ -440,6 +458,9 @@ export function AddRecordModal({
         completionDate: formatDateForAPI(data.completionDate),
         salesStatus: data.salesStatus,
         downPayment: data.downPayment,
+        height: convertEmptyToZero(data.height),
+        commission: convertEmptyToZero(data.commission),
+        duringConstruction: convertEmptyToZero(data.duringConstruction),
         percentOfConstruction: data.percentOfConstruction,
         installmentDate: formatDateForAPI(data.installmentDate),
         uponCompletion: formatDateForAPI(data.uponCompletion),
@@ -450,10 +471,7 @@ export function AddRecordModal({
       }
 
       // Convert empty strings to 0 for numeric fields
-      const convertEmptyToZero = (value: any) => {
-        if (value === "") return 0
-        return value
-      }
+     
 
       // Update submitData for numeric fields
 
@@ -515,6 +533,9 @@ export function AddRecordModal({
         completionDate: undefined,
         salesStatus: SalesStatus.PRIMARY,
         downPayment: 10,
+        height: "",
+        commission: "",
+        duringConstruction: "",
         percentOfConstruction: 50,
         installmentDate: undefined,
         uponCompletion: undefined,
@@ -956,6 +977,93 @@ export function AddRecordModal({
               </div>
 
               <div className="space-y-2">
+                <label htmlFor="height" className="text-sm font-medium">
+                  Height (m) *
+                </label>
+                <Controller
+                  name="height"
+                  control={control}
+                  rules={{
+                    required: "Height is required",
+                  }}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="height"
+                      placeholder="e.g. 10"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : Number(value))
+                      }}
+                    />
+                  )}
+                />
+                {errors.height && <p className="text-sm text-destructive">{errors.height.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="commission" className="text-sm font-medium">
+                  Commission (%) *
+                </label>
+                <Controller
+                  name="commission"
+                  control={control}
+                  rules={{
+                    required: "Commission is required",
+                    min: { value: 0, message: "Must be at least 0%" },
+                    max: { value: 100, message: "Must be at most 100%" },
+                  }}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="commission"
+                      placeholder="e.g. 5"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : Number(value))
+                      }}
+                    />
+                  )}
+                />
+                {errors.commission && <p className="text-sm text-destructive">{errors.commission.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="duringConstruction" className="text-sm font-medium">
+                  During Construction (%) *
+                </label>
+                <Controller
+                  name="duringConstruction"
+                  control={control}
+                  rules={{
+                    required: "During construction value is required",
+                    min: { value: 0, message: "Must be at least 0%" },
+                    max: { value: 100, message: "Must be at most 100%" },
+                  }}
+                  render={({ field }) => (
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      id="duringConstruction"
+                      placeholder="e.g. 30"
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(value === "" ? "" : Number(value))
+                      }}
+                    />
+                  )}
+                />
+                {errors.duringConstruction && (
+                  <p className="text-sm text-destructive">{errors.duringConstruction.message}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <label htmlFor="installmentDate" className="text-sm font-medium">
                   Installment Date *
                 </label>
@@ -1059,7 +1167,6 @@ export function AddRecordModal({
             </div>
           </div>
 
-
           <div className="p-4 border rounded-lg shadow-sm">
             <label className="block mb-2 text-lg font-semibold">Project Images</label>
             <div className="grid grid-cols-3 md:grid-cols-6 gap-4 mb-2">
@@ -1135,78 +1242,76 @@ export function AddRecordModal({
               Select up to 6 images. All images will be stored in cloud storage.
             </p>
           </div>
-     <div className="p-4 border rounded-lg shadow-sm">
-              <label className="text-lg font-medium">Amenities Categories *</label>
-              <div className="grid grid-cols-2 gap-3 mt-3  overflow-y-auto pr-2">
-                <Controller
-                  name="amenitiesCategories"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      {amenitiesCategoriesOptions.map((category) => (
-                        <div key={category} className="flex flex-row  items-start space-x-3 space-y-0">
-                          <Checkbox
-                            id={`amenity-${category}`}
-                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                            checked={field.value.includes(category)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                field.onChange([...field.value, category])
-                              } else {
-                                field.onChange(field.value.filter((value: string) => value !== category))
-                              }
-                            }}
-                          />
-                          <label htmlFor={`amenity-${category}`} className="font-normal">
-                            {category}
-                          </label>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                />
-              </div>
-              {errors.amenitiesCategories && (
-                <p className="text-sm text-destructive">{errors.amenitiesCategories.message}</p>
-              )}
+          <div className="p-4 border rounded-lg shadow-sm">
+            <label className="text-lg font-medium">Amenities Categories *</label>
+            <div className="grid grid-cols-2 gap-3 mt-3  overflow-y-auto pr-2">
+              <Controller
+                name="amenitiesCategories"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    {amenitiesCategoriesOptions.map((category) => (
+                      <div key={category} className="flex flex-row  items-start space-x-3 space-y-0">
+                        <Checkbox
+                          id={`amenity-${category}`}
+                          className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                          checked={field.value.includes(category)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              field.onChange([...field.value, category])
+                            } else {
+                              field.onChange(field.value.filter((value: string) => value !== category))
+                            }
+                          }}
+                        />
+                        <label htmlFor={`amenity-${category}`} className="font-normal">
+                          {category}
+                        </label>
+                      </div>
+                    ))}
+                  </>
+                )}
+              />
             </div>
-            <div className="p-4 border rounded-lg shadow-sm">
-              <label className="text-lg font-medium">Facilities Categories *</label>
-              <div className="grid grid-cols-2 gap-3 mt-3  overflow-y-auto pr-2">
-                <Controller
-                  name="facilityCategories"
-                  control={control}
-                  render={({ field }) => (
-                    <>
-                      {facilitiesCategoriesOptions.map((category) => (
-                        <div key={category} className="flex flex-row items-start space-x-3 space-y-0">
-                          <Checkbox
-                            id={`facility-${category}`}
-                            className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                            checked={field.value.includes(category)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                field.onChange([...field.value, category])
-                              } else {
-                                field.onChange(field.value.filter((value: string) => value !== category))
-                              }
-                            }}
-                          />
-                          <label htmlFor={`facility-${category}`} className="font-normal">
-                            {category}
-                          </label>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                />
-              </div>
-              {errors.facilityCategories && (
-                <p className="text-sm text-destructive">{errors.facilityCategories.message}</p>
-              )}
+            {errors.amenitiesCategories && (
+              <p className="text-sm text-destructive">{errors.amenitiesCategories.message}</p>
+            )}
+          </div>
+          <div className="p-4 border rounded-lg shadow-sm">
+            <label className="text-lg font-medium">Facilities Categories *</label>
+            <div className="grid grid-cols-2 gap-3 mt-3  overflow-y-auto pr-2">
+              <Controller
+                name="facilityCategories"
+                control={control}
+                render={({ field }) => (
+                  <>
+                    {facilitiesCategoriesOptions.map((category) => (
+                      <div key={category} className="flex flex-row items-start space-x-3 space-y-0">
+                        <Checkbox
+                          id={`facility-${category}`}
+                          className="h-5 w-5 rounded-md data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                          checked={field.value.includes(category)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              field.onChange([...field.value, category])
+                            } else {
+                              field.onChange(field.value.filter((value: string) => value !== category))
+                            }
+                          }}
+                        />
+                        <label htmlFor={`facility-${category}`} className="font-normal">
+                          {category}
+                        </label>
+                      </div>
+                    ))}
+                  </>
+                )}
+              />
             </div>
-
-          
+            {errors.facilityCategories && (
+              <p className="text-sm text-destructive">{errors.facilityCategories.message}</p>
+            )}
+          </div>
 
           <DialogFooter className="mt-6 pt-0">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>

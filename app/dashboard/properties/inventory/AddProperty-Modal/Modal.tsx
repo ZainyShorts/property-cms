@@ -88,7 +88,17 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
   useEffect(() => {
     if (data) console.log("data →", data)
     if (error) console.error("error →", error)
-  }, [data, error])
+  }, [data, error]) 
+useEffect(() => {
+  const purchasePrice = dataForm.purchasePrice || 0;
+  const marketPrice = dataForm.marketPrice || 0;
+  const premiumAndLoss = purchasePrice - marketPrice;
+  
+  setDataForm(prev => ({
+    ...prev,
+    premiumAndLoss: premiumAndLoss
+  }));
+}, [dataForm.purchasePrice, dataForm.marketPrice]);
 
   // Fetch projects on component mount
   useEffect(() => {
@@ -120,7 +130,7 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
     } finally {
       setIsSearching(false)
     }
-  }
+  } 
 
   const handleProjectSearch = (searchTerm: string) => {
     setProjectSearchTerm(searchTerm)
@@ -973,15 +983,16 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
 
                 <div className="space-y-2">
                   <Label htmlFor="premiumAndLoss">Premium/Loss</Label>
-                  <Input
-                    id="premiumAndLoss"
-                    name="premiumAndLoss"
-                    type="number"
-                    value={dataForm.premiumAndLoss || ""}
-                    onChange={(e) => handleChange(e, "premiumAndLoss", "number")}
-                    className="bg-input border-input"
-                    placeholder="Enter premium/loss"
-                  />
+  <Input
+    id="premiumAndLoss"
+    name="premiumAndLoss"
+    type="number"
+    value={dataForm.premiumAndLoss || ""}
+    onChange={(e) => handleChange(e, "premiumAndLoss", "number")}
+    className="bg-input border-input"
+    placeholder="Auto-calculated"
+    disabled
+  />
                 </div>
 
                 <div className="space-y-2">

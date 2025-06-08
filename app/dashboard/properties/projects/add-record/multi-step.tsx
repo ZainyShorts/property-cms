@@ -155,7 +155,7 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   const fetchMasterDevelopments = async () => {
     setLoading(true)
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment`)
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?limit=1000`)
       setMasterDevelopments(response.data.data)
     } catch (error) {
       console.error("Error fetching master developments:", error)
@@ -177,7 +177,8 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       const response = await axios.get(url)
 
       if (response.data && Array.isArray(response.data.data)) {
-        setSubDevelopments(response.data.data)
+        setSubDevelopments(response.data.data) 
+        console.log('sub',response.data.data)
       } else {
         setSubDevelopments([])
         console.error("Invalid response format:", response.data)

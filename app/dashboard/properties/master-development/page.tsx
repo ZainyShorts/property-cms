@@ -1159,10 +1159,10 @@ export default function MasterDevelopmentPage() {
                 <SelectItem value="100">100 rows</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+            {/* <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
-            </Button>
+            </Button> */}
             {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}

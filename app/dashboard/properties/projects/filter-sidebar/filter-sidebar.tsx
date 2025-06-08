@@ -29,6 +29,9 @@ import {
   setInstallmentDate,
   setPostHandOver,
   setUponCompletion,
+  setHeight,
+  setCommission,
+  setDuringConstruction,
 } from "@/lib/store/slices/projectSlice"
 import { useDispatch, useSelector } from "react-redux"
 import type { RootState } from "@/store"
@@ -68,9 +71,12 @@ enum PropertyType {
 }
 
 enum SaleStatus {
-  PRIMARY = "Primary",
-  OFF_PLANN_RESALE = "Off Plan Resale",
-  RESALE = "Resale",
+   PRIMARY = 'Primary',
+  PEDING = 'Pending',
+  RESALE = 'Resale',
+  PRIMARY_RESALE = 'Primary Resale',
+  OFF_PLANN_RESALE = 'Off Plan Resale',
+  PRIMARYPLUSOFFPLANRESALE = 'Primary + Off Plan Resale',
 }
 
 const facilitiesCategoriesOptions = [
@@ -205,6 +211,24 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
         const percent = Number.parseInt(value)
         if (!isNaN(percent) && percent >= 0 && percent <= 100) {
           dispatch(setpercentOfConstruction(percent))
+        }
+        break
+      case "height":
+        const height = Number.parseInt(value)
+        if (!isNaN(height) && height >= 0) {
+          dispatch(setHeight(height))
+        }
+        break
+      case "commission":
+        const commission = Number.parseInt(value)
+        if (!isNaN(commission) && commission >= 0) {
+          dispatch(setCommission(commission))
+        }
+        break
+      case "duringConstruction":
+        const duringConstruction = Number.parseInt(value)
+        if (!isNaN(duringConstruction) && duringConstruction >= 0) {
+          dispatch(setDuringConstruction(duringConstruction))
         }
         break
     }
@@ -621,6 +645,48 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
               max="100"
               placeholder="Enter percent of construction"
               value={filters.percentOfConstruction}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          {/* Height */}
+          <div className="space-y-2">
+            <Label htmlFor="height">Height</Label>
+            <Input
+              id="height"
+              name="height"
+              type="number"
+              min="0"
+              placeholder="Enter height"
+              value={filters.height}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          {/* Commission */}
+          <div className="space-y-2">
+            <Label htmlFor="commission">Commission</Label>
+            <Input
+              id="commission"
+              name="commission"
+              type="number"
+              min="0"
+              placeholder="Enter commission"
+              value={filters.commission}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          {/* During Construction */}
+          <div className="space-y-2">
+            <Label htmlFor="duringConstruction">During Construction</Label>
+            <Input
+              id="duringConstruction"
+              name="duringConstruction"
+              type="number"
+              min="0"
+              placeholder="Enter during construction value"
+              value={filters.duringConstruction}
               onChange={handleInputChange}
             />
           </div>

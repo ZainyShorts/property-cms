@@ -108,10 +108,10 @@ export function FilterBar({
               </ol>
             </nav>
             <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
-              <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+              {/* <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
                 <Upload size={18} />
                 Import Records
-              </Button>
+              </Button> */}
 
               {/* Add Limit Dropdown here */}
              <DropdownMenu>

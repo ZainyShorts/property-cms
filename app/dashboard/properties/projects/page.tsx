@@ -44,7 +44,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { FilterSidebar, type FilterValues } from "./filter-sidebar/filter-sidebar"
-import { resetFilters } from "@/lib/store/slices/projectSlice"
+import { resetFilters, setDuringConstruction } from "@/lib/store/slices/projectSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { projectDetails, projectStatus, paymentPlan, actions } from "./data/data"
@@ -94,7 +94,10 @@ const tableHeaders = [
   { key: "percentOfConstruction", label: "PERCENT OF CONSTRUCTION" },
   { key: "installmentDate", label: "INSTALLMENT DATA" },
   { key: "uponCompletion", label: "UPON COMPLETION" },
-  { key: "postHandOver", label: "POST HANDOVER" },
+  { key: "postHandOver", label: "POST HANDOVER" }, 
+    { key: "height", label: "HEIGHT" },
+  { key: "commission", label: "COMMISSION" },
+  { key: "duringConstruction", label: "DURING CONSTRUCTION" },
   { key: "plot", label: "PLOT DETAILS" },
   { key: "attachDocument", label: "DOCUMENT" },
   { key: "view", label: "VIEW" },
@@ -280,7 +283,10 @@ export default function MasterDevelopmentPage() {
         uponCompletion: filters.uponCompletion,
         installmentDate: filters.installmentDate,
         plotNumber: filters.plotNumber,
-        plotPermission: filters.plotPermission,
+        plotPermission: filters.plotPermission, 
+        commission: filters.commission, 
+        height : filters.height, 
+        duringConstruction : filters.duringConstruction,
         postHandOver: filters.postHandOver,
         salesStatus: filters.saleStatus,
         percentOfConstruction: filters.percentOfConstruction,
@@ -322,7 +328,10 @@ export default function MasterDevelopmentPage() {
       if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus)
       if (requestData.percentOfConstruction) params.append("percentOfConstruction", requestData.percentOfConstruction)
       if (requestData.launchDate) params.append("launchDate", requestData.launchDate)
-      if (requestData.completionDate) params.append("completionDate", requestData.completionDate)
+      if (requestData.completionDate) params.append("completionDate", requestData.completionDate) 
+             if (requestData.height) params.append("height", requestData.height)
+      if (requestData.commission) params.append("commission", requestData.commission) 
+              if (requestData.duringConstruction) params.append("duringConstruction", requestData.duringConstruction)
       if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
       if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
       if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
@@ -471,7 +480,10 @@ export default function MasterDevelopmentPage() {
         completionDate: filters.completionDate,
         uponCompletion: filters.uponCompletion,
         plotStatus: filters.plotStatus,
-        installmentDate: filters.installmentDate,
+        installmentDate: filters.installmentDate, 
+        commission: filters.commission, 
+        height : filters.height, 
+        duringConstruction : filters.duringConstruction,
         plotNumber: filters.plotNumber,
         plotPermission: filters.plotPermission,
         postHandOver: filters.postHandOver,
@@ -516,7 +528,12 @@ export default function MasterDevelopmentPage() {
       if (requestData.salesStatus) params.append("salesStatus", requestData.salesStatus)
       if (requestData.percentOfConstruction) params.append("percentOfConstruction", requestData.percentOfConstruction)
       if (requestData.launchDate) params.append("launchDate", requestData.launchDate)
-      if (requestData.completionDate) params.append("completionDate", requestData.completionDate)
+      if (requestData.completionDate) params.append("completionDate", requestData.completionDate) 
+              if (requestData.height) params.append("height", requestData.height)
+      if (requestData.commission) params.append("commission", requestData.commission) 
+              if (requestData.duringConstruction) params.append("duringConstruction", requestData.duringConstruction)
+
+
       if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
       if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
       if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
@@ -775,10 +792,13 @@ export default function MasterDevelopmentPage() {
       case "projectQuality":
       case "launchDate":
       case "completionDate":
-      case "salesStatus":
+      case "salesStatus": 
+      case "height" : 
+      case "commission": 
+      case "duringConstruction":
       case "installmentDate":
       case "postHandOver":
-        return record[key].toLocaleString()
+    return record[key] ? record[key].toLocaleString() : "N/A";
       case "plot":
         // First check if plot object exists in record
         if (record.plot) {
@@ -1378,10 +1398,10 @@ export default function MasterDevelopmentPage() {
                 <SelectItem value="100">100 rows</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+            {/* <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
-            </Button>
+            </Button> */}
             {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
