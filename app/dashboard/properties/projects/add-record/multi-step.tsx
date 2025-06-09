@@ -44,7 +44,14 @@ interface MasterDevelopment {
 
 interface SubDevelopment {
   _id: string
-  subDevelopment: string
+  subDevelopment: string  
+   plotNumber: string
+  plotHeight: string
+  plotPermission: string[]
+  plotSizeSqFt: string
+  plotBUASqFt: string
+  plotStatus: string
+  buaAreaSqFt: string
 }
 
 export interface PlotDetails {
@@ -243,7 +250,18 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
 
   const handleSubDevelopmentChange = (id: string) => {
     const selectedSubDev = subDevelopments.find((subDev) => subDev._id === id)
-    if (selectedSubDev) {
+    if (selectedSubDev) { 
+      console.log('selected', selectedSubDev)  
+      setPlotDetails(
+        {
+    plotNumber: selectedSubDev.plotNumber,
+    plotHeight: selectedSubDev.plotHeight,
+    plotPermission:selectedSubDev.plotPermission,
+    plotSizeSqFt: selectedSubDev.plotSizeSqFt,
+    plotBUASqFt: selectedSubDev.plotBUASqFt,
+    plotStatus: selectedSubDev.plotStatus,
+    buaAreaSqFt: selectedSubDev.buaAreaSqFt,
+      })
       setSelectedSubDevelopmentId(id)
       setSubDevelopmentName(selectedSubDev.subDevelopment)
     }
@@ -381,7 +399,16 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   const handleSkip = () => {
     if (step === 2) {
       setSubDevelopmentName("")
-      setSelectedSubDevelopmentId("")
+      setSelectedSubDevelopmentId("") 
+      setPlotDetails({
+        plotNumber: "",
+        plotHeight: "",
+        plotPermission: [],
+        plotSizeSqFt: "",
+        plotBUASqFt: "",
+        plotStatus: "",
+        buaAreaSqFt: "",
+      })
       setStep(3)
     } else if (step === 3) {
       setPlotDetails({

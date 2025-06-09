@@ -54,6 +54,11 @@ interface SubDevelopment {
   subDevelopment: string
 }
 
+interface Project {
+  _id: string
+  projectName: string
+}
+
 enum PropertyType {
   Apartment = "Apartment",
   Shops = "Shops",
@@ -195,12 +200,16 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
   const [selectedSubDev, setSelectedSubDev] = useState<SubDevelopment | null>(null)
   const subDevSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Search states for project name
+  const [projectNameSearchTerm, setProjectNameSearchTerm] = useState("")
+  const [isSearchingProjectName, setIsSearchingProjectName] = useState(false)
+  const [projectNameResults, setProjectNameResults] = useState<Project[]>([])
+  const [selectedProjectName, setSelectedProjectName] = useState<Project | null>(null)
+  const projectNameSearchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     switch (name) {
-      case "projectName":
-        dispatch(setProjectName(value))
-        break
       case "constructionStatus":
         const numValue = Number.parseInt(value)
         if (!isNaN(numValue) && numValue >= 0) {
@@ -288,6 +297,33 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     }
   }
 
+  // Fetch project names with debouncing
+  const fetchProjectNames = async (searchTerm = "") => {
+    setIsSearchingProjectName(true)
+    try {
+      let url = `${process.env.NEXT_PUBLIC_CMS_SERVER}/project?fields=projectName&limit=1000`
+
+      // Add search parameter if provided
+      if (searchTerm) {
+        url += `&projectName=${encodeURIComponent(searchTerm)}`
+      }
+
+      const response = await axios.get(url)
+
+      if (response.data && Array.isArray(response.data.data)) {
+        setProjectNameResults(response.data.data)
+      } else {
+        setProjectNameResults([])
+        console.error("Invalid response format for project names:", response.data)
+      }
+    } catch (error) {
+      console.error("Error fetching project names:", error)
+      setProjectNameResults([])
+    } finally {
+      setIsSearchingProjectName(false)
+    }
+  }
+
   // Handle master development search input change with debouncing
   const handleMasterDevSearchChange = (value: string) => {
     setMasterDevSearchTerm(value)
@@ -326,6 +362,25 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     }, 300) // 300ms debounce time
   }
 
+  // Handle project name search input change with debouncing
+  const handleProjectNameSearchChange = (value: string) => {
+    setProjectNameSearchTerm(value)
+    dispatch(setProjectName(value))
+
+    // Clear previous timeout
+    if (projectNameSearchTimeoutRef.current) {
+      clearTimeout(projectNameSearchTimeoutRef.current)
+    }
+
+    // Set searching state
+    setIsSearchingProjectName(true)
+
+    // Set a new timeout for debouncing
+    projectNameSearchTimeoutRef.current = setTimeout(() => {
+      fetchProjectNames(value)
+    }, 300) // 300ms debounce time
+  }
+
   // Select master development from dropdown
   const handleSelectMasterDev = (id: string) => {
     const selected = masterDevResults.find((dev) => dev._id === id)
@@ -343,6 +398,16 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
       setSelectedSubDev(selected)
       setSubDevSearchTerm(selected.subDevelopment)
       dispatch(setsubDevelopment(selected.subDevelopment))
+    }
+  }
+
+  // Select project name from dropdown
+  const handleSelectProjectName = (id: string) => {
+    const selected = projectNameResults.find((project) => project._id === id)
+    if (selected) {
+      setSelectedProjectName(selected)
+      setProjectNameSearchTerm(selected.projectName)
+      dispatch(setProjectName(selected.projectName))
     }
   }
 
@@ -413,6 +478,9 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
       if (subDevSearchTimeoutRef.current) {
         clearTimeout(subDevSearchTimeoutRef.current)
       }
+      if (projectNameSearchTimeoutRef.current) {
+        clearTimeout(projectNameSearchTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -421,8 +489,9 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
     if (open) {
       setMasterDevSearchTerm(filters.masterDevelopment || "")
       setSubDevSearchTerm(filters.subDevelopment || "")
+      setProjectNameSearchTerm(filters.projectName || "")
     }
-  }, [open, filters.masterDevelopment, filters.subDevelopment])
+  }, [open, filters.masterDevelopment, filters.subDevelopment, filters.projectName])
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -517,8 +586,8 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 )}
-              </div>
-
+              </div> 
+              
               <Select value={selectedSubDev?._id || ""} onValueChange={handleSelectSubDev} disabled={isSearchingSubDev}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select sub development" />
@@ -548,6 +617,70 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                       setSelectedSubDev(null)
                       setSubDevSearchTerm("")
                       dispatch(setsubDevelopment(""))
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Project Name */}
+          <div className="space-y-2">
+            <Label htmlFor="projectName">Project Name</Label>
+            <div className="space-y-2">
+              <div className="relative">
+                <Input
+                  id="projectNameSearch"
+                  placeholder="Search project name..."
+                  value={projectNameSearchTerm}
+                  onChange={(e) => handleProjectNameSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  <Search className="h-4 w-4" />
+                </div>
+                {isSearchingProjectName && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+
+              <Select
+                value={selectedProjectName?._id || ""}
+                onValueChange={handleSelectProjectName}
+                disabled={isSearchingProjectName}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select project name" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectNameResults.length > 0 ? (
+                    projectNameResults.map((project) => (
+                      <SelectItem key={project._id} value={project._id}>
+                        {project.projectName}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <div className="px-3 py-4 text-center text-muted-foreground">
+                      {isSearchingProjectName ? "Searching..." : "No projects found"}
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+
+              {selectedProjectName && (
+                <div className="flex items-center justify-between p-2 bg-muted rounded-md">
+                  <span>Selected: {selectedProjectName.projectName}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedProjectName(null)
+                      setProjectNameSearchTerm("")
+                      dispatch(setProjectName(""))
                     }}
                   >
                     <X className="h-4 w-4" />
@@ -589,18 +722,6 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          {/* Project Name */}
-          <div className="space-y-2">
-            <Label htmlFor="projectName">Project Name</Label>
-            <Input
-              id="projectName"
-              name="projectName"
-              placeholder="Enter project name"
-              value={filters.projectName}
-              onChange={handleInputChange}
-            />
           </div>
 
           {/* Project Quality */}

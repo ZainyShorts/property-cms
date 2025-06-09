@@ -685,8 +685,8 @@ export default function SubDevelopmentPage() {
 
       exportData.forEach((record) => {
         const row = [
-          record.masterDevelopment.developmentName,
-          record.masterDevelopment.roadLocation,
+          record.masterDevelopment?.developmentName,
+          record.masterDevelopment?.roadLocation,
           record.subDevelopment,
           record.plotNumber,
           record.plotHeight,
@@ -794,10 +794,10 @@ export default function SubDevelopmentPage() {
         selectedColumns.forEach((col) => {
           switch (col) {
             case "masterDevelopment":
-              selectedData[col] = record.masterDevelopment.developmentName
+              selectedData[col] = record.masterDevelopment?.developmentName
               break
             case "roadLocation":
-              selectedData[col] = record.masterDevelopment.roadLocation
+              selectedData[col] = record.masterDevelopment?.roadLocation
               break
             default:
               selectedData[col] = record[col]
@@ -967,9 +967,9 @@ export default function SubDevelopmentPage() {
          case "index":
         return <div className="flex justify-center">{startingIndex + index + 1}</div>
       case "masterDevelopment":
-        return record.masterDevelopment.developmentName
+        return record.masterDevelopment?.developmentName
       case "roadLocation":
-        return record.masterDevelopment.roadLocation
+        return record.masterDevelopment?.roadLocation
       case "plotPermission":
         return (
           <HoverCard>
