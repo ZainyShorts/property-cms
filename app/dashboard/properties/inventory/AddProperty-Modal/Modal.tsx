@@ -636,15 +636,17 @@ useEffect(() => {
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          resetForm()
-          onClose()
+          resetForm();
+          onClose();
         }
       }}
     >
       <DialogContent className="lg:max-w-4xl bg-background text-foreground">
         <DialogHeader>
           <div className="flex items-center space-x-2">
-            <DialogTitle className="text-2xl font-bold">{isEditing ? "Edit Property" : "Add Property"}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">
+              {isEditing ? "Edit Property" : "Add Property"}
+            </DialogTitle>
             <File className="text-white" />
           </div>
         </DialogHeader>
@@ -663,7 +665,9 @@ useEffect(() => {
                         placeholder="Search projects..."
                         value={projectSearchTerm}
                         onChange={(e) => handleProjectSearch(e.target.value)}
-                        className={`w-full pl-10 ${errors.project ? "border-destructive" : ""}`}
+                        className={`w-full pl-10 ${
+                          errors.project ? "border-destructive" : ""
+                        }`}
                         autoComplete="off"
                       />
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -678,10 +682,16 @@ useEffect(() => {
 
                     <Select
                       value={dataForm.project || ""}
-                      onValueChange={(value) => handleSelectChange(value, "project")}
+                      onValueChange={(value) =>
+                        handleSelectChange(value, "project")
+                      }
                       disabled={isSearching}
                     >
-                      <SelectTrigger className={`w-full ${errors.project ? "border-destructive" : ""}`}>
+                      <SelectTrigger
+                        className={`w-full ${
+                          errors.project ? "border-destructive" : ""
+                        }`}
+                      >
                         <SelectValue placeholder="Select a project" />
                       </SelectTrigger>
                       <SelectContent>
@@ -706,12 +716,12 @@ useEffect(() => {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedProject(null)
-                            setProjectSearchTerm("")
+                            setSelectedProject(null);
+                            setProjectSearchTerm("");
                             setDataForm((prev) => ({
                               ...prev,
                               project: "",
-                            }))
+                            }));
                           }}
                         >
                           <X className="h-4 w-4" />
@@ -719,7 +729,11 @@ useEffect(() => {
                       </div>
                     )}
                   </div>
-                  {errors.project && <p className="text-sm text-destructive">Project is required</p>}
+                  {errors.project && (
+                    <p className="text-sm text-destructive">
+                      Project is required
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -735,21 +749,31 @@ useEffect(() => {
                     name="unitNumber"
                     value={dataForm.unitNumber || ""}
                     onChange={(e) => handleChange(e, "unitNumber", "text")}
-                    className={`bg-input border-input ${errors.unitNumber ? "border-destructive" : ""}`}
+                    className={`bg-input border-input ${
+                      errors.unitNumber ? "border-destructive" : ""
+                    }`}
                     placeholder="e.g., A-101"
                   />
-                  {errors.unitNumber && <p className="text-sm text-destructive">Unit number is required</p>}
+                  {errors.unitNumber && (
+                    <p className="text-sm text-destructive">
+                      Unit number is required
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="unitType">Unit Type *</Label>
                   <Select
                     value={dataForm.unitType || ""}
-                    onValueChange={(value) => handleSelectChange(value, "unitType")}
+                    onValueChange={(value) =>
+                      handleSelectChange(value, "unitType")
+                    }
                   >
                     <SelectTrigger
                       id="unitType"
-                      className={`bg-input border-input ${errors.unitType ? "border-destructive" : ""}`}
+                      className={`bg-input border-input ${
+                        errors.unitType ? "border-destructive" : ""
+                      }`}
                     >
                       <SelectValue placeholder="Select unit type..." />
                     </SelectTrigger>
@@ -761,18 +785,26 @@ useEffect(() => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.unitType && <p className="text-sm text-destructive">Unit type is required</p>}
+                  {errors.unitType && (
+                    <p className="text-sm text-destructive">
+                      Unit type is required
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="unitPurpose">Unit Purpose *</Label>
                   <Select
                     value={dataForm.unitPurpose || ""}
-                    onValueChange={(value) => handleSelectChange(value, "unitPurpose")}
+                    onValueChange={(value) =>
+                      handleSelectChange(value, "unitPurpose")
+                    }
                   >
                     <SelectTrigger
                       id="unitPurpose"
-                      className={`bg-input border-input ${errors.unitPurpose ? "border-destructive" : ""}`}
+                      className={`bg-input border-input ${
+                        errors.unitPurpose ? "border-destructive" : ""
+                      }`}
                     >
                       <SelectValue placeholder="Select purpose..." />
                     </SelectTrigger>
@@ -784,7 +816,11 @@ useEffect(() => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.unitPurpose && <p className="text-sm text-destructive">Unit purpose is required</p>}
+                  {errors.unitPurpose && (
+                    <p className="text-sm text-destructive">
+                      Unit purpose is required
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -805,7 +841,9 @@ useEffect(() => {
                     id="unitInternalDesign"
                     name="unitInternalDesign"
                     value={dataForm.unitInternalDesign || ""}
-                    onChange={(e) => handleChange(e, "unitInternalDesign", "text")}
+                    onChange={(e) =>
+                      handleChange(e, "unitInternalDesign", "text")
+                    }
                     className="bg-input border-input"
                     placeholder="e.g., Modern"
                   />
@@ -817,7 +855,9 @@ useEffect(() => {
                     id="unitExternalDesign"
                     name="unitExternalDesign"
                     value={dataForm.unitExternalDesign || ""}
-                    onChange={(e) => handleChange(e, "unitExternalDesign", "text")}
+                    onChange={(e) =>
+                      handleChange(e, "unitExternalDesign", "text")
+                    }
                     className="bg-input border-input"
                     placeholder="e.g., Contemporary"
                   />
@@ -857,15 +897,20 @@ useEffect(() => {
                       id="noOfBedRooms"
                       name="noOfBedRooms"
                       value={dataForm.noOfBedRooms || ""}
-                      onChange={(e) => handleChange(e, "noOfBedRooms", "number")}
+                      onChange={(e) =>
+                        handleChange(e, "noOfBedRooms", "number")
+                      }
                       type="number"
                       className="bg-input border-input"
                       placeholder="e.g., 2"
                     />
-                                  {errors.noOfBedRooms && <p className="text-sm text-destructive">BedRooms are required</p>}
+                    {errors.noOfBedRooms && (
+                      <p className="text-sm text-destructive">
+                        BedRooms are required
+                      </p>
+                    )}
                   </div>
-                )} 
-
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="unitView">Unit View</Label>
@@ -881,7 +926,10 @@ useEffect(() => {
                   <div className="flex flex-wrap gap-2 mt-2">
                     {Array.isArray(dataForm.unitView) &&
                       dataForm.unitView?.map((view: string, index: number) => (
-                        <div key={index} className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-full text-sm">
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-full text-sm"
+                        >
                           {view}
                           <button
                             onClick={() => removeArrayItem("unitView", index)}
@@ -983,16 +1031,18 @@ useEffect(() => {
 
                 <div className="space-y-2">
                   <Label htmlFor="premiumAndLoss">Premium/Loss</Label>
-  <Input
-    id="premiumAndLoss"
-    name="premiumAndLoss"
-    type="number"
-    value={dataForm.premiumAndLoss || ""}
-    onChange={(e) => handleChange(e, "premiumAndLoss", "number")}
-    className="bg-input border-input"
-    placeholder="Auto-calculated"
-    disabled
-  />
+                  <Input
+                    id="premiumAndLoss"
+                    name="premiumAndLoss"
+                    type="number"
+                    value={dataForm.premiumAndLoss || ""}
+                    onChange={(e) =>
+                      handleChange(e, "premiumAndLoss", "number")
+                    }
+                    className="bg-input border-input"
+                    placeholder="Auto-calculated"
+                    disabled
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -1033,7 +1083,9 @@ useEffect(() => {
                     id="paidTODevelopers"
                     name="paidTODevelopers"
                     value={dataForm.paidTODevelopers || ""}
-                    onChange={(e) => handleChange(e, "paidTODevelopers", "number")}
+                    onChange={(e) =>
+                      handleChange(e, "paidTODevelopers", "number")
+                    }
                     type="number"
                     className="bg-input border-input"
                     placeholder="Amount paid to developers"
@@ -1041,15 +1093,65 @@ useEffect(() => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="payableTODevelopers">Payable to Developers</Label>
+                  <Label htmlFor="payableTODevelopers">
+                    Payable to Developers
+                  </Label>
                   <Input
                     id="payableTODevelopers"
                     name="payableTODevelopers"
                     value={dataForm.payableTODevelopers || ""}
-                    onChange={(e) => handleChange(e, "payableTODevelopers", "number")}
+                    onChange={(e) =>
+                      handleChange(e, "payableTODevelopers", "number")
+                    }
                     type="number"
                     className="bg-input border-input"
                     placeholder="Amount payable to developers"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Developer Paymentplan */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Developer Price</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Payment Plan 1 */}
+                <div className="space-y-2">
+                  <Label htmlFor="PaymentPlan1">Payment Plan 1</Label>
+                  <Input
+                    id="PaymentPlan1"
+                    name="PaymentPlan1"
+                    value={dataForm.PaymentPlan1 || ""}
+                    onChange={(e) => handleChange(e, "PaymentPlan1", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="Payment Plan 1"
+                  />
+                </div>
+                {/* Payment Plan 2 */}
+                <div className="space-y-2">
+                  <Label htmlFor="PaymentPlan2">Payment Plan 2</Label>
+                  <Input
+                    id="PaymentPlan2"
+                    name="PaymentPlan2"
+                    value={dataForm.PaymentPlan2 || ""}
+                    onChange={(e) => handleChange(e, "PaymentPlan2", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="Payment Plan 2"
+                  />
+                </div>
+                {/* Payment Plan 3 */}
+                <div className="space-y-2">
+                  <Label htmlFor="PaymentPlan3">Payment Plan 3</Label>
+                  <Input
+                    id="PaymentPlan3"
+                    name="PaymentPlan3"
+                    value={dataForm.PaymentPlan3 || ""}
+                    onChange={(e) => handleChange(e, "PaymentPlan3", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="Payment Plan 3"
                   />
                 </div>
               </div>
@@ -1109,7 +1211,7 @@ useEffect(() => {
         </ScrollArea>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 export default AddPropertyModal
