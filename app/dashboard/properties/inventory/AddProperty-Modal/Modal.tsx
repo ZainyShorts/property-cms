@@ -65,7 +65,7 @@ const getCleanValue = (value: any, defaultValue: any = ""): any => {
   return value || defaultValue
 }
 
-export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps)  {
+export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit }: AddPropertyModalProps) {
   const [dataForm, setDataForm] = useState<Record<string, any>>({})
   const [selectedImages, setSelectedImages] = useState<string[]>([])
   const [arrayInputs, setArrayInputs] = useState<Record<string, string>>({})
@@ -82,6 +82,11 @@ export  function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdi
   const [showProjectResults, setShowProjectResults] = useState(false)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Add payment plan states
+  const [paymentPlan1, setPaymentPlan1] = useState<{ developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]>([])
+  const [paymentPlan2, setPaymentPlan2] = useState<{ developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]>([])
+  const [paymentPlan3, setPaymentPlan3] = useState<{ developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]>([])
 
   const { data, error } = useSWR<any>("/api/me", fetcher)
 
@@ -326,6 +331,9 @@ useEffect(() => {
     setIsSearching(false)
     setInitialLoadComplete(false)
     setShowProjectResults(false)
+    setPaymentPlan1([])
+    setPaymentPlan2([])
+    setPaymentPlan3([])
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current)
       searchTimeoutRef.current = null
@@ -462,6 +470,9 @@ useEffect(() => {
       paidTODevelopers: dataForm.paidTODevelopers ? Number(dataForm.paidTODevelopers) : 0,
       payableTODevelopers: dataForm.payableTODevelopers ? Number(dataForm.payableTODevelopers) : 0,
       project: dataForm.project || "",
+      paymentPlan1: paymentPlan1,
+      paymentPlan2: paymentPlan2,
+      paymentPlan3: paymentPlan3,
     }
 
     try {
@@ -629,6 +640,22 @@ useEffect(() => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string, type: string) => {
     const value = type === "number" ? Number(e.target.value) : e.target.value
     setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
+  }
+
+  // Add payment plan handlers
+  const handlePaymentPlanChange = (planNumber: number, field: string, value: any) => {
+    const planState = planNumber === 1 ? paymentPlan1 : planNumber === 2 ? paymentPlan2 : paymentPlan3
+    const setPlanState = planNumber === 1 ? setPaymentPlan1 : planNumber === 2 ? setPaymentPlan2 : setPaymentPlan3
+
+    if (planState.length === 0) {
+      setPlanState([{ developerPrice: 0, plan: [] }])
+    }
+
+    const updatedPlan = [...planState]
+    if (field === 'developerPrice') {
+      updatedPlan[0].developerPrice = Number(value)
+    }
+    setPlanState(updatedPlan)
   }
 
   return (
@@ -1111,7 +1138,7 @@ useEffect(() => {
               </div>
             </div>
 
-            {/* Developer Paymentplan */}
+            {/* Developer price */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Developer Price</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1121,11 +1148,11 @@ useEffect(() => {
                   <Input
                     id="PaymentPlan1"
                     name="PaymentPlan1"
-                    value={dataForm.PaymentPlan1 || ""}
-                    onChange={(e) => handleChange(e, "PaymentPlan1", "number")}
+                    value={paymentPlan1[0]?.developerPrice || ""}
+                    onChange={(e) => handlePaymentPlanChange(1, 'developerPrice', e.target.value)}
                     type="number"
                     className="bg-input border-input"
-                    placeholder="Payment Plan 1"
+                    placeholder="amount"
                   />
                 </div>
                 {/* Payment Plan 2 */}
@@ -1134,11 +1161,11 @@ useEffect(() => {
                   <Input
                     id="PaymentPlan2"
                     name="PaymentPlan2"
-                    value={dataForm.PaymentPlan2 || ""}
-                    onChange={(e) => handleChange(e, "PaymentPlan2", "number")}
+                    value={paymentPlan2[0]?.developerPrice || ""}
+                    onChange={(e) => handlePaymentPlanChange(2, 'developerPrice', e.target.value)}
                     type="number"
                     className="bg-input border-input"
-                    placeholder="Payment Plan 2"
+                    placeholder="amount"
                   />
                 </div>
                 {/* Payment Plan 3 */}
@@ -1147,11 +1174,11 @@ useEffect(() => {
                   <Input
                     id="PaymentPlan3"
                     name="PaymentPlan3"
-                    value={dataForm.PaymentPlan3 || ""}
-                    onChange={(e) => handleChange(e, "PaymentPlan3", "number")}
+                    value={paymentPlan3[0]?.developerPrice || ""}
+                    onChange={(e) => handlePaymentPlanChange(3, 'developerPrice', e.target.value)}
                     type="number"
                     className="bg-input border-input"
-                    placeholder="Payment Plan 3"
+                    placeholder="amount"
                   />
                 </div>
               </div>
