@@ -220,7 +220,19 @@ useEffect(() => {
             : getCleanValue(propertyToEdit.payableTODevelopers, ""),
       })
 
-      if (propertyToEdit.pictures && propertyToEdit.pictures.length > 0) {
+      // Initialize payment plans
+      if (Array.isArray(propertyToEdit.paymentPlan1)) {
+        setPaymentPlan1(propertyToEdit.paymentPlan1)
+      }
+      if (Array.isArray(propertyToEdit.paymentPlan2)) {
+        setPaymentPlan2(propertyToEdit.paymentPlan2)
+      }
+      if (Array.isArray(propertyToEdit.paymentPlan3)) {
+        setPaymentPlan3(propertyToEdit.paymentPlan3)
+      }
+
+      // Initialize images
+      if (Array.isArray(propertyToEdit.pictures)) {
         setSelectedImages(propertyToEdit.pictures)
       }
 
@@ -307,7 +319,7 @@ useEffect(() => {
     } else if (propertyToEdit === null) {
       resetForm()
     }
-  }, [propertyToEdit])
+  }, [propertyToEdit, initialLoadComplete])
 
   // Update master and sub development when project changes
   useEffect(() => {

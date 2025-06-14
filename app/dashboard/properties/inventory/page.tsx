@@ -62,7 +62,14 @@ const tableHeaders = [
   "paidTODevelopers",
   "payableTODevelopers",
   "premiumAndLoss",
+  "paymentPlan1",
+  "paymentPlan2",
+  "paymentPlan3",
 ]
+
+interface FilterObject {
+  [key: string]: string | number | string[] | undefined;
+}
 
 export default function PropertiesPage() {
   const [selectionModalOpen, setSelectionModalOpen] = useState(false)
@@ -108,13 +115,55 @@ export default function PropertiesPage() {
       setLoading(true)
       try {
         const { filter: filterObj, ...restParams } = params
+        
+        // Clean up the filter object to remove empty values
+        const cleanedFilter = Object.entries(filterObj || {}).reduce<FilterObject>((acc, [key, value]) => {
+          // Skip empty values
+          if (value === "" || value === null || value === undefined) {
+            return acc;
+          }
+
+          // Handle project ID specifically
+          if (key === "project") {
+            if (typeof value === "string" && value.trim() !== "") {
+              acc[key] = value.trim();
+            }
+            return acc;
+          }
+
+          // Handle arrays
+          if (Array.isArray(value)) {
+            if (value.length > 0) {
+              acc[key] = value;
+            }
+            return acc;
+          }
+
+          // Handle numbers
+          if (typeof value === "number") {
+            acc[key] = value;
+            return acc;
+          }
+
+          // Handle strings
+          if (typeof value === "string") {
+            const trimmed = value.trim();
+            if (trimmed !== "") {
+              acc[key] = trimmed;
+            }
+          }
+
+          return acc;
+        }, {});
+
         const finalParams = {
-          ...filterObj, // Spread the filter object contents
-          ...restParams, // Include other params
-          limit: limit, // Use dynamic limit instead of hardcoded 10
+          ...cleanedFilter,
+          ...restParams,
+          limit: limit,
           page: page !== undefined ? page : currentPage,
         }
-        console.log("final", finalParams)
+
+        console.log("Fetching with params:", finalParams);
         const response = await axios.get(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory?populate=project,masterDevelopment,subDevelopment`,
           {
@@ -137,7 +186,7 @@ export default function PropertiesPage() {
         setLoading(false)
       }
     },
-    [currentPage, limit], // Add limit to dependencies
+    [currentPage, limit],
   )
 
   useEffect(() => {
@@ -183,6 +232,9 @@ export default function PropertiesPage() {
     paidTODevelopers: property.paidTODevelopers || "N/A",
     payableTODevelopers: property.payableTODevelopers || "N/A",
     premiumAndLoss: property.premiumAndLoss || "N/A",
+    paymentPlan1: property.paymentPlan1 || [],
+    paymentPlan2: property.paymentPlan2 || [],
+    paymentPlan3: property.paymentPlan3 || [],
   }))
 
   const toggleRow = (id: string) => {
