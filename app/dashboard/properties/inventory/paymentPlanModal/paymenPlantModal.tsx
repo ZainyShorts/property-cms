@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, Calendar, Percent, DollarSign } from "lucide-react";
+import { Plus, Trash2, Calendar, Percent } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface PaymentFieldSet {
@@ -24,6 +24,7 @@ interface PaymentFieldSet {
 
 interface PaymentPlan {
   id: string;
+  totalAmount: number;
   fieldSets: PaymentFieldSet[];
 }
 
@@ -32,6 +33,11 @@ interface PaymentPlanModalProps {
   onClose: () => void;
   rowId: string | null;
   onPaymentPlanSave: (data: any) => void;
+  existingPlans?: {
+    paymentPlan1?: number;
+    paymentPlan2?: number;
+    paymentPlan3?: number;
+  };
 }
 
 export default function PaymentPlanModal({
@@ -39,20 +45,93 @@ export default function PaymentPlanModal({
   onClose,
   rowId,
   onPaymentPlanSave,
+  existingPlans,
 }: PaymentPlanModalProps) {
-  const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([
-    {
-      id: "1",
-      fieldSets: [
+  const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>(() => {
+    // Initialize with existing plans if available
+    return [
+      {
+        id: "1",
+        totalAmount: existingPlans?.paymentPlan1 || 0,
+        fieldSets: [
+          {
+            id: "1-1",
+            date: "",
+            percentage: 0,
+            amount: existingPlans?.paymentPlan1 || 0,
+          },
+        ],
+      },
+      {
+        id: "2",
+        totalAmount: existingPlans?.paymentPlan2 || 0,
+        fieldSets: [
+          {
+            id: "2-1",
+            date: "",
+            percentage: 0,
+            amount: existingPlans?.paymentPlan2 || 0,
+          },
+        ],
+      },
+      {
+        id: "3",
+        totalAmount: existingPlans?.paymentPlan3 || 0,
+        fieldSets: [
+          {
+            id: "3-1",
+            date: "",
+            percentage: 0,
+            amount: existingPlans?.paymentPlan3 || 0,
+          },
+        ],
+      },
+    ];
+  });
+
+  // Update payment plans when existingPlans changes
+  useEffect(() => {
+    if (existingPlans) {
+      setPaymentPlans([
         {
-          id: "1-1",
-          date: "",
-          percentage: 0,
-          amount: 0,
+          id: "1",
+          totalAmount: existingPlans.paymentPlan1 || 0,
+          fieldSets: [
+            {
+              id: "1-1",
+              date: "",
+              percentage: 0,
+              amount: existingPlans.paymentPlan1 || 0,
+            },
+          ],
         },
-      ],
-    },
-  ]);
+        {
+          id: "2",
+          totalAmount: existingPlans.paymentPlan2 || 0,
+          fieldSets: [
+            {
+              id: "2-1",
+              date: "",
+              percentage: 0,
+              amount: existingPlans.paymentPlan2 || 0,
+            },
+          ],
+        },
+        {
+          id: "3",
+          totalAmount: existingPlans.paymentPlan3 || 0,
+          fieldSets: [
+            {
+              id: "3-1",
+              date: "",
+              percentage: 0,
+              amount: existingPlans.paymentPlan3 || 0,
+            },
+          ],
+        },
+      ]);
+    }
+  }, [existingPlans]);
 
   const addFieldSet = (planId: string) => {
     const newFieldSet: PaymentFieldSet = {
@@ -113,6 +192,7 @@ export default function PaymentPlanModal({
   const addPaymentPlan = () => {
     const newPlan: PaymentPlan = {
       id: Date.now().toString(),
+      totalAmount: 0,
       fieldSets: [
         {
           id: `${Date.now()}-1`,
@@ -159,9 +239,37 @@ export default function PaymentPlanModal({
       return;
     }
 
+    // Format data according to backend structure
+    const formattedPlans = {
+      paymentPlan1: [{
+        developerPrice: paymentPlans[0].fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0),
+        plan: paymentPlans[0].fieldSets.map(fs => ({
+          date: fs.date,
+          percentage: fs.percentage,
+          amount: fs.amount
+        }))
+      }],
+      paymentPlan2: [{
+        developerPrice: paymentPlans[1].fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0),
+        plan: paymentPlans[1].fieldSets.map(fs => ({
+          date: fs.date,
+          percentage: fs.percentage,
+          amount: fs.amount
+        }))
+      }],
+      paymentPlan3: [{
+        developerPrice: paymentPlans[2].fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0),
+        plan: paymentPlans[2].fieldSets.map(fs => ({
+          date: fs.date,
+          percentage: fs.percentage,
+          amount: fs.amount
+        }))
+      }]
+    };
+
     const paymentPlanData = {
       rowId,
-      paymentPlans: validPlans,
+      ...formattedPlans,
       totalPercentage,
       totalAmount,
     };
@@ -173,9 +281,34 @@ export default function PaymentPlanModal({
     setPaymentPlans([
       {
         id: "1",
+        totalAmount: 0,
         fieldSets: [
           {
             id: "1-1",
+            date: "",
+            percentage: 0,
+            amount: 0,
+          },
+        ],
+      },
+      {
+        id: "2",
+        totalAmount: 0,
+        fieldSets: [
+          {
+            id: "2-1",
+            date: "",
+            percentage: 0,
+            amount: 0,
+          },
+        ],
+      },
+      {
+        id: "3",
+        totalAmount: 0,
+        fieldSets: [
+          {
+            id: "3-1",
             date: "",
             percentage: 0,
             amount: 0,
@@ -203,7 +336,7 @@ export default function PaymentPlanModal({
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-purple-600" />
+            
             Add Payment Plans
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
@@ -286,7 +419,7 @@ export default function PaymentPlanModal({
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">
-                      Payment Plan {planIndex + 1}
+                      Payment Plan {planIndex + 1}: {(plan.totalAmount || 0).toLocaleString()} AED
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <Button
@@ -298,22 +431,12 @@ export default function PaymentPlanModal({
                         <Plus className="h-4 w-4" />
                         Add Field
                       </Button>
-                      {paymentPlans.length > 1 && (
-                        <Button
-                          onClick={() => removePaymentPlan(plan.id)}
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent>
                   {plan.fieldSets.map((fieldSet, fieldIndex) => (
-                    <div key={fieldSet.id} className="space-y-4">
+                    <div key={fieldSet.id} className="space-y-4 mb-4">
                       {/* Field Set Header */}
                       <div className="flex items-center justify-between">
                         <h4 className="text-sm font-medium text-muted-foreground">
@@ -332,7 +455,7 @@ export default function PaymentPlanModal({
                       </div>
 
                       {/* Field Set Content */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Date */}
                         <div className="space-y-2">
                           <Label
@@ -398,7 +521,7 @@ export default function PaymentPlanModal({
                             htmlFor={`amount-${fieldSet.id}`}
                             className="flex items-center gap-2"
                           >
-                            <DollarSign className="h-4 w-4 text-purple-500" />
+                            
                             Amount
                           </Label>
                           <div className="relative">
@@ -419,24 +542,16 @@ export default function PaymentPlanModal({
                               className="pl-8"
                               placeholder="0.00"
                             />
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                              AED
-                            </span>
                           </div>
                         </div>
                       </div>
 
                       {/* Field Set Summary */}
-                      {fieldSet.date &&
-                        fieldSet.percentage > 0 &&
-                        fieldSet.amount > 0 && (
-                          <div className="ml-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300">
-                            <strong>Summary:</strong> Pay AED
-                            {fieldSet.amount.toLocaleString()} (
-                            {fieldSet.percentage}%) on{" "}
-                            {new Date(fieldSet.date).toLocaleDateString()}
-                          </div>
-                        )}
+                      {fieldSet.date && fieldSet.percentage > 0 && fieldSet.amount > 0 && (
+                        <div className="ml-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-xs text-blue-700 dark:text-blue-300">
+                          <strong>Summary:</strong> Pay AED {fieldSet.amount.toLocaleString()} ({fieldSet.percentage}%) on {new Date(fieldSet.date).toLocaleDateString()}
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -448,34 +563,19 @@ export default function PaymentPlanModal({
                       </h4>
                       <div className="grid grid-cols-3 gap-4 text-sm">
                         <div>
-                          <span className="text-muted-foreground">
-                            Field Sets:
-                          </span>
+                          <span className="text-muted-foreground">Field Sets:</span>
+                          <div className="font-medium">{plan.fieldSets.length}</div>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total %:</span>
                           <div className="font-medium">
-                            {plan.fieldSets.length}
+                            {plan.fieldSets.reduce((sum, fs) => sum + (fs.percentage || 0), 0)}%
                           </div>
                         </div>
                         <div>
-                          <span className="text-muted-foreground">
-                            Total %:
-                          </span>
+                          <span className="text-muted-foreground">Total Amount:</span>
                           <div className="font-medium">
-                            {plan.fieldSets.reduce(
-                              (sum, fs) => sum + (fs.percentage || 0),
-                              0
-                            )}
-                            %
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">
-                            Total Amount:
-                          </span>
-                          <div className="font-medium">
-                            AED
-                            {plan.fieldSets
-                              .reduce((sum, fs) => sum + (fs.amount || 0), 0)
-                              .toLocaleString()}
+                            AED {plan.fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0).toLocaleString()}
                           </div>
                         </div>
                       </div>
@@ -490,8 +590,7 @@ export default function PaymentPlanModal({
         <DialogFooter className="flex items-center justify-between pt-6">
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>
-              Total: {totalPercentage}% | AED {totalAmount.toLocaleString()} |{" "}
-              {totalFieldSets} field sets
+              Total: {totalPercentage}% | AED {totalAmount.toLocaleString()} | {totalFieldSets} field sets
             </span>
             {totalPercentage > 100 && (
               <Badge variant="destructive" className="text-xs">

@@ -210,6 +210,7 @@ function PropertyDataTable({
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   const handlePaymentPlan = async (recordId: string) => {
+    const record = data.find((row) => row._id === recordId);
     setSelectedRowForPayment(recordId);
     setIsPaymentPlanModalOpen(true);
   };
@@ -217,8 +218,15 @@ function PropertyDataTable({
   const handlePaymentPlanSave = async (paymentPlanData: any) => {
     try {
       console.log("Payment plan data to save:", paymentPlanData);
-      // Here you would typically make an API call to save the payment plan
-      // const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/payment-plan/save`, paymentPlanData)
+      const response = await axios.patch(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/property/${paymentPlanData.rowId}`,
+        {
+          paymentPlan1: paymentPlanData.paymentPlan1,
+          paymentPlan2: paymentPlanData.paymentPlan2,
+          paymentPlan3: paymentPlanData.paymentPlan3,
+        }
+      );
+      console.log("Payment plan save response:", response);
       toast.success("Payment plan saved successfully");
       setIsPaymentPlanModalOpen(false);
       setSelectedRowForPayment(null);
@@ -1335,6 +1343,11 @@ function PropertyDataTable({
         onClose={() => setIsPaymentPlanModalOpen(false)}
         rowId={selectedRowForPayment}
         onPaymentPlanSave={handlePaymentPlanSave}
+        existingPlans={{
+          paymentPlan1: data.find((row) => row._id === selectedRowForPayment)?.paymentPlan1?.[0]?.developerPrice || 0,
+          paymentPlan2: data.find((row) => row._id === selectedRowForPayment)?.paymentPlan2?.[0]?.developerPrice || 0,
+          paymentPlan3: data.find((row) => row._id === selectedRowForPayment)?.paymentPlan3?.[0]?.developerPrice || 0,
+        }}
       />
     </>
   );
