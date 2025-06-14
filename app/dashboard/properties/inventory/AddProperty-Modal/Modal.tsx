@@ -647,15 +647,14 @@ useEffect(() => {
     const planState = planNumber === 1 ? paymentPlan1 : planNumber === 2 ? paymentPlan2 : paymentPlan3
     const setPlanState = planNumber === 1 ? setPaymentPlan1 : planNumber === 2 ? setPaymentPlan2 : setPaymentPlan3
 
-    if (planState.length === 0) {
-      setPlanState([{ developerPrice: 0, plan: [] }])
+    // Create a new plan object with the updated value
+    const newPlan = {
+      developerPrice: field === 'developerPrice' ? Number(value) : 0,
+      plan: [] // Initialize with empty plan array
     }
 
-    const updatedPlan = [...planState]
-    if (field === 'developerPrice') {
-      updatedPlan[0].developerPrice = Number(value)
-    }
-    setPlanState(updatedPlan)
+    // Update the state with the new plan
+    setPlanState([newPlan])
   }
 
   return (
