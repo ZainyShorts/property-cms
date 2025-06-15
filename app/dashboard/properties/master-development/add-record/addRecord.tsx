@@ -18,7 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
 import { countries, getCitiesByCountry } from "../data/data"
+import useSWR from 'swr'
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 // Define MasterDevelopment interface
 interface MasterDevelopment {
   _id?: string
@@ -91,6 +93,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const [availableCities, setAvailableCities] = useState<string[]>([])
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const isEditMode = !!editRecord
+  const { data:authData } = useSWR('/api/me', fetcher);
 
   // Initialize form with empty values
   const form = useForm<FormValues>({
@@ -415,6 +418,11 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
           submitData,
+          {
+            headers:{
+              "Authorization": `Bearer ${authData.token}`
+            }
+          }
         )
         console.log(response)
         toast.success("Master development record has been added successfully")

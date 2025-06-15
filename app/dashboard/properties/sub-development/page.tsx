@@ -1152,10 +1152,10 @@ export default function SubDevelopmentPage() {
                 <SelectItem value="100">100 rows</SelectItem>
               </SelectContent>
             </Select>
-            {/* <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+            <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
-            </Button> */}
+            </Button>
             {/* <Button variant="outline" onClick={handleExport} className="gap-2">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
@@ -1578,7 +1578,7 @@ export default function SubDevelopmentPage() {
                         type="text"
                         value={pageInputValue}
                         onChange={handlePageInputChange}
-                        className="h-9 w-12 text-center rounded-md"
+                        className="h-9 w-16 text-center rounded-md"
                         aria-label="Page number"
                       />
                     </div>

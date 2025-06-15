@@ -14,7 +14,6 @@ export async function GET(req: any) {
   if(expired) return NextResponse.json(null);
 
   const user = useUser(token);
-
-  return NextResponse.json(user);
+  return NextResponse.json({...user,token});
 
 }

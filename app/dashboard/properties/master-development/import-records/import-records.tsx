@@ -20,13 +20,22 @@ interface ImportResponse {
   insertedEntries: number
   skippedDuplicateEntires: number
   totalEntries: number
+  message?: string
 }
+import useSWR from 'swr'
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+
+
 
 export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecordsModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle")
+  const { data:authData } = useSWR('/api/me', fetcher);
+
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -68,11 +77,14 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
       const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/import`, {
         method: "POST",
         body: formData,
+        headers:{
+          "authorization": `Bearer ${authData.token}`
+        }
       })
 
       clearInterval(interval)
       setUploadProgress(100)
-      const data = (await response.json()) as ImportResponse
+      const data = (await response.json()) as any
       console.log("response data:", data)
 
       if (response.ok && data.success) {
@@ -80,7 +92,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
         fetchRecords()
         // Show toast with import results using react-toastify
         toast.success(
-          `Import successful: ${data.insertedEntries} entries added, ${data.skippedInvalidEntries} duplicates skipped.`,
+          `Import successful: ${data.insertedEntries} entries inserted, ${data.skippedDuplicateEntries + data.skippedInvalidEntries} entries skipped.`,
           {
             position: "top-right",
             autoClose: 5000,
@@ -96,7 +108,17 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
           handleClose()
         }, 1500)
       } else {
-        throw new Error("Upload failed")
+        console.error("Upload error:", data.message)
+        setUploadStatus("error")
+        toast.error(data.message, {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        })
+        // throw new Error("Upload failed")
       }
     } catch (error) {
       console.error("Upload error:", error)

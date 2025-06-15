@@ -142,7 +142,8 @@ const plotPermissionOptions = [
   "Bungalow",
 ]
 
-const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
+// const plotStatusOptions = ["Available", "Sold", "Reserved", "Under Construction"]
+ const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
 
 export function SubDevFilterSidebar({ open, onOpenChange }: SubDevFilterSidebarProps) {
   const dispatch = useDispatch()
