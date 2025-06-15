@@ -1826,7 +1826,7 @@ export default function MasterDevelopmentPage() {
                         type="text"
                         value={pageInputValue}
                         onChange={handlePageInputChange}
-                        className="h-9 w-12 text-center rounded-md"
+                        className="h-9 w-16 text-center rounded-md"
                         aria-label="Page number"
                       />
                     </div>
