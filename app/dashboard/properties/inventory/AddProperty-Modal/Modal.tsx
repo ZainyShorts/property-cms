@@ -84,26 +84,32 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Add payment plan states
-  const [paymentPlan1, setPaymentPlan1] = useState<{ developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]>([])
-  const [paymentPlan2, setPaymentPlan2] = useState<{ developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]>([])
-  const [paymentPlan3, setPaymentPlan3] = useState<{ developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]>([])
+  const [paymentPlan1, setPaymentPlan1] = useState<
+    { developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]
+  >([])
+  const [paymentPlan2, setPaymentPlan2] = useState<
+    { developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]
+  >([])
+  const [paymentPlan3, setPaymentPlan3] = useState<
+    { developerPrice: number; plan: Array<{ date: string; constructionPercent: number; amount: number }> }[]
+  >([])
 
   const { data, error } = useSWR<any>("/api/me", fetcher)
 
   useEffect(() => {
     if (data) console.log("data →", data)
     if (error) console.error("error →", error)
-  }, [data, error]) 
-useEffect(() => {
-  const purchasePrice = dataForm.purchasePrice || 0;
-  const marketPrice = dataForm.marketPrice || 0;
-  const premiumAndLoss = purchasePrice - marketPrice;
-  
-  setDataForm(prev => ({
-    ...prev,
-    premiumAndLoss: premiumAndLoss
-  }));
-}, [dataForm.purchasePrice, dataForm.marketPrice]);
+  }, [data, error])
+  useEffect(() => {
+    const purchasePrice = dataForm.purchasePrice || 0
+    const marketPrice = dataForm.marketPrice || 0
+    const premiumAndLoss = purchasePrice - marketPrice
+
+    setDataForm((prev) => ({
+      ...prev,
+      premiumAndLoss: premiumAndLoss,
+    }))
+  }, [dataForm.purchasePrice, dataForm.marketPrice])
 
   // Fetch projects on component mount
   useEffect(() => {
@@ -135,7 +141,7 @@ useEffect(() => {
     } finally {
       setIsSearching(false)
     }
-  } 
+  }
 
   const handleProjectSearch = (searchTerm: string) => {
     setProjectSearchTerm(searchTerm)
@@ -219,6 +225,25 @@ useEffect(() => {
             ? propertyToEdit.payableTODevelopers
             : getCleanValue(propertyToEdit.payableTODevelopers, ""),
       })
+
+      // Initialize payment plans for editing
+      if (propertyToEdit.paymentPlan1 && propertyToEdit.paymentPlan1 !== "-") {
+        setPaymentPlan1([{ developerPrice: Number(propertyToEdit.paymentPlan1), plan: [] }])
+      } else {
+        setPaymentPlan1([{ developerPrice: 0, plan: [] }])
+      }
+
+      if (propertyToEdit.paymentPlan2 && propertyToEdit.paymentPlan2 !== "-") {
+        setPaymentPlan2([{ developerPrice: Number(propertyToEdit.paymentPlan2), plan: [] }])
+      } else {
+        setPaymentPlan2([{ developerPrice: 0, plan: [] }])
+      }
+
+      if (propertyToEdit.paymentPlan3 && propertyToEdit.paymentPlan3 !== "-") {
+        setPaymentPlan3([{ developerPrice: Number(propertyToEdit.paymentPlan3), plan: [] }])
+      } else {
+        setPaymentPlan3([{ developerPrice: 0, plan: [] }])
+      }
 
       if (propertyToEdit.pictures && propertyToEdit.pictures.length > 0) {
         setSelectedImages(propertyToEdit.pictures)
@@ -421,8 +446,8 @@ useEffect(() => {
     // Required fields
     if (!dataForm.unitPurpose) newErrors.unitPurpose = true
     if (!dataForm.unitNumber) newErrors.unitNumber = true
-    if (!dataForm.unitType) newErrors.unitType = true 
-    if (dataForm.unitType === 'BedRoom') { 
+    if (!dataForm.unitType) newErrors.unitType = true
+    if (dataForm.unitType === "BedRoom") {
       if (!dataForm.noOfBedRooms) newErrors.noOfBedRooms = true
     }
 
@@ -642,19 +667,20 @@ useEffect(() => {
     setDataForm((prev) => ({ ...prev, [fieldKey]: value }))
   }
 
-  // Add payment plan handlers
   const handlePaymentPlanChange = (planNumber: number, field: string, value: any) => {
     const planState = planNumber === 1 ? paymentPlan1 : planNumber === 2 ? paymentPlan2 : paymentPlan3
     const setPlanState = planNumber === 1 ? setPaymentPlan1 : planNumber === 2 ? setPaymentPlan2 : setPaymentPlan3
 
-    if (planState.length === 0) {
-      setPlanState([{ developerPrice: 0, plan: [] }])
+    let updatedPlan = [...planState]
+
+    if (updatedPlan.length === 0) {
+      updatedPlan = [{ developerPrice: 0, plan: [] }]
     }
 
-    const updatedPlan = [...planState]
-    if (field === 'developerPrice') {
+    if (field === "developerPrice") {
       updatedPlan[0].developerPrice = Number(value)
     }
+
     setPlanState(updatedPlan)
   }
 
@@ -663,17 +689,15 @@ useEffect(() => {
       open={isOpen}
       onOpenChange={(open) => {
         if (!open) {
-          resetForm();
-          onClose();
+          resetForm()
+          onClose()
         }
       }}
     >
       <DialogContent className="lg:max-w-4xl bg-background text-foreground">
         <DialogHeader>
           <div className="flex items-center space-x-2">
-            <DialogTitle className="text-2xl font-bold">
-              {isEditing ? "Edit Property" : "Add Property"}
-            </DialogTitle>
+            <DialogTitle className="text-2xl font-bold">{isEditing ? "Edit Property" : "Add Property"}</DialogTitle>
             <File className="text-white" />
           </div>
         </DialogHeader>
@@ -692,9 +716,7 @@ useEffect(() => {
                         placeholder="Search projects..."
                         value={projectSearchTerm}
                         onChange={(e) => handleProjectSearch(e.target.value)}
-                        className={`w-full pl-10 ${
-                          errors.project ? "border-destructive" : ""
-                        }`}
+                        className={`w-full pl-10 ${errors.project ? "border-destructive" : ""}`}
                         autoComplete="off"
                       />
                       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -709,16 +731,10 @@ useEffect(() => {
 
                     <Select
                       value={dataForm.project || ""}
-                      onValueChange={(value) =>
-                        handleSelectChange(value, "project")
-                      }
+                      onValueChange={(value) => handleSelectChange(value, "project")}
                       disabled={isSearching}
                     >
-                      <SelectTrigger
-                        className={`w-full ${
-                          errors.project ? "border-destructive" : ""
-                        }`}
-                      >
+                      <SelectTrigger className={`w-full ${errors.project ? "border-destructive" : ""}`}>
                         <SelectValue placeholder="Select a project" />
                       </SelectTrigger>
                       <SelectContent>
@@ -743,12 +759,12 @@ useEffect(() => {
                           variant="ghost"
                           size="sm"
                           onClick={() => {
-                            setSelectedProject(null);
-                            setProjectSearchTerm("");
+                            setSelectedProject(null)
+                            setProjectSearchTerm("")
                             setDataForm((prev) => ({
                               ...prev,
                               project: "",
-                            }));
+                            }))
                           }}
                         >
                           <X className="h-4 w-4" />
@@ -756,11 +772,7 @@ useEffect(() => {
                       </div>
                     )}
                   </div>
-                  {errors.project && (
-                    <p className="text-sm text-destructive">
-                      Project is required
-                    </p>
-                  )}
+                  {errors.project && <p className="text-sm text-destructive">Project is required</p>}
                 </div>
               </div>
             </div>
@@ -776,31 +788,21 @@ useEffect(() => {
                     name="unitNumber"
                     value={dataForm.unitNumber || ""}
                     onChange={(e) => handleChange(e, "unitNumber", "text")}
-                    className={`bg-input border-input ${
-                      errors.unitNumber ? "border-destructive" : ""
-                    }`}
+                    className={`bg-input border-input ${errors.unitNumber ? "border-destructive" : ""}`}
                     placeholder="e.g., A-101"
                   />
-                  {errors.unitNumber && (
-                    <p className="text-sm text-destructive">
-                      Unit number is required
-                    </p>
-                  )}
+                  {errors.unitNumber && <p className="text-sm text-destructive">Unit number is required</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="unitType">Unit Type *</Label>
                   <Select
                     value={dataForm.unitType || ""}
-                    onValueChange={(value) =>
-                      handleSelectChange(value, "unitType")
-                    }
+                    onValueChange={(value) => handleSelectChange(value, "unitType")}
                   >
                     <SelectTrigger
                       id="unitType"
-                      className={`bg-input border-input ${
-                        errors.unitType ? "border-destructive" : ""
-                      }`}
+                      className={`bg-input border-input ${errors.unitType ? "border-destructive" : ""}`}
                     >
                       <SelectValue placeholder="Select unit type..." />
                     </SelectTrigger>
@@ -812,26 +814,18 @@ useEffect(() => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.unitType && (
-                    <p className="text-sm text-destructive">
-                      Unit type is required
-                    </p>
-                  )}
+                  {errors.unitType && <p className="text-sm text-destructive">Unit type is required</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="unitPurpose">Unit Purpose *</Label>
                   <Select
                     value={dataForm.unitPurpose || ""}
-                    onValueChange={(value) =>
-                      handleSelectChange(value, "unitPurpose")
-                    }
+                    onValueChange={(value) => handleSelectChange(value, "unitPurpose")}
                   >
                     <SelectTrigger
                       id="unitPurpose"
-                      className={`bg-input border-input ${
-                        errors.unitPurpose ? "border-destructive" : ""
-                      }`}
+                      className={`bg-input border-input ${errors.unitPurpose ? "border-destructive" : ""}`}
                     >
                       <SelectValue placeholder="Select purpose..." />
                     </SelectTrigger>
@@ -843,11 +837,7 @@ useEffect(() => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.unitPurpose && (
-                    <p className="text-sm text-destructive">
-                      Unit purpose is required
-                    </p>
-                  )}
+                  {errors.unitPurpose && <p className="text-sm text-destructive">Unit purpose is required</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -868,9 +858,7 @@ useEffect(() => {
                     id="unitInternalDesign"
                     name="unitInternalDesign"
                     value={dataForm.unitInternalDesign || ""}
-                    onChange={(e) =>
-                      handleChange(e, "unitInternalDesign", "text")
-                    }
+                    onChange={(e) => handleChange(e, "unitInternalDesign", "text")}
                     className="bg-input border-input"
                     placeholder="e.g., Modern"
                   />
@@ -882,9 +870,7 @@ useEffect(() => {
                     id="unitExternalDesign"
                     name="unitExternalDesign"
                     value={dataForm.unitExternalDesign || ""}
-                    onChange={(e) =>
-                      handleChange(e, "unitExternalDesign", "text")
-                    }
+                    onChange={(e) => handleChange(e, "unitExternalDesign", "text")}
                     className="bg-input border-input"
                     placeholder="e.g., Contemporary"
                   />
@@ -924,18 +910,12 @@ useEffect(() => {
                       id="noOfBedRooms"
                       name="noOfBedRooms"
                       value={dataForm.noOfBedRooms || ""}
-                      onChange={(e) =>
-                        handleChange(e, "noOfBedRooms", "number")
-                      }
+                      onChange={(e) => handleChange(e, "noOfBedRooms", "number")}
                       type="number"
                       className="bg-input border-input"
                       placeholder="e.g., 2"
                     />
-                    {errors.noOfBedRooms && (
-                      <p className="text-sm text-destructive">
-                        BedRooms are required
-                      </p>
-                    )}
+                    {errors.noOfBedRooms && <p className="text-sm text-destructive">BedRooms are required</p>}
                   </div>
                 )}
 
@@ -953,10 +933,7 @@ useEffect(() => {
                   <div className="flex flex-wrap gap-2 mt-2">
                     {Array.isArray(dataForm.unitView) &&
                       dataForm.unitView?.map((view: string, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-full text-sm"
-                        >
+                        <div key={index} className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-full text-sm">
                           {view}
                           <button
                             onClick={() => removeArrayItem("unitView", index)}
@@ -1063,9 +1040,7 @@ useEffect(() => {
                     name="premiumAndLoss"
                     type="number"
                     value={dataForm.premiumAndLoss || ""}
-                    onChange={(e) =>
-                      handleChange(e, "premiumAndLoss", "number")
-                    }
+                    onChange={(e) => handleChange(e, "premiumAndLoss", "number")}
                     className="bg-input border-input"
                     placeholder="Auto-calculated"
                     disabled
@@ -1110,9 +1085,7 @@ useEffect(() => {
                     id="paidTODevelopers"
                     name="paidTODevelopers"
                     value={dataForm.paidTODevelopers || ""}
-                    onChange={(e) =>
-                      handleChange(e, "paidTODevelopers", "number")
-                    }
+                    onChange={(e) => handleChange(e, "paidTODevelopers", "number")}
                     type="number"
                     className="bg-input border-input"
                     placeholder="Amount paid to developers"
@@ -1120,16 +1093,12 @@ useEffect(() => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="payableTODevelopers">
-                    Payable to Developers
-                  </Label>
+                  <Label htmlFor="payableTODevelopers">Payable to Developers</Label>
                   <Input
                     id="payableTODevelopers"
                     name="payableTODevelopers"
                     value={dataForm.payableTODevelopers || ""}
-                    onChange={(e) =>
-                      handleChange(e, "payableTODevelopers", "number")
-                    }
+                    onChange={(e) => handleChange(e, "payableTODevelopers", "number")}
                     type="number"
                     className="bg-input border-input"
                     placeholder="Amount payable to developers"
@@ -1149,7 +1118,7 @@ useEffect(() => {
                     id="PaymentPlan1"
                     name="PaymentPlan1"
                     value={paymentPlan1[0]?.developerPrice || ""}
-                    onChange={(e) => handlePaymentPlanChange(1, 'developerPrice', e.target.value)}
+                    onChange={(e) => handlePaymentPlanChange(1, "developerPrice", e.target.value)}
                     type="number"
                     className="bg-input border-input"
                     placeholder="amount"
@@ -1162,7 +1131,7 @@ useEffect(() => {
                     id="PaymentPlan2"
                     name="PaymentPlan2"
                     value={paymentPlan2[0]?.developerPrice || ""}
-                    onChange={(e) => handlePaymentPlanChange(2, 'developerPrice', e.target.value)}
+                    onChange={(e) => handlePaymentPlanChange(2, "developerPrice", e.target.value)}
                     type="number"
                     className="bg-input border-input"
                     placeholder="amount"
@@ -1175,7 +1144,7 @@ useEffect(() => {
                     id="PaymentPlan3"
                     name="PaymentPlan3"
                     value={paymentPlan3[0]?.developerPrice || ""}
-                    onChange={(e) => handlePaymentPlanChange(3, 'developerPrice', e.target.value)}
+                    onChange={(e) => handlePaymentPlanChange(3, "developerPrice", e.target.value)}
                     type="number"
                     className="bg-input border-input"
                     placeholder="amount"
@@ -1238,7 +1207,7 @@ useEffect(() => {
         </ScrollArea>
       </DialogContent>
     </Dialog>
-  );
+  )
 }
 
 export default AddPropertyModal

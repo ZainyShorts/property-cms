@@ -1,11 +1,37 @@
 "use client"
 
 import type React from "react"
-
 import { useEffect, useState, useRef } from "react"
-import Image from "next/image"
 import axios from "axios"
-import { Mail, Phone, MapPin, BedDouble, ChevronLeft, ChevronRight, Tag, Heart, Share2, Calendar, Building, Home, Landmark, DollarSign, CheckCircle2, UserRound, PlusIcon as HousePlus, Ruler, Paintbrush, LayoutGrid, CalendarRange, Banknote, Hourglass, FileText, Download, Eye, Clock, Play, Pause } from 'lucide-react'
+import {
+  Mail,
+  Phone,
+  MapPin,
+  BedDouble,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Tag,
+  Calendar,
+  Building,
+  Home,
+  Landmark,
+  DollarSign,
+  CheckCircle2,
+  UserRound,
+  PlusIcon as HousePlus,
+  Ruler,
+  Paintbrush,
+  LayoutGrid,
+  CalendarRange,
+  Banknote,
+  FileText,
+  Download,
+  Eye,
+  Clock,
+  Play,
+  Pause,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,8 +40,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const DEFAULT_IMAGE =
-  "https://formbuilder.ccavenue.com/live/uploads/company_image/488/17316704336156_Event-Image-Not-Found.jpg"
+const DEFAULT_IMAGE = "/placeholder.svg?height=600&width=800"
 
 type Props = {
   params: {
@@ -92,21 +117,21 @@ interface Document {
 }
 
 interface MediaItem {
-  type: "image" | "video"
+  type: "image" | "video" | "youtube"
   url: string
   title: string
 }
 
 function PropertySkeleton() {
-  const [darkMode, setDarkMode] = useState(false) // defaults to light mode
+  const [darkMode, setDarkMode] = useState(false)
 
-  // On mount, check for stored theme preference (default to light)
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme")
     if (storedTheme === "dark") {
       setDarkMode(true)
     }
   }, [])
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark")
@@ -116,10 +141,10 @@ function PropertySkeleton() {
       localStorage.setItem("theme", "light")
     }
   }, [darkMode])
+
   return (
     <div className="min-h-screen bg-background animate-pulse">
       <div className="container mx-auto px-4 py-8">
-        {/* Image Slider Skeleton */}
         <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-gray-300 dark:bg-muted h-[60vh]">
           <div className="absolute top-0 left-0 right-0 p-6">
             <Skeleton className="h-8 w-48 mb-2 bg-gray-400 dark:bg-muted-foreground/20" />
@@ -129,153 +154,6 @@ function PropertySkeleton() {
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="w-2 h-2 rounded-full bg-gray-400 dark:bg-muted-foreground/20" />
             ))}
-          </div>
-        </div>
-
-        {/* Tabs Skeleton */}
-        <div className="mb-8">
-          <div className="flex gap-2 mb-6">
-            <Skeleton className="h-10 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-            <Skeleton className="h-10 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-            <Skeleton className="h-10 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-          </div>
-
-          {/* Overview Tab Skeleton */}
-          <div className="grid gap-8 md:grid-cols-3">
-            {/* Left Column */}
-            <div className="md:col-span-2 space-y-8">
-              {/* Key Stats Skeleton */}
-              <Card className="overflow-hidden border dark:border-border">
-                <CardContent className="p-0">
-                  <div className="grid grid-cols-2 sm:grid-cols-4 bg-transparent">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div
-                        key={i}
-                        className="flex flex-col items-center bg-transparent justify-center gap-2 p-6 border-r border-b dark:border-border"
-                      >
-                        <Skeleton className="h-6 w-6 rounded-full bg-gray-400 dark:bg-muted-foreground/20" />
-                        <Skeleton className="h-5 w-16 bg-gray-400 dark:bg-muted-foreground/20" />
-                        <Skeleton className="h-3 w-20 bg-gray-400 dark:bg-muted-foreground/20" />
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Project Info Skeleton */}
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-40 bg-gray-400 dark:bg-muted-foreground/20" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
-                        <Skeleton className="h-5 w-5 rounded-full bg-gray-400 dark:bg-muted-foreground/20" />
-                        <div className="w-full">
-                          <Skeleton className="h-3 w-20 mb-2 bg-gray-400 dark:bg-muted-foreground/20" />
-                          <Skeleton className="h-5 w-full bg-gray-400 dark:bg-muted-foreground/20" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Features Skeleton */}
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48 bg-gray-400 dark:bg-muted-foreground/20" />
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {[1, 2].map((i) => (
-                      <div key={i} className="space-y-3">
-                        <Skeleton className="h-5 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-                        <div className="flex flex-wrap gap-2">
-                          {[1, 2, 3, 4].map((j) => (
-                            <Skeleton
-                              key={j}
-                              className="h-8 w-24 rounded-full bg-gray-400 dark:bg-muted-foreground/20"
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Documents Skeleton */}
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-32 bg-gray-400 dark:bg-muted-foreground/20" />
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 gap-4">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-4 border rounded-lg dark:border-border"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Skeleton className="h-10 w-10 rounded-md bg-gray-400 dark:bg-muted-foreground/20" />
-                          <div>
-                            <Skeleton className="h-5 w-40 mb-1 bg-gray-400 dark:bg-muted-foreground/20" />
-                            <Skeleton className="h-3 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Skeleton className="h-9 w-9 rounded-md bg-gray-400 dark:bg-muted-foreground/20" />
-                          <Skeleton className="h-9 w-9 rounded-md bg-gray-400 dark:bg-muted-foreground/20" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column Skeleton */}
-            <div className="space-y-6">
-              {/* Price Card Skeleton */}
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-6 w-40 bg-gray-400 dark:bg-muted-foreground/20" />
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex justify-between items-center">
-                      <Skeleton className="h-4 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-                      <Skeleton className="h-4 w-32 bg-gray-400 dark:bg-muted-foreground/20" />
-                    </div>
-                  ))}
-                  <Separator />
-                  <div>
-                    <Skeleton className="h-4 w-24 mb-2 bg-gray-400 dark:bg-muted-foreground/20" />
-                    <Skeleton className="h-5 w-48 bg-gray-400 dark:bg-muted-foreground/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact Agent Skeleton */}
-              <Card>
-                <CardContent className="p-6">
-                  <Skeleton className="h-6 w-32 mb-4 bg-gray-400 dark:bg-muted-foreground/20" />
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Skeleton className="h-12 w-12 rounded-full bg-gray-400 dark:bg-muted-foreground/20" />
-                    <div>
-                      <Skeleton className="h-5 w-32 mb-2 bg-gray-400 dark:bg-muted-foreground/20" />
-                      <Skeleton className="h-4 w-24 bg-gray-400 dark:bg-muted-foreground/20" />
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <Skeleton className="h-10 w-full bg-gray-400 dark:bg-muted-foreground/20" />
-                    <Skeleton className="h-10 w-full bg-gray-400 dark:bg-muted-foreground/20" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         </div>
       </div>
@@ -291,12 +169,44 @@ export default function PropertyDetail({ params }: Props) {
   const [isSliding, setIsSliding] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+
   const sliderRef = useRef<HTMLDivElement>(null)
   const touchStartX = useRef<number>(0)
   const touchEndX = useRef<number>(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const youtubeIframeRef = useRef<HTMLIFrameElement>(null)
   const autoPlayTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Navigation functions
+  const nextMedia = () => {
+    if (mediaItems.length === 0) return
+    setIsSliding(true)
+    setCurrentMediaIndex((prev) => (prev + 1) % mediaItems.length)
+    setTimeout(() => setIsSliding(false), 300)
+  }
+
+  const prevMedia = () => {
+    if (mediaItems.length === 0) return
+    setIsSliding(true)
+    setCurrentMediaIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length)
+    setTimeout(() => setIsSliding(false), 300)
+  }
+
+  // Get current media item safely
+  const currentMedia =
+    mediaItems.length > 0
+      ? mediaItems[currentMediaIndex]
+      : {
+          type: "image" as const,
+          url: DEFAULT_IMAGE,
+          title: "Default Property Image",
+        }
+
+  // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       if (!params.preview) return
@@ -304,7 +214,6 @@ export default function PropertyDetail({ params }: Props) {
       try {
         setLoading(true)
 
-        // Fetch both property data and documents in parallel
         const [propertyResponse, documentsResponse] = await Promise.all([
           axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${params.preview}`),
           axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/byRefId/${params.preview}`),
@@ -326,14 +235,14 @@ export default function PropertyDetail({ params }: Props) {
     fetchData()
   }, [params.preview])
 
-  // Process documents to extract media (images and videos)
+  // Process media items
   useEffect(() => {
-    if (!documents || !propertyData) return
+    if (!propertyData && (!documents || documents.length === 0)) return
 
     const media: MediaItem[] = []
 
     // Add property images first
-    if (propertyData.pictures && propertyData.pictures.length > 0) {
+    if (propertyData?.pictures && propertyData.pictures.length > 0) {
       propertyData.pictures.forEach((url) => {
         media.push({
           type: "image",
@@ -341,77 +250,72 @@ export default function PropertyDetail({ params }: Props) {
           title: "Property Image",
         })
       })
-    } else if (propertyData.project?.pictures && propertyData.project.pictures.length > 0) {
-      propertyData.project.pictures.forEach((url) => {
-        media.push({
-          type: "image",
-          url,
-          title: "Project Image",
-        })
-      })
     }
 
     // Add media from documents
-    documents.forEach((doc) => {
-      const type = doc.type.toLowerCase()
-      if (
-        type.includes("image") ||
-        type.includes("jpg") ||
-        type.includes("jpeg") ||
-        type.includes("png") ||
-        type.includes("gif")
-      ) {
-        media.push({
-          type: "image",
-          url: doc.documentUrl,
-          title: doc.title,
-        })
-      } else if (type.includes("video") || type.includes("mp4") || type.includes("mov") || type.includes("avi")) {
-        media.push({
-          type: "video",
-          url: doc.documentUrl,
-          title: doc.title,
-        })
-      }
-    })
+    if (documents && documents.length > 0) {
+      documents.forEach((doc) => {
+        const type = doc.type.toLowerCase()
+        const url = doc.documentUrl
 
-    // If no media found, add default image
-    if (media.length === 0) {
-      media.push({
-        type: "image",
-        url: DEFAULT_IMAGE,
-        title: "Default Property Image",
+        // Check for YouTube URLs first
+        if (url.includes("youtube.com") || url.includes("youtu.be")) {
+          media.push({
+            type: "youtube",
+            url: doc.documentUrl,
+            title: doc.title || "YouTube Video",
+          })
+        }
+        // Check for images
+        else if (
+          type.includes("image") ||
+          type.includes("jpg") ||
+          type.includes("jpeg") ||
+          type.includes("png") ||
+          type.includes("gif") ||
+          url.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+        ) {
+          media.push({
+            type: "image",
+            url: doc.documentUrl,
+            title: doc.title || "Document Image",
+          })
+        }
+        // Check for videos
+        else if (
+          type.includes("video") ||
+          type.includes("mp4") ||
+          type.includes("mov") ||
+          type.includes("avi") ||
+          url.match(/\.(mp4|mov|avi|webm)$/i)
+        ) {
+          media.push({
+            type: "video",
+            url: doc.documentUrl,
+            title: doc.title || "Document Video",
+          })
+        }
       })
     }
 
+    // If no media found, add default image
+  
+
+    console.log("Processed media items:", media)
     setMediaItems(media)
+    setCurrentMediaIndex(0) // Reset to first item
   }, [documents, propertyData])
 
-  // Auto-advance slider
-  useEffect(() => {
-    if (isAutoPlaying && mediaItems.length > 1) {
-      autoPlayTimerRef.current = setInterval(() => {
-        nextMedia()
-      }, 3000)
-    }
-
-    return () => {
-      if (autoPlayTimerRef.current) {
-        clearInterval(autoPlayTimerRef.current)
-      }
-    }
-  }, [isAutoPlaying, mediaItems.length, currentMediaIndex])
-
-  // Reset auto-play when media changes
+  // Auto-play functionality
   useEffect(() => {
     if (autoPlayTimerRef.current) {
       clearInterval(autoPlayTimerRef.current)
     }
 
-    if (isAutoPlaying && mediaItems.length > 1) {
+    if (isAutoPlaying && mediaItems.length > 1 && currentMedia?.type === "image") {
       autoPlayTimerRef.current = setInterval(() => {
         nextMedia()
-      }, 3000)
+      }, 4000)
     }
 
     return () => {
@@ -419,36 +323,76 @@ export default function PropertyDetail({ params }: Props) {
         clearInterval(autoPlayTimerRef.current)
       }
     }
-  }, [currentMediaIndex, mediaItems.length])
+  }, [isAutoPlaying, currentMediaIndex, mediaItems.length, currentMedia?.type])
 
-  if (!params.preview) {
-    return (
-      <div className="container mx-auto p-8 text-center">
-        No preview ID provided. Please provide a valid document ID.
-      </div>
-    )
+  // Video controls
+  const togglePlayPause = () => {
+    if (videoRef.current) {
+      if (isPlaying) {
+        videoRef.current.pause()
+      } else {
+        videoRef.current.play()
+      }
+      setIsPlaying(!isPlaying)
+    }
   }
 
-  if (loading) return <PropertySkeleton />
-
-  if (error) return <div className="container mx-auto p-8 text-center text-red-500">Error: {error}</div>
-
-  if (!propertyData) {
-    return <div className="container mx-auto p-8 text-center">No property data found for the given preview ID.</div>
+  const updateProgress = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime)
+    }
   }
 
-  const nextMedia = () => {
-    setIsSliding(true)
-    setCurrentMediaIndex((prev) => (prev + 1) % mediaItems.length)
-    setTimeout(() => setIsSliding(false), 300)
+  const setVideoDuration = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration)
+    }
   }
 
-  const prevMedia = () => {
-    setIsSliding(true)
-    setCurrentMediaIndex((prev) => (prev - 1 + mediaItems.length) % mediaItems.length)
-    setTimeout(() => setIsSliding(false), 300)
+  const seekVideo = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (videoRef.current && duration) {
+      const rect = e.currentTarget.getBoundingClientRect()
+      const clickX = e.clientX - rect.left
+      const newTime = (clickX / rect.width) * duration
+      videoRef.current.currentTime = newTime
+      setCurrentTime(newTime)
+    }
   }
 
+  const toggleFullscreen = () => {
+    if (videoRef.current) {
+      if (videoRef.current.requestFullscreen) {
+        videoRef.current.requestFullscreen()
+      }
+    }
+  }
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  }
+
+  const getYouTubeEmbedUrl = (url: string) => {
+    let videoId = ""
+
+    if (url.includes("youtube.com/watch")) {
+      videoId = url.split("v=")[1]?.split("&")[0]
+    } else if (url.includes("youtu.be/")) {
+      videoId = url.split("youtu.be/")[1]?.split("?")[0]
+    } else if (url.includes("youtube.com/embed/")) {
+      videoId = url.split("embed/")[1]?.split("?")[0]
+    }
+
+    if (!videoId) {
+      const match = url.match(/[a-zA-Z0-9_-]{11}/)
+      videoId = match ? match[0] : ""
+    }
+
+    return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1&controls=1` : url
+  }
+
+  // Touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX
   }
@@ -459,10 +403,8 @@ export default function PropertyDetail({ params }: Props) {
 
   const handleTouchEnd = () => {
     if (touchStartX.current - touchEndX.current > 50) {
-      // Swipe left
       nextMedia()
     } else if (touchEndX.current - touchStartX.current > 50) {
-      // Swipe right
       prevMedia()
     }
   }
@@ -471,6 +413,7 @@ export default function PropertyDetail({ params }: Props) {
     setIsAutoPlaying(!isAutoPlaying)
   }
 
+  // Utility functions
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A"
     const date = new Date(dateString)
@@ -500,15 +443,25 @@ export default function PropertyDetail({ params }: Props) {
 
   const handleGmail = () => {
     const recipient = "agent@example.com"
-    const subject = `Inquiry about ${propertyData.project.projectName} - Unit ${propertyData.unitNumber}`
+    const subject = `Inquiry about ${propertyData?.project?.projectName} - Unit ${propertyData?.unitNumber}`
     const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipient)}&su=${encodeURIComponent(subject)}`
     window.open(url, "_blank")
   }
 
-  const currentMedia = mediaItems[currentMediaIndex] || {
-    type: "image",
-    url: DEFAULT_IMAGE,
-    title: "Default Property Image",
+  if (!params.preview) {
+    return (
+      <div className="container mx-auto p-8 text-center">
+        No preview ID provided. Please provide a valid document ID.
+      </div>
+    )
+  }
+
+  if (loading) return <PropertySkeleton />
+
+  if (error) return <div className="container mx-auto p-8 text-center text-red-500">Error: {error}</div>
+
+  if (!propertyData) {
+    return <div className="container mx-auto p-8 text-center">No property data found for the given preview ID.</div>
   }
 
   return (
@@ -518,117 +471,121 @@ export default function PropertyDetail({ params }: Props) {
         <div className="relative mb-8 overflow-hidden rounded-xl shadow-lg bg-background">
           <div
             ref={sliderRef}
-            className={`relative h-[60vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
+            className={`relative h-[50vh] sm:h-[60vh] md:h-[75vh] w-full transition-transform duration-300 ease-in-out ${isSliding ? "opacity-90" : ""}`}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
             {/* Media Content */}
-            <div className="absolute inset-0 flex items-center justify-center bg-black">
-              {currentMedia.type === "image" ? (
-                <Image
-                  src={currentMedia.url || "/placeholder.svg"}
-                  alt={currentMedia.title || "Property image"}
-                  fill
-                  className="object-cover"
-                  priority
-                />
-              ) : (
-                <video
-                  src={currentMedia.url}
-                  className="w-full h-full object-contain"
-                  controls={false}
-                  autoPlay
-                  muted
-                  loop
-                />
-              )}
-            </div>
-
-            {/* Media counter - moved to top right */}
-            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
-              {mediaItems.length} Media
-            </div>
-
-            {/* Action buttons */}
-            <div className="absolute top-4 right-36 flex gap-2">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
-                onClick={toggleAutoPlay}
-                title={isAutoPlaying ? "Pause slideshow" : "Play slideshow"}
-              >
-                {isAutoPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
-              >
-                <Heart className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full bg-background/80 backdrop-blur-sm hover:bg-background/90"
-              >
-                <Share2 className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Thumbnail navigation */}
-            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 bg-background/70 p-2 rounded-full">
-              {mediaItems.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setIsSliding(true)
-                    setCurrentMediaIndex(index)
-                    setTimeout(() => setIsSliding(false), 300)
-                  }}
-                  className={`w-2 h-2 rounded-full ${index === currentMediaIndex ? "bg-primary" : "bg-muted"}`}
-                  aria-label={`View media ${index + 1}`}
-                />
-              ))}
-            </div>
-
-            {/* Media navigation controls */}
-            <div className="absolute inset-0 flex items-center justify-between p-4">
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm"
-                onClick={prevMedia}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm"
-                onClick={nextMedia}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
+            <div className="absolute inset-0">
+              <div className="w-full h-full flex items-center justify-center bg-black">
+                {currentMedia?.type === "image" ? (
+                  <img
+                    src={currentMedia?.url}
+                    alt={currentMedia?.title || "Property image"}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.src = DEFAULT_IMAGE
+                    }}
+                  />
+                ) : currentMedia?.type === "youtube" ? (
+                  <div className="relative w-full h-full">
+                    <iframe
+                      ref={youtubeIframeRef}
+                      src={getYouTubeEmbedUrl(currentMedia?.url)}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                      allowFullScreen
+                      title={currentMedia?.title || "YouTube video"}
+                    />
+                  </div>
+                ) : currentMedia?.type === "video" ? (
+                  <div className="relative w-full h-full">
+                    <video
+                      ref={videoRef}
+                      src={currentMedia?.url}
+                      className="w-full h-full object-contain"
+                      onClick={togglePlayPause}
+                      onTimeUpdate={updateProgress}
+                      onLoadedMetadata={setVideoDuration}
+                      onPlay={() => setIsPlaying(true)}
+                      onPause={() => setIsPlaying(false)}
+                    />
+                    {/* Video controls */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-3 flex flex-col gap-2">
+                      <div className="w-full bg-gray-600 h-1 rounded cursor-pointer" onClick={seekVideo}>
+                        <div
+                          className="bg-red-500 h-full rounded"
+                          style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-white">
+                        <div className="flex items-center gap-3">
+                          <button className="p-1 text-white hover:bg-white/20 rounded-full" onClick={togglePlayPause}>
+                            {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                          </button>
+                          <span className="text-sm">
+                            {formatTime(currentTime)} / {formatTime(duration)}
+                          </span>
+                        </div>
+                        <button className="p-1 text-white hover:bg-white/20 rounded-full" onClick={toggleFullscreen}>
+                          <Maximize2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full">
+                   
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Media counter */}
-            <div className="absolute top-4 right-36 bg-background/80 px-3 py-1 rounded-full text-sm font-medium">
-              {currentMediaIndex + 1} / {mediaItems.length}
+            <div className="absolute top-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium z-50 pointer-events-none">
+              {mediaItems.length > 0 ? `${currentMediaIndex + 1} / ${mediaItems.length}` : "0 / 0"}
             </div>
 
-            {/* Media type indicator */}
-            <div className="absolute bottom-4 right-4 bg-background/80 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
-              {currentMedia.type === "video" ? (
-                <>
-                  <Play className="h-4 w-4" /> Video
-                </>
-              ) : (
-                <>
-                  <Image className="h-4 w-4" /> Image
-                </>
-              )}
+            {/* Media navigation controls */}
+            {mediaItems.length > 1 && (
+              <div className="absolute inset-0 flex items-center justify-between p-4 z-40 pointer-events-none">
+                <button
+                  className="rounded-full opacity-80 hover:opacity-100 bg-white backdrop-blur-sm pointer-events-auto h-10 w-10 flex items-center justify-center transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    prevMedia()
+                  }}
+                  disabled={mediaItems.length <= 1}
+                >
+                  <ChevronLeft className="h-6 w-6 text-black" />
+                </button>
+                <button
+                  className="rounded-full opacity-80 hover:opacity-100 bg-white backdrop-blur-sm pointer-events-auto h-10 w-10 flex items-center justify-center transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    nextMedia()
+                  }}
+                  disabled={mediaItems.length <= 1}
+                >
+                  <ChevronRight className="h-6 w-6 text-black" />
+                </button>
+              </div>
+            )}
+
+            {/* Auto-play toggle */}
+            <div className="absolute top-4 left-4 z-50">
+              <button
+                className="rounded-full opacity-80 hover:opacity-100 bg-background/50 backdrop-blur-sm pointer-events-auto flex items-center px-3 py-1 text-sm"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleAutoPlay()
+                }}
+              >
+                {isAutoPlaying ? <Pause className="h-4 w-4 mr-1" /> : <Play className="h-4 w-4 mr-1" />}
+                <span className="ml-1 text-xs">Auto</span>
+              </button>
             </div>
           </div>
         </div>
@@ -694,28 +651,28 @@ export default function PropertyDetail({ params }: Props) {
                         <Home className="h-5 w-5 text-primary" />
                         <div>
                           <span className="text-xs text-muted-foreground block">Project Name</span>
-                          <span className="font-medium">{propertyData.project.projectName}</span>
+                          <span className="font-medium">{propertyData.project?.projectName}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
                         <Building className="h-5 w-5 text-primary" />
                         <div>
                           <span className="text-xs text-muted-foreground block">Property Type</span>
-                          <span className="font-medium">{propertyData.project.propertyType}</span>
+                          <span className="font-medium">{propertyData.project?.propertyType}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
                         <Landmark className="h-5 w-5 text-primary" />
                         <div>
                           <span className="text-xs text-muted-foreground block">Master Development</span>
-                          <span className="font-medium">{propertyData.project.masterDevelopment.developmentName}</span>
+                          <span className="font-medium">{propertyData.project?.masterDevelopment.developmentName}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
                         <MapPin className="h-5 w-5 text-primary" />
                         <div>
                           <span className="text-xs text-muted-foreground block">Road Location</span>
-                          <span className="font-medium">{propertyData.project.masterDevelopment.roadLocation}</span>
+                          <span className="font-medium">{propertyData.project?.masterDevelopment.roadLocation}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 p-3 border rounded-lg dark:border-border">
@@ -723,7 +680,7 @@ export default function PropertyDetail({ params }: Props) {
                         <div>
                           <span className="text-xs text-muted-foreground block">Sub Development</span>
                           <span className="font-medium">
-                            {propertyData.project.subDevelopment?.subDevelopment || "N/A"}
+                            {propertyData.project?.subDevelopment?.subDevelopment || "N/A"}
                           </span>
                         </div>
                       </div>
@@ -731,7 +688,7 @@ export default function PropertyDetail({ params }: Props) {
                         <CheckCircle2 className="h-5 w-5 text-primary" />
                         <div>
                           <span className="text-xs text-muted-foreground block">Project Quality</span>
-                          <span className="font-medium">{propertyData.project.projectQuality}</span>
+                          <span className="font-medium">{propertyData.project?.projectQuality}</span>
                         </div>
                       </div>
                     </div>
@@ -751,8 +708,8 @@ export default function PropertyDetail({ params }: Props) {
                       <div className="space-y-3">
                         <h3 className="font-semibold">Amenities</h3>
                         <div className="flex flex-wrap gap-2">
-                          {propertyData.project.amenitiesCategories.length > 0 ? (
-                            propertyData.project.amenitiesCategories.map((amenity, index) => (
+                          {propertyData.project?.amenitiesCategories.length > 0 ? (
+                            propertyData.project?.amenitiesCategories.map((amenity, index) => (
                               <Badge key={index} variant="secondary" className="px-3 py-1 text-sm capitalize">
                                 {amenity}
                               </Badge>
@@ -765,8 +722,8 @@ export default function PropertyDetail({ params }: Props) {
                       <div className="space-y-3">
                         <h3 className="font-semibold">Facilities</h3>
                         <div className="flex flex-wrap gap-2">
-                          {propertyData.project.facilityCategories.length > 0 ? (
-                            propertyData.project.facilityCategories.map((facility, index) => (
+                          {propertyData.project?.facilityCategories.length > 0 ? (
+                            propertyData.project?.facilityCategories.map((facility, index) => (
                               <Badge key={index} variant="secondary" className="px-3 py-1 text-sm capitalize">
                                 {facility}
                               </Badge>
@@ -1030,8 +987,6 @@ export default function PropertyDetail({ params }: Props) {
                         <span className="font-medium">{formatDate(propertyData.listingDate)}</span>
                       </div>
                     </div>
-                
-                  
                   </div>
 
                   <Separator />
@@ -1053,7 +1008,6 @@ export default function PropertyDetail({ params }: Props) {
                           <span className="font-medium">{formatDate(propertyData.rentedTill)}</span>
                         </div>
                       </div>
-                   
                     </div>
                   </div>
                 </CardContent>
@@ -1091,7 +1045,6 @@ export default function PropertyDetail({ params }: Props) {
                         {propertyData.askingPrice ? formatCurrency(propertyData.askingPrice) : "N/A"}
                       </span>
                     </div>
-                 
                     <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-5 w-5 text-primary" />
@@ -1129,8 +1082,6 @@ export default function PropertyDetail({ params }: Props) {
                   </div>
 
                   <Separator />
-
-                 
                 </CardContent>
               </Card>
 

@@ -15,8 +15,11 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils" 
+import useSWR from 'swr'
+
 import { Progress } from "@/components/ui/progress"
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface MasterDevelopment {
   _id: string
@@ -116,7 +119,7 @@ const emptyFormValues = {
 
 export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
-  const [error, setError] = useState<any>(null)
+  const [error, setError] = useState<any>(null) 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
@@ -125,7 +128,9 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   const [isLoading, setIsLoading] = useState(true)
   const isEditMode = !!editRecord
   const [devNameSearchTerm, setDevNameSearchTerm] = useState("")
-  const [isSearchingDevName, setIsSearchingDevName] = useState(false)
+  const [isSearchingDevName, setIsSearchingDevName] = useState(false) 
+      const { data:authData } = useSWR('/api/me', fetcher);
+
 
   // Extract masterDevelopment ID if it's an object
   const getMasterDevelopmentId = () => {
@@ -517,7 +522,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
           try {
             const response = await axios.patch(
               `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/updateSingleRecord/${editRecord._id}`,
-              changedFields,
+              changedFields, 
+
             )
 
             console.log("Update response:", response)
@@ -540,7 +546,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         console.log("Sending", submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/addSingleRecord`,
-          submitData,
+          submitData, 
+            {
+            headers:{
+              "Authorization": `Bearer ${authData.token}`
+            }
+          }
         )
         toast.success("Sub-development record has been added successfully")
         console.log("res", response)

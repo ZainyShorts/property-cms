@@ -503,7 +503,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
 
         <div className="space-y-6">
           {/* Master Development */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="masterDevelopment">Master Development</Label>
             <div className="space-y-2">
               <div className="relative">
@@ -564,10 +564,10 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Sub Development */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="subDevelopment">Sub Development</Label>
             <div className="space-y-2">
               <div className="relative">
@@ -624,7 +624,7 @@ export function FilterSidebar({ open, onOpenChange }: FilterSidebarProps) {
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Project Name */}
           <div className="space-y-2">

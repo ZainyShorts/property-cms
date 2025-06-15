@@ -91,7 +91,11 @@ function App({ params }: Props) {
     setDevelopmentId(urlParams)
   }, [])
 
-  useEffect(() => {
+ 
+
+  const { data, isLoading, error, refetch } = useDevelopmentReport(developmentId)
+  console.log("data", data) 
+   useEffect(() => {
     const fetchDocuments = async () => {
       if (!developmentId) return
 
@@ -109,10 +113,8 @@ function App({ params }: Props) {
     fetchDocuments()
   }, [developmentId, params.preview])
 
-  const { data, isLoading, error, refetch } = useDevelopmentReport(developmentId)
-  console.log("data", data)
-
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0) 
+  
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
   const [isSliding, setIsSliding] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)

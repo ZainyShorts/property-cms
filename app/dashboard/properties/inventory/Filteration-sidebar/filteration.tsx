@@ -392,7 +392,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
           <SheetDescription>Adjust the filters to find your perfect property.</SheetDescription>
         </SheetHeader>
         <div className="grid gap-6 py-4">
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="developmentName">Master Development</Label>
             <div className="space-y-2">
               <div className="relative">
@@ -575,9 +575,9 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label htmlFor="roadLocation">Road Location</Label>
             <div className="space-y-2">
               <div className="relative">
@@ -638,7 +638,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           <div className="space-y-2">
             <Label htmlFor="unitNumber">Unit Number</Label>

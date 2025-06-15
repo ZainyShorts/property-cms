@@ -46,22 +46,22 @@ interface SubDevelopment {
   _id: string
   subDevelopment: string  
    plotNumber: string
-  plotHeight: string
+  plotHeight: number
   plotPermission: string[]
   plotSizeSqFt: string
-  plotBUASqFt: string
+  plotBUASqFt: number
   plotStatus: string
-  buaAreaSqFt: string
+  buaAreaSqFt: number
 }
 
 export interface PlotDetails {
   plotNumber: string
-  plotHeight: string
+  plotHeight: number
   plotPermission: string[]
   plotSizeSqFt: string
-  plotBUASqFt: string
+  plotBUASqFt: number
   plotStatus: string
-  buaAreaSqFt: string
+  buaAreaSqFt: number
 }
 
 export interface MultiStepFormData {
@@ -90,12 +90,12 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
   const [selectedSubDevelopmentId, setSelectedSubDevelopmentId] = useState<string>("")
   const [plotDetails, setPlotDetails] = useState<PlotDetails>({
     plotNumber: "",
-    plotHeight: "",
+    plotHeight: 0,
     plotPermission: [],
     plotSizeSqFt: "",
-    plotBUASqFt: "",
+    plotBUASqFt: 0,
     plotStatus: "",
-    buaAreaSqFt: "",
+    buaAreaSqFt: 0,
   })
   const [loading, setLoading] = useState<boolean>(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -149,12 +149,12 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     if (onEdit.plot) {
       setPlotDetails({
         plotNumber: onEdit.plot.plotNumber || "",
-        plotHeight: onEdit.plot.plotHeight || "",
+        plotHeight: Number(onEdit.plot.plotHeight) || 0,
         plotPermission: onEdit.plot.plotPermission || [],
         plotSizeSqFt: onEdit.plot.plotSizeSqFt || "",
-        plotBUASqFt: onEdit.plot.plotBUASqFt || "",
+        plotBUASqFt: Number(onEdit.plot.plotBUASqFt) || 0,
         plotStatus: onEdit.plot.plotStatus || "",
-        buaAreaSqFt: onEdit.plot.buaAreaSqFt || "",
+        buaAreaSqFt: Number(onEdit.plot.buaAreaSqFt) || 0,
       })
     }
   }
@@ -211,12 +211,12 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     setSelectedSubDevelopmentId("")
     setPlotDetails({
       plotNumber: "",
-      plotHeight: "",
+      plotHeight: 0,
       plotPermission: [],
       plotSizeSqFt: "",
-      plotBUASqFt: "",
+      plotBUASqFt: 0,
       plotStatus: "",
-      buaAreaSqFt: "",
+      buaAreaSqFt: 0,
     })
     setErrors({})
     setSubDevelopments([])
@@ -342,19 +342,19 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     if (!plotDetails.plotNumber.trim()) {
       newErrors.plotNumber = "Plot number is required"
     }
-    if (!plotDetails.plotHeight.trim()) {
+    if (!plotDetails.plotHeight || plotDetails.plotHeight <= 0) {
       newErrors.plotHeight = "Plot height is required"
     }
     if (!plotDetails.plotSizeSqFt.trim()) {
       newErrors.plotSizeSqFt = "Plot size is required"
     }
-    if (!plotDetails.plotBUASqFt.trim()) {
+    if (!plotDetails.plotBUASqFt || plotDetails.plotBUASqFt <= 0) {
       newErrors.plotBUASqFt = "Plot BUA is required"
     }
     if (!plotDetails.plotStatus.trim()) {
       newErrors.plotStatus = "Plot status is required"
     }
-    if (!plotDetails.buaAreaSqFt.trim()) {
+    if (!plotDetails.buaAreaSqFt || plotDetails.buaAreaSqFt <= 0) {
       newErrors.buaAreaSqFt = "BUA area is required"
     }
     if (plotDetails.plotPermission.length === 0) {
@@ -403,23 +403,23 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       setSelectedSubDevelopmentId("") 
       setPlotDetails({
         plotNumber: "",
-        plotHeight: "",
+        plotHeight: 0,
         plotPermission: [],
         plotSizeSqFt: "",
-        plotBUASqFt: "",
+        plotBUASqFt: 0,
         plotStatus: "",
-        buaAreaSqFt: "",
+        buaAreaSqFt: 0,
       })
       setStep(3)
     } else if (step === 3) {
       setPlotDetails({
         plotNumber: "",
-        plotHeight: "",
+        plotHeight: 0,
         plotPermission: [],
         plotSizeSqFt: "",
-        plotBUASqFt: "",
+        plotBUASqFt: 0,
         plotStatus: "",
-        buaAreaSqFt: "",
+        buaAreaSqFt: 0,
       })
       setErrors({})
 
@@ -600,12 +600,14 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
                     <Label htmlFor="plotHeight">Plot Height *</Label>
                     <Input
                       id="plotHeight"
-                      value={plotDetails.plotHeight}
+                      value={plotDetails.plotHeight || ""}
                       onChange={(e) => {
-                        setPlotDetails({ ...plotDetails, plotHeight: e.target.value })
+                        const value = e.target.value === "" ? 0 : Number(e.target.value)
+                        setPlotDetails({ ...plotDetails, plotHeight: value })
                         if (errors.plotHeight) setErrors((prev) => ({ ...prev, plotHeight: "" }))
                       }}
                       placeholder="Plot Height"
+                      type="number"
                     />
                     {errors.plotHeight && <p className="text-sm text-red-500">{errors.plotHeight}</p>}
                   </div>
@@ -629,9 +631,10 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
                     <Label htmlFor="plotBUASqFt">Plot BUA (Sq Ft) *</Label>
                     <Input
                       id="plotBUASqFt"
-                      value={plotDetails.plotBUASqFt}
+                      value={plotDetails.plotBUASqFt || ""}
                       onChange={(e) => {
-                        setPlotDetails({ ...plotDetails, plotBUASqFt: e.target.value })
+                        const value = e.target.value === "" ? 0 : Number(e.target.value)
+                        setPlotDetails({ ...plotDetails, plotBUASqFt: value })
                         if (errors.plotBUASqFt) setErrors((prev) => ({ ...prev, plotBUASqFt: "" }))
                       }}
                       placeholder="Plot BUA"
@@ -667,9 +670,10 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
                     <Label htmlFor="buaAreaSqFt">BUA Area (Sq Ft) *</Label>
                     <Input
                       id="buaAreaSqFt"
-                      value={plotDetails.buaAreaSqFt}
+                      value={plotDetails.buaAreaSqFt || ""}
                       onChange={(e) => {
-                        setPlotDetails({ ...plotDetails, buaAreaSqFt: e.target.value })
+                        const value = e.target.value === "" ? 0 : Number(e.target.value)
+                        setPlotDetails({ ...plotDetails, buaAreaSqFt: value })
                         if (errors.buaAreaSqFt) setErrors((prev) => ({ ...prev, buaAreaSqFt: "" }))
                       }}
                       placeholder="BUA Area"
@@ -737,3 +741,5 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
     </Dialog>
   )
 }
+
+export default MultiStepModal

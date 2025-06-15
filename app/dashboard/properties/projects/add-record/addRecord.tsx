@@ -86,7 +86,8 @@ interface RecordModalProps {
   setIsModalOpen: (open: boolean) => void
   editRecord?: any | null
   open: boolean
-  onRecordSaved?: () => void
+  onRecordSaved?: () => void 
+  setEditRecord?: () => void
   onRecordUpdated?: () => void
   onOpenChange?: (open: boolean) => void
   multiStepFormData?: {
@@ -110,11 +111,12 @@ export function AddRecordModal({
   open,
   setIsModalOpen,
   editRecord = null,
-  onRecordSaved,
+  onRecordSaved, 
+  setEditRecord,
   onRecordUpdated,
   onOpenChange,
   multiStepFormData = null,
-}: RecordModalProps) {
+}: any) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
@@ -420,7 +422,8 @@ export function AddRecordModal({
 
       // Reset plot details if any
       setPlotDetails(null)
-
+        setEditRecord(null)
+    setPictures?.(Array(6).fill(null)); // reset pictures if you use setPictures too
       // Reset edit mode
       setIsEditMode(false)
     }

@@ -162,31 +162,7 @@ export default function PropertyDetail({ params }: Props) {
   }, [darkMode])
 
   // Initialize YouTube API
-  useEffect(() => {
-    const initYouTubeAPI = () => {
-      // If the API is already loaded, don't load it again
-      if (window.YT) return
 
-      // Create script element
-      const tag = document.createElement("script")
-      tag.src = "https://www.youtube.com/iframe_api"
-
-      const firstScriptTag = document.getElementsByTagName("script")[0]
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
-    }
-
-    initYouTubeAPI()
-
-    // Define the onYouTubeIframeAPIReady function
-    window.onYouTubeIframeAPIReady = () => {
-      console.log("YouTube API ready")
-    }
-
-    return () => {
-      // Clean up
-      window.onYouTubeIframeAPIReady = undefined
-    }
-  }, [])
 
   // Modify the useEffect that fetches data to check for plot data in multiple places
   useEffect(() => {
@@ -259,28 +235,11 @@ export default function PropertyDetail({ params }: Props) {
           url: doc.documentUrl,
           title: doc.title,
         })
-      } else if (type.includes("video") || type.includes("mp4") || type.includes("mov") || type.includes("avi")) {
-        media.push({
-          type: "video",
-          url: doc.documentUrl,
-          title: doc.title,
-        })
-      }
+      } 
     })
 
     // Add the YouTube videos
-    media.push({
-      type: "youtube",
-      url: "https://www.youtube.com/watch?v=4jnzf1yj48M",
-      title: "DESIGNER RESIDENCE | CINEMATIC REAL ESTATE VIDEO IN 4K",
-    })
-
-    // Add the YouTube Short
-    media.push({
-      type: "youtube",
-      url: "https://youtube.com/shorts/cx6V1vOEKwg?si=L6PZXbfbglg2-NKe",
-      title: "Property Showcase Short",
-    })
+  
 
     // If no media found, add default image
     if (media.length === 0) {
@@ -292,7 +251,60 @@ export default function PropertyDetail({ params }: Props) {
     }
 
     setMediaItems(media)
-  }, [documents, propertyData])
+  }, [documents, propertyData]) 
+    useEffect(() => {
+      if (!documents) return
+  
+      const media: MediaItem[] = []
+  
+      // Add media from documents
+      documents.forEach((doc) => {
+        const type = doc.type.toLowerCase()
+        const url = doc.documentUrl
+  
+        if (
+          type.includes("image") ||
+          type.includes("jpg") ||
+          type.includes("jpeg") ||
+          type.includes("png") ||
+          type.includes("gif")
+        ) {
+          media.push({
+            type: "image",
+            url: doc.documentUrl,
+            title: doc.title || "Document Image",
+          })
+        } else if (type.includes("video") || type.includes("mp4") || type.includes("mov") || type.includes("avi")) {
+          // Check if it's a YouTube URL
+          if (url.includes("youtube.com") || url.includes("youtu.be")) {
+            media.push({
+              type: "youtube",
+              url: doc.documentUrl,
+              title: doc.title || "Document Video",
+            })
+          } else {
+            media.push({
+              type: "video",
+              url: doc.documentUrl,
+              title: doc.title || "Document Video",
+            })
+          }
+        }
+      })
+  
+      // If no media found, add default images
+      if (media.length === 0) {
+        media.push(
+          {
+            type: "image",
+            url: "/placeholder.svg?height=600&width=1000",
+            title: "Amenities Overview",
+          },
+        )
+      }
+  
+      setMediaItems(media)
+    }, [documents])
 
   // Auto-advance slider - pause when on video content
   useEffect(() => {
@@ -630,7 +642,8 @@ export default function PropertyDetail({ params }: Props) {
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`
-  }
+  } 
+  
 
   const toggleFullscreen = () => {
     const videoContainer = document.getElementById("video-container")
@@ -645,25 +658,9 @@ export default function PropertyDetail({ params }: Props) {
     }
   }
 
-  function getYouTubeEmbedUrl(url: string) {
-    // Extract video ID from various YouTube URL formats
-    let videoId = ""
-
-    if (url.includes("youtube.com/embed/")) {
-      const baseUrl = url.split("?")[0]
-      return `${baseUrl}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`
-    } else if (url.includes("youtube.com/watch")) {
-      const urlParams = new URLSearchParams(url.split("?")[1])
-      videoId = urlParams.get("v") || ""
-    } else if (url.includes("youtu.be/")) {
-      videoId = url.split("youtu.be/")[1].split("?")[0]
-    } else if (url.includes("youtube.com/shorts/")) {
-      videoId = url.split("youtube.com/shorts/")[1].split("?")[0]
-    }
-
-    if (!videoId) return url
-
-    return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&controls=1&rel=0&showinfo=0&modestbranding=1&fs=1&cc_load_policy=0&iv_load_policy=3&autohide=0`
+  const getYouTubeEmbedUrl = (url: string) => {
+    const videoId = url.split("v=")[1]?.split("&")[0] || url.split("/").pop()
+    return `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`
   }
 
   return (

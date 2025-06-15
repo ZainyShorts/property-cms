@@ -1416,7 +1416,8 @@ export default function MasterDevelopmentPage() {
               <AddRecordModal
                 setIsModalOpen={handleModalClose}
                 editRecord={editMainRecord}
-                onRecordSaved={fetchRecords}
+                onRecordSaved={fetchRecords} 
+                setEditRecord={setEditMainRecord}
                 // onEdit = {editMainRecord}
                 open={isModalOpen}
                 multiStepFormData={multiStepFormData}

@@ -176,7 +176,13 @@ export default function PropertiesPage() {
     rentedAt: property.rentedAt || "N/A",
     rentedTill: property.rentedTill || "N/A",
     purchasePrice: property.purchasePrice || "N/A",
-    marketPrice: property.marketPrice || "N/A",
+    marketPrice: property.marketPrice || "N/A", 
+    paymentPlan1 : property.paymentPlan1?.developerPrice?.[0]?.developerPrice || "-",  
+        paymentPlan2 : property.paymentPlan2?.developerPrice?.[0]?.developerPrice  || "-", 
+    paymentPlan3 : property.paymentPlan3?.developerPrice?.[0]?.developerPrice || "-",   
+    plan1:  property.paymentPlan1?.plan, 
+        plan2:  property.paymentPlan2?.plan,
+    plan3:  property.paymentPlan3?.plan,
     askingPrice: property.askingPrice || "N/A",
     marketRent: property.marketRent || "N/A",
     askingRent: property.askingRent || "N/A",
@@ -425,7 +431,7 @@ export default function PropertiesPage() {
 
   const handleUpdate = (property: any) => {
     // const originalProperty = properties.find((p) => p._id === property._id)
-    // console.log('prpertyto edit',property);
+    // console.log('prpertyto edit',property); 
     setPropertyToEdit(property)
     setAddPropertyModalOpen(true)
     setDataChanged(false)
