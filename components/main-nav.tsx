@@ -74,7 +74,7 @@ export function MainNav({ onOpenSidebar }: MainNavProps) {
           <Switch checked={darkMode} onCheckedChange={setDarkMode} className="mr-4" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="cursor-pointer">
+              <div className="cursor-pointer bg-black rounded-full dark:bg-white">
                 <Image
                   src="/afs-logo.avif"
                   alt="AFS Logo"
