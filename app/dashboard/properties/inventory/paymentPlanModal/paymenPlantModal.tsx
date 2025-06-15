@@ -212,66 +212,39 @@ export default function PaymentPlanModal({
   };
 
   const handleSave = () => {
-    const validPlans = paymentPlans.filter((plan) =>
-      plan.fieldSets.some((fs) => fs.date && fs.percentage > 0 && fs.amount > 0)
-    );
-
-    if (validPlans.length === 0) {
-      alert(
-        "Please add at least one valid payment plan with date, percentage, and amount."
-      );
+    if (!rowId) {
+      alert("Invalid property ID. Please try again.");
       return;
     }
 
-    // Calculate totals from all field sets across all plans
-    const allFieldSets = paymentPlans.flatMap((plan) => plan.fieldSets);
-    const totalPercentage = allFieldSets.reduce(
-      (sum, fs) => sum + (fs.percentage || 0),
-      0
-    );
-    const totalAmount = allFieldSets.reduce(
-      (sum, fs) => sum + (fs.amount || 0),
-      0
-    );
+    // Filter and format plans
+    const formattedPlans: any = {};
+    ['paymentPlan1', 'paymentPlan2', 'paymentPlan3'].forEach((planKey, idx) => {
+      const plan = paymentPlans[idx];
+      const validFields = plan.fieldSets
+        .filter(fs => fs.date && fs.percentage > 0 && fs.amount > 0)
+        .map(fs => ({
+          date: fs.date,
+          percentage: Number(fs.percentage),
+          amount: Number(fs.amount)
+        }));
+      if (validFields.length > 0) {
+        formattedPlans[planKey] = [{
+          developerPrice: validFields.reduce((sum, fs) => sum + fs.amount, 0),
+          plan: validFields
+        }];
+      }
+    });
 
-    if (totalPercentage > 100) {
-      alert("Total percentage cannot exceed 100%.");
+    // Require at least one plan to be present
+    if (Object.keys(formattedPlans).length === 0) {
+      alert("Please add at least one payment plan with valid data.");
       return;
     }
-
-    // Format data according to backend structure
-    const formattedPlans = {
-      paymentPlan1: [{
-        developerPrice: paymentPlans[0].fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0),
-        plan: paymentPlans[0].fieldSets.map(fs => ({
-          date: fs.date,
-          percentage: fs.percentage,
-          amount: fs.amount
-        }))
-      }],
-      paymentPlan2: [{
-        developerPrice: paymentPlans[1].fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0),
-        plan: paymentPlans[1].fieldSets.map(fs => ({
-          date: fs.date,
-          percentage: fs.percentage,
-          amount: fs.amount
-        }))
-      }],
-      paymentPlan3: [{
-        developerPrice: paymentPlans[2].fieldSets.reduce((sum, fs) => sum + (fs.amount || 0), 0),
-        plan: paymentPlans[2].fieldSets.map(fs => ({
-          date: fs.date,
-          percentage: fs.percentage,
-          amount: fs.amount
-        }))
-      }]
-    };
 
     const paymentPlanData = {
       rowId,
-      ...formattedPlans,
-      totalPercentage,
-      totalAmount,
+      ...formattedPlans
     };
 
     onPaymentPlanSave(paymentPlanData);

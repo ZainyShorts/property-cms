@@ -218,21 +218,61 @@ function PropertyDataTable({
   const handlePaymentPlanSave = async (paymentPlanData: any) => {
     try {
       console.log("Payment plan data to save:", paymentPlanData);
+      
+      // Validate the data before sending
+      if (!paymentPlanData.rowId) {
+        toast.error("Invalid property ID");
+        return;
+      }
+
+      // Log the API endpoint and data being sent
+      const apiUrl = `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${paymentPlanData.rowId}`;
+      console.log("API URL:", apiUrl);
+      console.log("Request data:", {
+        paymentPlan1: paymentPlanData.paymentPlan1,
+        paymentPlan2: paymentPlanData.paymentPlan2,
+        paymentPlan3: paymentPlanData.paymentPlan3,
+      });
+
       const response = await axios.patch(
-        `${process.env.NEXT_PUBLIC_CMS_SERVER}/property/${paymentPlanData.rowId}`,
+        apiUrl,
         {
           paymentPlan1: paymentPlanData.paymentPlan1,
           paymentPlan2: paymentPlanData.paymentPlan2,
           paymentPlan3: paymentPlanData.paymentPlan3,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         }
       );
-      console.log("Payment plan save response:", response);
-      toast.success("Payment plan saved successfully");
-      setIsPaymentPlanModalOpen(false);
-      setSelectedRowForPayment(null);
-    } catch (error) {
+
+      if (response.status === 200 || response.status === 201) {
+        console.log("Payment plan save response:", response);
+        toast.success("Payment plan saved successfully");
+        setIsPaymentPlanModalOpen(false);
+        setSelectedRowForPayment(null);
+      } else {
+        throw new Error(`Failed to save payment plan: ${response.status}`);
+      }
+    } catch (error: any) {
       console.error("Error saving payment plan:", error);
-      toast.error("Failed to save payment plan. Please try again.");
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      let errorMessage = "Failed to save payment plan. Please try again.";
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
