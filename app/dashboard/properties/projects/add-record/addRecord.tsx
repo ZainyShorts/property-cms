@@ -47,7 +47,7 @@ const plotStatusOptions = ["Vacant", "Under Construction", "Ready", "Pending"]
 
 interface FormValues {
   // Project Details
-  masterDevelopment: string
+  masterDevelopment?: string
   subDevelopment?: string
   propertyType: string
   projectName: string
@@ -132,23 +132,22 @@ export function AddRecordModal({
     setValue,
     reset,
     formState: { errors },
-  } = useForm<FormValues>({
+  } = useForm<any>({
     defaultValues: {
       masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
       subDevelopment: multiStepFormData?.subDevelopmentId || "",
-      propertyType: "Apartment",
+      propertyType: "",
       projectName: "",
-      projectQuality: "B",
-      constructionStatus: 20,
+      projectQuality: "",
+      constructionStatus: null,
       launchDate: undefined,
       completionDate: undefined,
       salesStatus: SalesStatus.PRIMARY,
-      downPayment: 10,
+      downPayment: null,
       height: "",
       commission: "",
       duringConstruction: "",
-      percentOfConstruction: 50,
-      installmentDate: undefined,
+      percentOfConstruction: null,
       uponCompletion: undefined,
       postHandOver: undefined,
       facilityCategories: [],
@@ -230,7 +229,34 @@ export function AddRecordModal({
       console.error("Error uploading file:", error)
       throw new Error("Failed to upload file")
     }
-  }
+  } 
+  useEffect(() => {
+  return () => { 
+    console.log('call');
+    reset({
+      masterDevelopment: "",
+      subDevelopment: "",
+      propertyType: "",
+      projectName: "",
+      projectQuality: "",
+      constructionStatus: null,
+      launchDate: undefined,
+      completionDate: undefined,
+      salesStatus: SalesStatus.PRIMARY,
+      downPayment: null,
+      height: "",
+      commission: "",
+      duringConstruction: "",
+      percentOfConstruction: null,
+      uponCompletion: undefined,
+      postHandOver: undefined,
+      facilityCategories: [],
+      amenitiesCategories: [],
+      pictures: [],
+    });
+  };
+}, [])
+
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -308,9 +334,7 @@ export function AddRecordModal({
       if (editRecord.completionDate) {
         setValue("completionDate", new Date(editRecord.completionDate))
       }
-      if (editRecord.installmentDate) {
-        setValue("installmentDate", new Date(editRecord.installmentDate))
-      }
+     
       if (editRecord.uponCompletion) {
         setValue("uponCompletion", new Date(editRecord.uponCompletion))
       }
@@ -360,7 +384,8 @@ export function AddRecordModal({
 
   // Reset form when modal closes
   useEffect(() => {
-    if (!open) {
+    if (!open) { 
+      console.log('hello');
       // Reset form fields
       reset({
         masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
@@ -377,7 +402,6 @@ export function AddRecordModal({
         commission: "",
         duringConstruction: "",
         percentOfConstruction: 0,
-        installmentDate: undefined,
         uponCompletion: undefined,
         postHandOver: undefined,
         facilityCategories: [],
@@ -462,7 +486,6 @@ export function AddRecordModal({
         commission: convertEmptyToZero(data.commission),
         duringConstruction: convertEmptyToZero(data.duringConstruction),
         percentOfConstruction: data.percentOfConstruction,
-        installmentDate: formatDateForAPI(data.installmentDate),
         uponCompletion: formatDateForAPI(data.uponCompletion),
         postHandOver: formatDateForAPI(data.postHandOver),
         facilityCategories: data.facilityCategories,
@@ -537,7 +560,6 @@ export function AddRecordModal({
         commission: "",
         duringConstruction: "",
         percentOfConstruction: 50,
-        installmentDate: undefined,
         uponCompletion: undefined,
         postHandOver: undefined,
         facilityCategories: [],
@@ -1063,39 +1085,7 @@ export function AddRecordModal({
                 )}
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="installmentDate" className="text-sm font-medium">
-                  Installment Date *
-                </label>
-                <Controller
-                  name="installmentDate"
-                  control={control}
-                  rules={{ required: "Installment date is required" }}
-                  render={({ field }) => (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant={"outline"}
-                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
-                        >
-                          {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date("1900-01-01")}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                />
-                {errors.installmentDate && <p className="text-sm text-destructive">{errors.installmentDate.message}</p>}
-              </div>
+            
 
               <div className="space-y-2">
                 <label htmlFor="uponCompletion" className="text-sm font-medium">

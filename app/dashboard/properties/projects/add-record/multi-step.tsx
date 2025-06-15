@@ -321,7 +321,8 @@ export function MultiStepModal({ open, onEdit, onOpenChange, onComplete, onCompl
       if (step === 2 && subDevelopmentName.trim()) {
         // If user selected a SubDevelopment, add it
         formData.subDevelopmentName = subDevelopmentName
-        formData.subDevelopmentId = selectedSubDevelopmentId
+        formData.subDevelopmentId = selectedSubDevelopmentId 
+        formData.plot = plotDetails
         // Don't include plotDetails
       } else if (step === 3 && stepNo !== 3) {
         // If user added PlotDetails, add them

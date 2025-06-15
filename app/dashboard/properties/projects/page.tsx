@@ -92,7 +92,6 @@ const tableHeaders = [
   { key: "salesStatus", label: "SALES STATUS" },
   { key: "downPayment", label: "DOWNPAYMENT" },
   { key: "percentOfConstruction", label: "PERCENT OF CONSTRUCTION" },
-  { key: "installmentDate", label: "INSTALLMENT DATA" },
   { key: "uponCompletion", label: "UPON COMPLETION" },
   { key: "postHandOver", label: "POST HANDOVER" }, 
     { key: "height", label: "HEIGHT" },
@@ -281,7 +280,6 @@ export default function MasterDevelopmentPage() {
         launchDate: filters.launchDate,
         completionDate: filters.completionDate,
         uponCompletion: filters.uponCompletion,
-        installmentDate: filters.installmentDate,
         plotNumber: filters.plotNumber,
         plotPermission: filters.plotPermission, 
         commission: filters.commission, 
@@ -333,7 +331,6 @@ export default function MasterDevelopmentPage() {
       if (requestData.commission) params.append("commission", requestData.commission) 
               if (requestData.duringConstruction) params.append("duringConstruction", requestData.duringConstruction)
       if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
-      if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
       if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
       if (filters.plotPermission?.length) {
         filters.plotPermission.forEach((permission: string) => {
@@ -480,7 +477,6 @@ export default function MasterDevelopmentPage() {
         completionDate: filters.completionDate,
         uponCompletion: filters.uponCompletion,
         plotStatus: filters.plotStatus,
-        installmentDate: filters.installmentDate, 
         commission: filters.commission, 
         height : filters.height, 
         duringConstruction : filters.duringConstruction,
@@ -535,7 +531,6 @@ export default function MasterDevelopmentPage() {
 
 
       if (requestData.projectQuality) params.append("projectQuality", requestData.projectQuality)
-      if (requestData.installmentDate) params.append("installmentDate", requestData.installmentDate)
       if (requestData.postHandOver) params.append("postHandOver", requestData.postHandOver)
       if (filters.plotPermission?.length) {
         filters.plotPermission.forEach((permission: string) => {
@@ -777,11 +772,11 @@ export default function MasterDevelopmentPage() {
       case "index":
         return <div className="flex justify-center">{startingIndex + index + 1}</div>
       case "masterDevelopment":
-        return record.masterDevelopment.developmentName
+        return record.masterDevelopment?.developmentName ?? "N/A"
       case "subDevelopment":
         return record.subDevelopment?.subDevelopment ?? "N/A"
       case "roadLocation":
-        return record.masterDevelopment.roadLocation
+        return record.masterDevelopment?.roadLocation ?? "N/A"
       case "percentOfConstruction":
         return record[key].toLocaleString() + "%"
       case "constructionStatus":
@@ -796,7 +791,6 @@ export default function MasterDevelopmentPage() {
       case "height" : 
       case "commission": 
       case "duringConstruction":
-      case "installmentDate":
       case "postHandOver":
     return record[key] ? record[key].toLocaleString() : "N/A";
       case "plot":
@@ -889,102 +883,102 @@ export default function MasterDevelopmentPage() {
         }
 
         // If plot object doesn't exist, check if subDevelopment exists and has plot details
-        if (
-          record.subDevelopment &&
-          (record.subDevelopment.plotBUASqFt ||
-            record.subDevelopment.plotNumber ||
-            record.subDevelopment.plotSizeSqFt ||
-            record.subDevelopment.plotStatus ||
-            record.subDevelopment.plotPermission)
-        ) {
-          // Use subDevelopment plot details
-          return (
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <div className="flex items-center justify-center gap-2 cursor-pointer">
-                  <Badge
-                    variant="outline"
-                    className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
-                  >
-                    Plot Details
-                  </Badge>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </HoverCardTrigger>
-              <HoverCardContent className="w-[400px] p-0 shadow-lg">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-500 to-blue-500 p-4 rounded-t-lg">
-                  <div className="flex items-center gap-2 text-white">
-                    <MapPin className="h-5 w-5" />
-                    <h3 className="font-semibold">Plot #{record.subDevelopment.plotNumber}</h3>
-                  </div>
-                  <div className="mt-2">
-                    <Badge className="bg-white/20 text-white border-none">{record.subDevelopment.plotStatus}</Badge>
-                  </div>
-                </div>
+        // if (
+        //   record.subDevelopment &&
+        //   (record.subDevelopment.plotBUASqFt ||
+        //     record.subDevelopment.plotNumber ||
+        //     record.subDevelopment.plotSizeSqFt ||
+        //     record.subDevelopment.plotStatus ||
+        //     record.subDevelopment.plotPermission)
+        // ) {
+        //   // Use subDevelopment plot details
+        //   return (
+        //     <HoverCard>
+        //       <HoverCardTrigger asChild>
+        //         <div className="flex items-center justify-center gap-2 cursor-pointer">
+        //           <Badge
+        //             variant="outline"
+        //             className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
+        //           >
+        //             Plot Details
+        //           </Badge>
+        //           <Info className="h-4 w-4 text-muted-foreground" />
+        //         </div>
+        //       </HoverCardTrigger>
+        //       <HoverCardContent className="w-[400px] p-0 shadow-lg">
+        //         {/* Header */}
+        //         <div className="bg-gradient-to-r from-indigo-500 to-blue-500 p-4 rounded-t-lg">
+        //           <div className="flex items-center gap-2 text-white">
+        //             <MapPin className="h-5 w-5" />
+        //             <h3 className="font-semibold">Plot #{record.subDevelopment.plotNumber}</h3>
+        //           </div>
+        //           <div className="mt-2">
+        //             <Badge className="bg-white/20 text-white border-none">{record.subDevelopment.plotStatus}</Badge>
+        //           </div>
+        //         </div>
 
-                <div className="p-4 space-y-6">
-                  {/* Plot Metrics */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Height</p>
-                          <p className="font-medium">{record.subDevelopment.plotHeight}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Ruler className="h-4 w-4 text-indigo-500 mt-1" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Plot Size</p>
-                          <p className="font-medium">{record.subDevelopment.plotSizeSqFt} sq.ft</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Layout className="h-4 w-4 text-indigo-500 mt-1" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">BUA</p>
-                          <p className="font-medium">{record.subDevelopment.plotBUASqFt} sq.ft</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Built Area</p>
-                          <p className="font-medium">{record.subDevelopment.buaAreaSqFt} sq.ft</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+        //         <div className="p-4 space-y-6">
+        //           {/* Plot Metrics */}
+        //           <div className="grid grid-cols-2 gap-4">
+        //             <div className="space-y-4">
+        //               <div className="flex items-start gap-3">
+        //                 <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
+        //                 <div>
+        //                   <p className="text-xs text-muted-foreground">Height</p>
+        //                   <p className="font-medium">{record.subDevelopment.plotHeight}</p>
+        //                 </div>
+        //               </div>
+        //               <div className="flex items-start gap-3">
+        //                 <Ruler className="h-4 w-4 text-indigo-500 mt-1" />
+        //                 <div>
+        //                   <p className="text-xs text-muted-foreground">Plot Size</p>
+        //                   <p className="font-medium">{record.subDevelopment.plotSizeSqFt} sq.ft</p>
+        //                 </div>
+        //               </div>
+        //             </div>
+        //             <div className="space-y-4">
+        //               <div className="flex items-start gap-3">
+        //                 <Layout className="h-4 w-4 text-indigo-500 mt-1" />
+        //                 <div>
+        //                   <p className="text-xs text-muted-foreground">BUA</p>
+        //                   <p className="font-medium">{record.subDevelopment.plotBUASqFt} sq.ft</p>
+        //                 </div>
+        //               </div>
+        //               <div className="flex items-start gap-3">
+        //                 <Building2 className="h-4 w-4 text-indigo-500 mt-1" />
+        //                 <div>
+        //                   <p className="text-xs text-muted-foreground">Built Area</p>
+        //                   <p className="font-medium">{record.subDevelopment.buaAreaSqFt} sq.ft</p>
+        //                 </div>
+        //               </div>
+        //             </div>
+        //           </div>
 
-                  {/* Plot Permissions */}
-                  {record.subDevelopment.plotPermission && (
-                    <div>
-                      <h4 className="font-medium text-sm mb-3 text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
-                        Permitted Usage
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {record.subDevelopment.plotPermission.map((permission, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="bg-indigo-50/50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-800"
-                          >
-                            {permission}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </HoverCardContent>
-            </HoverCard>
-          )
-        }
+        //           {/* Plot Permissions */}
+        //           {record.subDevelopment.plotPermission && (
+        //             <div>
+        //               <h4 className="font-medium text-sm mb-3 text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+        //                 <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
+        //                 Permitted Usage
+        //               </h4>
+        //               <div className="flex flex-wrap gap-2">
+        //                 {record.subDevelopment.plotPermission.map((permission, idx) => (
+        //                   <Badge
+        //                     key={idx}
+        //                     variant="outline"
+        //                     className="bg-indigo-50/50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-200 dark:border-indigo-800"
+        //                   >
+        //                     {permission}
+        //                   </Badge>
+        //                 ))}
+        //               </div>
+        //             </div>
+        //           )}
+        //         </div>
+        //       </HoverCardContent>
+        //     </HoverCard>
+        //   )
+        // }
 
         // If neither record.plot nor record.subDevelopment has plot details, show N/A
         return (
