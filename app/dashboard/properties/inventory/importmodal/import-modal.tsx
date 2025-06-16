@@ -20,6 +20,7 @@ interface ImportResponse {
   insertedEntries: number
   skippedDuplicateEntires: number
   totalEntries: number
+  message?: string
 }
 
 export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecordsModalProps) {
@@ -74,15 +75,33 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
       setUploadProgress(100)
       const data = (await response.json()) as ImportResponse
       console.log("response data:", data)
-       toast.success(data.message)
+      
       if (response.ok && data.success) {
         setUploadStatus("success")
         fetchRecords()
-        // Show toast with import results using react-toastify
-       
+        
+        // Show detailed toast message
+        if (data.skippedDuplicateEntires > 0) {
+          toast.info(`Import completed: ${data.insertedEntries} new entries added, ${data.skippedDuplicateEntires} duplicate entries skipped`, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          })
+        } else {
+          toast.success(`Successfully imported ${data.insertedEntries} new entries`, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          })
+        }
 
         // Close the modal after a short delay 
-        
         setTimeout(() => {
           handleClose()
         }, 1500) 

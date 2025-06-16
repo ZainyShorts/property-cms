@@ -1,50 +1,72 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Upload } from "lucide-react"
-import { useState } from "react"
-import { ImportRecordsModal } from "@/app/dashboard/properties/inventory/importmodal/import-modal"
-import { ChevronDown, ChevronRight, Filter, CalendarIcon, Trash2 } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { format } from "date-fns"
-import Link from "next/link"
+import type React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Upload } from "lucide-react";
+import { useState } from "react";
+import { ImportRecordsModal } from "@/app/dashboard/properties/inventory/importmodal/import-modal";
+import {
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  CalendarIcon,
+  Trash2,
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { format } from "date-fns";
+import Link from "next/link";
 
 interface FilterOption {
-  key: string
-  label: string
-  options: string[]
+  key: string;
+  label: string;
+  options: string[];
 }
 
 interface BreadcrumbItem {
-  label: string
-  href: string
+  label: string;
+  href: string;
 }
 
 interface FilterBarProps {
-  filters: FilterOption[]
-  breadcrumbs: BreadcrumbItem[]
-  onAddButton?: () => void
-  onFilter: () => void
-  onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void
-  setPage: () => void
-  onFilterChange?: (key: string, value: string) => void
-  showDatePickers?: boolean
-  onApplyFilters: () => void
-  startDate?: Date | null
-  endDate?: Date | null
+  filters: FilterOption[];
+  breadcrumbs: BreadcrumbItem[];
+  onAddButton?: () => void;
+  onFilter: () => void;
+  onSearch?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setPage: () => void;
+  onFilterChange?: (key: string, value: string) => void;
+  showDatePickers?: boolean;
+  onApplyFilters: () => void;
+  startDate?: Date | null;
+  endDate?: Date | null;
 
-  onStartDateChange?: (date: Date | null) => void
-  onEndDateChange?: (date: Date | null) => void
-  onClear?: () => void
-  selectedOptions: Record<string, string>
-  setSelectedOptions: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  onExport?: () => void
-  limit?: number // Add limit prop
-  setLimit?: (limit: number) => void // Add setLimit prop
+  onStartDateChange?: (date: Date | null) => void;
+  onEndDateChange?: (date: Date | null) => void;
+  onClear?: () => void;
+  selectedOptions: Record<string, string>;
+  setSelectedOptions: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >;
+  onExport?: () => void;
+  limit?: number; // Add limit prop
+  setLimit?: (limit: number) => void; // Add setLimit prop
 }
 
 export function FilterBar({
@@ -75,28 +97,33 @@ export function FilterBar({
   limit = 10, // Default limit
   setLimit, // setLimit function
 }: any) {
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const handleOptionSelect = (key: string, value: string) => {
-    setSelectedOptions((prev) => ({ ...prev, [key]: value }))
+    setSelectedOptions((prev) => ({ ...prev, [key]: value }));
     if (onFilterChange) {
-      onFilterChange(key, value)
+      onFilterChange(key, value);
     }
-  }
+  };
 
   // Add limit options
-  const limitOptions = ["10", "20", "30", "50"]
+  const limitOptions = ["10", "20", "30", "50"];
 
   return (
     <div className="space-y-4">
       <div className="border-b border-border bg-background">
         <div className="container mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <nav className="flex overflow-x-auto max-w-full pb-2 sm:pb-0" aria-label="Breadcrumb">
+            <nav
+              className="flex overflow-x-auto max-w-full pb-2 sm:pb-0"
+              aria-label="Breadcrumb"
+            >
               <ol className="inline-flex items-center space-x-1 whitespace-nowrap">
                 {breadcrumbs.map((item, index) => (
                   <li key={index} className="inline-flex items-center">
-                    {index > 0 && <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />}
+                    {index > 0 && (
+                      <ChevronRight className="mx-2 h-4 w-4 text-muted-foreground" />
+                    )}
                     <Link
                       href={item.href}
                       className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -108,41 +135,43 @@ export function FilterBar({
               </ol>
             </nav>
             <div className="flex items-center gap-2 sm:gap-4 self-end sm:self-auto">
-              {/* <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+              {/* Add Limit Dropdown here */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="gap-2 text-foreground hover:text-foreground hover:bg-muted"
+                  >
+                    {`Show ${limit}`}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-white text-foreground dark:bg-zinc-900">
+                  {limitOptions.map((option, optionIndex) => (
+                    <DropdownMenuItem
+                      key={optionIndex}
+                      onSelect={() => {
+                        const newLimit = Number.parseInt(option);
+                        if (setLimit) {
+                          setLimit(newLimit);
+                        }
+                        handleOptionSelect("limit", option);
+                      }}
+                    >
+                      {`Show ${option}`}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setIsImportModalOpen(true)}
+              >
                 <Upload size={18} />
                 Import Records
-              </Button> */}
-
-              {/* Add Limit Dropdown here */}
-             <DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button
-      variant="outline"
-      className="gap-2 text-foreground hover:text-foreground hover:bg-muted"
-    >
-      {`Show ${limit}`}
-      <ChevronDown className="h-4 w-4" />
-    </Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent className="bg-white text-foreground dark:bg-zinc-900">
-    {limitOptions.map((option, optionIndex) => (
-      <DropdownMenuItem
-        key={optionIndex}
-        onSelect={() => {
-          const newLimit = Number.parseInt(option)
-          if (setLimit) {
-            setLimit(newLimit)
-          }
-          handleOptionSelect("limit", option)
-        }}
-      >
-        {`Show ${option}`}
-      </DropdownMenuItem>
-    ))}
-  </DropdownMenuContent>
-</DropdownMenu>
-
-
+              </Button>
               {onAddButton && (
                 <Button
                   variant="default"
@@ -162,14 +191,20 @@ export function FilterBar({
           {filters.map((filter, index) => (
             <DropdownMenu key={index}>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted">
+                <Button
+                  variant="outline"
+                  className="gap-2 text-muted-foreground hover:text-foreground hover:bg-muted"
+                >
                   {selectedOptions[filter.key] || filter.label}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 {filter.options.map((option, optionIndex) => (
-                  <DropdownMenuItem key={optionIndex} onSelect={() => handleOptionSelect(filter.key, option)}>
+                  <DropdownMenuItem
+                    key={optionIndex}
+                    onSelect={() => handleOptionSelect(filter.key, option)}
+                  >
                     {option}
                   </DropdownMenuItem>
                 ))}
@@ -216,11 +251,11 @@ export function FilterBar({
                     onSelect={(date) => {
                       if (date) {
                         // Set time to 23:59:59.999 for end date
-                        const endOfDay = new Date(date)
-                        endOfDay.setHours(23, 59, 59, 999)
-                        onEndDateChange?.(endOfDay)
+                        const endOfDay = new Date(date);
+                        endOfDay.setHours(23, 59, 59, 999);
+                        onEndDateChange?.(endOfDay);
                       } else {
-                        onEndDateChange?.(null)
+                        onEndDateChange?.(null);
                       }
                     }}
                     initialFocus
@@ -235,7 +270,12 @@ export function FilterBar({
               <div className="flex items-center gap-2 sm:gap-4">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={onFilter} variant="outline" size="icon" className="hover:bg-muted">
+                    <Button
+                      onClick={onFilter}
+                      variant="outline"
+                      size="icon"
+                      className="hover:bg-muted"
+                    >
                       <Filter className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -245,7 +285,12 @@ export function FilterBar({
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button onClick={onClear} variant="outline" size="icon" className="hover:bg-muted">
+                    <Button
+                      onClick={onClear}
+                      variant="outline"
+                      size="icon"
+                      className="hover:bg-muted"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </TooltipTrigger>
@@ -271,5 +316,5 @@ export function FilterBar({
         </div>
       </div>
     </div>
-  )
+  );
 }
