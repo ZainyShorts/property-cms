@@ -181,6 +181,7 @@ function PropertyDataTable({
     { key: "attachDocument", label: "DOCUMENT" },
     { key: "view", label: "VIEW" },
     { key: "edit", label: "EDIT" },
+    { key: "delete", label: "DELETE" },
   ]
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
@@ -510,11 +511,11 @@ function PropertyDataTable({
         case "paymentPlan1":
         case "paymentPlan2":
         case "paymentPlan3":
-
         case "premiumAndLoss":
           return record[key] ? record[key].toLocaleString() : "N/A"
 
         case "addEditPlan1":
+          console.log('recor -- d', record)
           const hasPaymentPlan1 = record.plan1 && Array.isArray(record.plan1) && record.plan1.length > 0
           const paymentPlan1Amount = record.paymentPlan1
           const canAddPlan1 = paymentPlan1Amount && paymentPlan1Amount !== "-" && paymentPlan1Amount > 0
