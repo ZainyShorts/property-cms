@@ -428,10 +428,10 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       if (image.isExisting && image.awsUrl) {
         // Extract the key from the AWS URL (the filename is the last part of the URL path)
         const key = image.awsUrl.split("/").pop()
-        if (key) {
-          await deleteFromAWS(key)
-          toast.success("Image deleted from cloud storage")
-        }
+        // if (key) {
+        //   await deleteFromAWS(key)
+        //   toast.success("Image deleted from cloud storage")
+        // }
       }
 
       if (image.preview && image.preview.startsWith("blob:")) {

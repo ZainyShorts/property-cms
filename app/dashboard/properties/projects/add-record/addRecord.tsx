@@ -387,7 +387,6 @@ export function AddRecordModal({
   // Reset form when modal closes
   useEffect(() => {
     if (!open) { 
-      console.log('hello');
       // Reset form fields
       reset({
         masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
@@ -524,7 +523,7 @@ export function AddRecordModal({
       }
 
       console.log(`Submitting data to API for ${isEditMode ? "update" : "create"}:`, submitData)
-
+      
       let response
 
       if (isEditMode) {
@@ -532,9 +531,7 @@ export function AddRecordModal({
         response = await axios.patch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${editRecord._id}`, submitData)
         toast.success("Project record has been updated successfully")
 
-        if (onRecordUpdated) {
-          onRecordUpdated()
-        }
+          onRecordSaved()
       } else {
         // Create new record
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData)

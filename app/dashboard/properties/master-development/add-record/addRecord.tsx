@@ -333,10 +333,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       if (image.isExisting && image.awsUrl) {
         // Extract the key from the AWS URL (the filename is the last part of the URL path)
         const key = image.awsUrl.split("/").pop()
-        if (key) {
-          await deleteFromAWS(key)
-          toast.success("Image deleted from cloud storage")
-        }
+       
       }
 
       if (image.preview && image.preview.startsWith("blob:")) {
@@ -417,15 +414,16 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         console.log(submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
-          submitData,
+          submitData, 
           {
             headers:{
               "Authorization": `Bearer ${authData.token}`
             }
           }
         )
-        console.log(response)
-        toast.success("Master development record has been added successfully")
+        console.log(response) 
+        toast.success("Master development record has been added successfully") 
+        
       }
 
       // Reset form after successful submission

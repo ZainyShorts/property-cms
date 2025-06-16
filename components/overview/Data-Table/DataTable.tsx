@@ -2,7 +2,7 @@
 
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { DropdownMenuLabel } from "@/components/ui/dropdown-menu"
-import { useState, useEffect, memo, useCallback } from "react"
+import { useState, useEffect, memo, useCallback, use } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
@@ -187,7 +187,10 @@ function PropertyDataTable({
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
   )
-  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false) 
+  useEffect(()=>{
+  console.log('data',data)
+  },[data])
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
 
   const handlePaymentPlan = async (recordId: string, planType: string, record: any) => {
@@ -530,7 +533,7 @@ function PropertyDataTable({
                 onClick={() => handlePaymentPlan(record._id, "paymentPlan1", record)}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                {hasPaymentPlan1 ? "Edit Plan 1" : "Add Plan 1"}
+                {hasPaymentPlan1 ? "Add Plan 1" : "Add Plan 1"}
               </Button>
             </div>
           )
@@ -550,7 +553,7 @@ function PropertyDataTable({
                 onClick={() => handlePaymentPlan(record._id, "paymentPlan2", record)}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                {hasPaymentPlan2 ? "Edit Plan 2" : "Add Plan 2"}
+                {hasPaymentPlan2 ? "Add Plan 2" : "Add Plan 2"}
               </Button>
             </div>
           )
@@ -570,7 +573,7 @@ function PropertyDataTable({
                 onClick={() => handlePaymentPlan(record._id, "paymentPlan3", record)}
               >
                 <Plus className="h-4 w-4 mr-1" />
-                {hasPaymentPlan3 ? "Edit Plan 3" : "Add Plan 3"}
+                {hasPaymentPlan3 ? "Add Plan 3" : "Add Plan 3"}
               </Button>
             </div>
           )
@@ -1170,7 +1173,7 @@ function PropertyDataTable({
                   size="sm"
                   onClick={() => goToPage(pageNumber)}
                   className={`min-w-7 sm:min-w-8 ${
-                    page === pageNumber ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                    page === pageNumber ? "bg-white text-black  hover:bg-gray-200 hover:text-black" : ""
                   }`}
                 >
                   {pageNumber}

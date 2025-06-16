@@ -172,14 +172,15 @@ export default function PropertiesPage() {
     noOfBedRooms: property.noOfBedRooms || "N/A",
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
     unitPurpose: property.unitPurpose || "N/A",
-    listingDate: property.listingDate || "N/A",
+    listingDate: property.listingDate || "N/A", 
+pictures: [...(property.pictures || [])],
     rentedAt: property.rentedAt || "N/A",
     rentedTill: property.rentedTill || "N/A",
     purchasePrice: property.purchasePrice || "N/A",
     marketPrice: property.marketPrice || "N/A", 
-    paymentPlan1 : property.paymentPlan1?.developerPrice?.[0]?.developerPrice || "-",  
-        paymentPlan2 : property.paymentPlan2?.developerPrice?.[0]?.developerPrice  || "-", 
-    paymentPlan3 : property.paymentPlan3?.developerPrice?.[0]?.developerPrice || "-",   
+    paymentPlan1 : property.paymentPlan1?.developerPrice || "-",  
+        paymentPlan2 : property.paymentPlan2?.developerPrice  || "-", 
+    paymentPlan3 : property.paymentPlan3?.developerPrice || "-",   
     plan1:  property.paymentPlan1?.plan, 
         plan2:  property.paymentPlan2?.plan,
     plan3:  property.paymentPlan3?.plan,
@@ -688,7 +689,7 @@ export default function PropertiesPage() {
         {transformedData.length > 0 ? (
           <PropertyDataTable
             page={currentPage}
-            setPage={setCurrentPage}
+            setPage={setCurrentPage} 
             toggleRow={toggleRow}
             totalPages={totalPages}
             toggleColumns={toggleColumns}
