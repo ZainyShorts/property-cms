@@ -96,6 +96,8 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
 
   const { data, error } = useSWR<any>("/api/me", fetcher)
 
+  const [originalData, setOriginalData] = useState<any>(null);
+
   useEffect(() => {
     if (data) console.log("data →", data)
     if (error) console.error("error →", error)
@@ -166,6 +168,9 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     if (propertyToEdit && !initialLoadComplete) {
       console.log("Initializing edit mode with data:", propertyToEdit)
       setIsEditing(true)
+
+      // Store original data for comparison
+      setOriginalData(propertyToEdit);
 
       // Initialize form data from propertyToEdit with N/A handling
       setDataForm({
@@ -332,7 +337,7 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     } else if (propertyToEdit === null) {
       resetForm()
     }
-  }, [propertyToEdit])
+  }, [propertyToEdit, initialLoadComplete])
 
   // Update master and sub development when project changes
   useEffect(() => {
@@ -465,79 +470,172 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
     return Object.keys(newErrors).length === 0
   }
 
+  const getChangedFields = () => {
+    if (!originalData) return {};
+
+    const changes: any = {};
+    let hasChanges = false;
+    
+    // Compare each field and only include changed values
+    Object.keys(dataForm).forEach(key => {
+      const newValue = dataForm[key];
+      const oldValue = originalData[key];
+      
+      // Handle special cases for arrays and numbers
+      if (Array.isArray(newValue)) {
+        if (JSON.stringify(newValue) !== JSON.stringify(oldValue)) {
+          changes[key] = newValue;
+          hasChanges = true;
+        }
+      } else if (typeof newValue === 'number') {
+        // Convert both to numbers for comparison
+        const newNum = Number(newValue);
+        const oldNum = Number(oldValue);
+        if (newNum !== oldNum) {
+          changes[key] = newNum;
+          hasChanges = true;
+        }
+      } else if (newValue !== oldValue) {
+        changes[key] = newValue;
+        hasChanges = true;
+      }
+    });
+
+    // Add payment plans if they changed
+    const paymentPlan1Changed = JSON.stringify(paymentPlan1) !== JSON.stringify(originalData.paymentPlan1);
+    const paymentPlan2Changed = JSON.stringify(paymentPlan2) !== JSON.stringify(originalData.paymentPlan2);
+    const paymentPlan3Changed = JSON.stringify(paymentPlan3) !== JSON.stringify(originalData.paymentPlan3);
+
+    if (paymentPlan1Changed) {
+      changes.paymentPlan1 = paymentPlan1;
+      hasChanges = true;
+    }
+    if (paymentPlan2Changed) {
+      changes.paymentPlan2 = paymentPlan2;
+      hasChanges = true;
+    }
+    if (paymentPlan3Changed) {
+      changes.paymentPlan3 = paymentPlan3;
+      hasChanges = true;
+    }
+
+    // Add new images if any were added
+    if (selectedImages.length > 0) {
+      changes.pictures = selectedImages;
+      hasChanges = true;
+    }
+
+    // If no changes were detected, return empty object
+    if (!hasChanges) {
+      console.log("No changes detected in the form");
+      return {};
+    }
+
+    console.log("Detected changes:", changes);
+    return changes;
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) {
-      return
+      return;
     }
-    setLoading(true)
-
-    const finalData = {
-      unitNumber: dataForm.unitNumber || "",
-      unitHeight: dataForm.unitHeight || "",
-      unitInternalDesign: dataForm.unitInternalDesign || "",
-      unitExternalDesign: dataForm.unitExternalDesign || "",
-      plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
-      BuaSqFt: dataForm.BuaSqFt ? Number(dataForm.BuaSqFt) : 0,
-      noOfBedRooms: dataForm.unitType === "BedRoom" && dataForm.noOfBedRooms ? Number(dataForm.noOfBedRooms) : 0,
-      unitType: dataForm.unitType || "",
-      rentedAt: dataForm.rentedAt || "",
-      rentedTill: dataForm.rentedTill || "",
-      unitView: dataForm.unitView || [],
-      unitPurpose: dataForm.unitPurpose || "",
-      listingDate: dataForm.listingDate || "",
-      purchasePrice: dataForm.purchasePrice ? Number(dataForm.purchasePrice) : 0,
-      marketPrice: dataForm.marketPrice ? Number(dataForm.marketPrice) : 0,
-      askingPrice: dataForm.askingPrice ? Number(dataForm.askingPrice) : 0,
-      premiumAndLoss: dataForm.premiumAndLoss ? Number(dataForm.premiumAndLoss) : 0,
-      marketRent: dataForm.marketRent ? Number(dataForm.marketRent) : 0,
-      askingRent: dataForm.askingRent ? Number(dataForm.askingRent) : 0,
-      pictures: selectedImages,
-      paidTODevelopers: dataForm.paidTODevelopers ? Number(dataForm.paidTODevelopers) : 0,
-      payableTODevelopers: dataForm.payableTODevelopers ? Number(dataForm.payableTODevelopers) : 0,
-      project: dataForm.project || "",
-      paymentPlan1: paymentPlan1,
-      paymentPlan2: paymentPlan2,
-      paymentPlan3: paymentPlan3,
-    }
+    setLoading(true);
 
     try {
-      let response
+      let response;
       if (isEditing) {
-        const updatedData = { ...finalData }
-
-        if (imagesToDelete.length > 0) {
-          const deletePromises = imagesToDelete.map((imageKey) => deleteFromAWS(imageKey))
-          await Promise.all(deletePromises)
+        // Get only changed fields
+        const updatedData = getChangedFields();
+        
+        // If no changes were made, show message and return
+        if (Object.keys(updatedData).length === 0) {
+          toast.info("No changes were made to the property");
+          setLoading(false);
+          return;
         }
 
-        console.log("Updating property:", updatedData)
+        if (imagesToDelete.length > 0) {
+          const deletePromises = imagesToDelete.map((imageKey) => deleteFromAWS(imageKey));
+          await Promise.all(deletePromises);
+        }
+
+        console.log("Updating property with changed fields:", updatedData);
         response = await axios.patch(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${propertyToEdit._id}`,
           updatedData,
-        )
+        );
       } else {
-        console.log("Adding property:", finalData)
-        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData)
+        // For new properties, send all data
+        const finalData = {
+          unitNumber: dataForm.unitNumber || "",
+          unitHeight: dataForm.unitHeight || "",
+          unitInternalDesign: dataForm.unitInternalDesign || "",
+          unitExternalDesign: dataForm.unitExternalDesign || "",
+          plotSizeSqFt: dataForm.plotSizeSqFt ? Number(dataForm.plotSizeSqFt) : 0,
+          BuaSqFt: dataForm.BuaSqFt ? Number(dataForm.BuaSqFt) : 0,
+          noOfBedRooms: dataForm.unitType === "BedRoom" && dataForm.noOfBedRooms ? Number(dataForm.noOfBedRooms) : 0,
+          unitType: dataForm.unitType || "",
+          rentedAt: dataForm.rentedAt || "",
+          rentedTill: dataForm.rentedTill || "",
+          unitView: dataForm.unitView || [],
+          unitPurpose: dataForm.unitPurpose || "",
+          listingDate: dataForm.listingDate || "",
+          purchasePrice: dataForm.purchasePrice ? Number(dataForm.purchasePrice) : 0,
+          marketPrice: dataForm.marketPrice ? Number(dataForm.marketPrice) : 0,
+          askingPrice: dataForm.askingPrice ? Number(dataForm.askingPrice) : 0,
+          premiumAndLoss: dataForm.premiumAndLoss ? Number(dataForm.premiumAndLoss) : 0,
+          marketRent: dataForm.marketRent ? Number(dataForm.marketRent) : 0,
+          askingRent: dataForm.askingRent ? Number(dataForm.askingRent) : 0,
+          pictures: selectedImages,
+          paidTODevelopers: dataForm.paidTODevelopers ? Number(dataForm.paidTODevelopers) : 0,
+          payableTODevelopers: dataForm.payableTODevelopers ? Number(dataForm.payableTODevelopers) : 0,
+          project: dataForm.project || "",
+          paymentPlan1: paymentPlan1,
+          paymentPlan2: paymentPlan2,
+          paymentPlan3: paymentPlan3,
+        };
+        console.log("Adding property:", finalData);
+        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData);
       }
 
-      setLoading(false)
+      setLoading(false);
 
-      if (response.data) {
-        toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")
+      // Check if the response indicates success
+      if (response?.data && response.data.success === true) {
+        toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!");
         if (fetchRecords) {
-          fetchRecords()
+          fetchRecords();
         }
-        onClose()
-        resetForm()
+        onClose();
+        resetForm();
+      } else {
+        // Handle unsuccessful response
+        if (response?.data?.message) {
+          toast.error(response.data.message);
+        } else {
+          toast.error(
+            isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again."
+          );
+        }
       }
-    } catch (error) {
-      setLoading(false)
-      console.error(isEditing ? "Error updating property:" : "Error adding property:", error)
-      toast.error(
-        isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again.",
-      )
+    } catch (error: any) {
+      setLoading(false);
+      console.error(isEditing ? "Error updating property:" : "Error adding property:", error);
+      
+      // Check if the error is due to duplicate unit number
+      if (error.response?.data?.message?.includes("already exists in this project")) {
+        setErrors(prev => ({
+          ...prev,
+          unitNumber: true
+        }));
+        toast.error(error.response.data.message);
+      } else {
+        toast.error(
+          isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again.",
+        );
+      }
     }
-  }
+  };
 
   const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -791,7 +889,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                     className={`bg-input border-input ${errors.unitNumber ? "border-destructive" : ""}`}
                     placeholder="e.g., A-101"
                   />
-                  {errors.unitNumber && <p className="text-sm text-destructive">Unit number is required</p>}
+                  {errors.unitNumber && (
+                    <p className="text-sm text-destructive">
+                      {errors.unitNumber === true ? "Unit number already exists for this project" : "Unit number is required"}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
