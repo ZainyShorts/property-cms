@@ -505,9 +505,32 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       if (isEditing) {
         const updatedData = { ...finalData }
 
+        // Delete all marked images from AWS
         if (imagesToDelete.length > 0) {
-          const deletePromises = imagesToDelete.map((imageKey) => deleteFromAWS(imageKey))
-          await Promise.all(deletePromises)
+          try {
+            console.log("Deleting images from AWS:", imagesToDelete)
+
+            // Extract keys from URLs for deletion
+            const deletePromises = imagesToDelete.map((imageUrl) => {
+              // Extract the key from the full AWS URL
+              const urlParts = imageUrl.split("/")
+              const imageKey = urlParts[urlParts.length - 1]
+              return deleteFromAWS(imageKey)
+            })
+
+            await Promise.all(deletePromises)
+            console.log("Successfully deleted all marked images from AWS")
+            toast.success(`Deleted ${imagesToDelete.length} image(s) from storage`)
+          } catch (error: any) {
+            console.error("Error deleting images from AWS:", error)
+            const deleteErrorMessage =
+              error?.response?.data?.message ||
+              error?.response?.message ||
+              error?.message ||
+              "Some images could not be deleted from storage"
+            toast.error(deleteErrorMessage)
+            // Continue with the update even if image deletion fails
+          }
         }
 
         console.log("Updating property:", updatedData)
@@ -519,27 +542,37 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         console.log("Adding property:", finalData)
         response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData, {
           headers: {
-            "Authorization": `Bearer ${data.token}`
-          }
+            Authorization: `Bearer ${data.token}`,
+          },
         })
       }
 
-      setLoading(false)
+      setLoading(false) 
+      console.log('response',response)
 
-      if (response.data) {
+      if (response.data.success) {
         toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")
         if (fetchRecords) {
           fetchRecords()
         }
         onClose()
         resetForm()
+      } else {  
+         const errorMessage: string = response?.data?.msg || "Something went wrong.";
+         toast.error(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       setLoading(false)
       console.error(isEditing ? "Error updating property:" : "Error adding property:", error)
-      toast.error(
-        isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again.",
-      )
+
+      // Show specific error message from server response
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.message ||
+        error?.message ||
+        (isEditing ? "Failed to update property. Please try again." : "Failed to add property. Please try again.")
+
+      toast.error(errorMessage)
     }
   }
 
@@ -580,39 +613,61 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
 
       toast.dismiss(loadingToastId)
       toast.success("Images uploaded successfully")
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error uploading images:", error)
       toast.dismiss(loadingToastId)
-      toast.error("Failed to upload images. Please try again.")
+      const uploadErrorMessage =
+        error?.response?.data?.message ||
+        error?.response?.message ||
+        error?.message ||
+        "Failed to upload images. Please try again."
+      toast.error(uploadErrorMessage)
     }
   }
 
   const removeImage = async (index: number) => {
-    const imageKeys = dataForm.propertyImageKeys || []
-    const imageKey = imageKeys[index]
+    const imageUrl = selectedImages[index]
 
-    if (isEditing && imageKey) {
-      setImagesToDelete((prev) => [...prev, imageKey])
+    if (isEditing && imageUrl) {
+      // Extract the AWS key from the full URL for deletion
+      // Assuming the URL format is like: https://bucket-name.s3.region.amazonaws.com/key
+      const urlParts = imageUrl.split("/")
+      const imageKey = urlParts[urlParts.length - 1] // Get the last part as the key
+
+      // Add the full URL to the deletion array
+      setImagesToDelete((prev) => [...prev, imageUrl])
+
+      // Remove from current images
       setSelectedImages((prev) => prev.filter((_, i) => i !== index))
-      setDataForm((prev) => ({
-        ...prev,
-        propertyImageKeys: prev.propertyImageKeys?.filter((_: string, i: number) => i !== index) || [],
-      }))
-      toast.success("Image removed from preview")
-    } else if (imageKey) {
-      try {
-        const loadingToastId = toast.loading("Deleting image...")
-        await deleteFromAWS(imageKey)
+
+      toast.success("Image marked for deletion")
+    } else if (!isEditing && imageUrl) {
+      // For new properties, delete immediately
+      const imageKeys = dataForm.propertyImageKeys || []
+      const imageKey = imageKeys[index]
+
+      if (imageKey) {
+        try {
+          const loadingToastId = toast.loading("Deleting image...")
+          await deleteFromAWS(imageKey)
+          setSelectedImages((prev) => prev.filter((_, i) => i !== index))
+          setDataForm((prev) => ({
+            ...prev,
+            propertyImageKeys: prev.propertyImageKeys?.filter((_: string, i: number) => i !== index) || [],
+          }))
+          toast.dismiss(loadingToastId)
+          toast.success("Image deleted successfully")
+        } catch (error: any) {
+          console.error("Error deleting image:", error)
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Failed to delete image. Please try again."
+          toast.error(deleteErrorMessage)
+        }
+      } else {
         setSelectedImages((prev) => prev.filter((_, i) => i !== index))
-        setDataForm((prev) => ({
-          ...prev,
-          propertyImageKeys: prev.propertyImageKeys?.filter((_: string, i: number) => i !== index) || [],
-        }))
-        toast.dismiss(loadingToastId)
-        toast.success("Image deleted successfully")
-      } catch (error) {
-        console.error("Error deleting image:", error)
-        toast.error("Failed to delete image. Please try again.")
       }
     } else {
       setSelectedImages((prev) => prev.filter((_, i) => i !== index))

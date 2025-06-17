@@ -18,9 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils"
 import { Progress } from "@/components/ui/progress"
 import { countries, getCitiesByCountry } from "../data/data"
-import useSWR from 'swr'
+import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 // Define MasterDevelopment interface
 interface MasterDevelopment {
   _id?: string
@@ -87,13 +87,14 @@ const emptyFormValues = {
 
 export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
   const [availableCities, setAvailableCities] = useState<string[]>([])
   const fileInputRefs = useRef<Array<HTMLInputElement | null>>(Array(6).fill(null))
   const isEditMode = !!editRecord
-  const { data:authData } = useSWR('/api/me', fetcher);
+  const { data: authData } = useSWR("/api/me", fetcher)
 
   // Initialize form with empty values
   const form = useForm<FormValues>({
@@ -178,6 +179,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       form.reset(emptyFormValues)
       setPictures(Array(6).fill(null))
       setAvailableCities([])
+      setImagesToDelete([])
     }
   }, [editRecord, form, isEditMode])
 
@@ -201,6 +203,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       setActiveImageIndex(null)
       setUploadProgress(Array(6).fill(0))
       setAvailableCities([])
+      setImagesToDelete([])
     }
   }, [form])
 
@@ -292,11 +295,17 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
 
   const deleteFromAWS = async (filename: string): Promise<void> => {
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
         headers: {
           "Content-Type": "application/json",
         },
       })
+
+      if (response) {
+        return response.data
+      } else {
+        throw new Error("Failed to delete file")
+      }
     } catch (error) {
       console.error("Error deleting file:", error)
       throw new Error("Failed to delete file")
@@ -330,21 +339,34 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
     if (!image) return
 
     try {
-      if (image.isExisting && image.awsUrl) {
-        // Extract the key from the AWS URL (the filename is the last part of the URL path)
-        const key = image.awsUrl.split("/").pop()
-       
-      }
-
       if (image.preview && image.preview.startsWith("blob:")) {
         URL.revokeObjectURL(image.preview)
+      }
+
+      if (isEditMode && image.isExisting && image.awsUrl) {
+        // In edit mode, track the image for deletion but don't delete immediately
+        setImagesToDelete((prev) => [...prev, image.awsUrl!])
+        toast.success("Image marked for deletion")
+      } else if (!isEditMode && image.awsKey) {
+        // In create mode, delete immediately
+        try {
+          await deleteFromAWS(image.awsKey)
+          toast.success("Image deleted successfully")
+        } catch (error: any) {
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Failed to delete image. Please try again."
+          toast.error(deleteErrorMessage)
+        }
       }
 
       const newPictures = [...pictures]
       newPictures[index] = null
       setPictures(newPictures)
     } catch (error) {
-      toast.error("Failed to delete image")
+      toast.error("Failed to remove image")
       console.error("Error removing picture:", error)
     }
   }
@@ -359,6 +381,34 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
     try {
+      // Delete all marked images from AWS in edit mode
+      if (isEditMode && imagesToDelete.length > 0) {
+        try {
+          console.log("Deleting images from AWS:", imagesToDelete)
+
+          // Extract keys from URLs for deletion
+          const deletePromises = imagesToDelete.map((imageUrl) => {
+            // Extract the key from the full AWS URL
+            const urlParts = imageUrl.split("/")
+            const imageKey = urlParts[urlParts.length - 1]
+            return deleteFromAWS(imageKey)
+          })
+
+          await Promise.all(deletePromises)
+          console.log("Successfully deleted all marked images from AWS")
+          toast.success(`Deleted ${imagesToDelete.length} image(s) from storage`)
+        } catch (error: any) {
+          console.error("Error deleting images from AWS:", error)
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Some images could not be deleted from storage"
+          toast.error(deleteErrorMessage)
+          // Continue with the update even if image deletion fails
+        }
+      }
+
       // Upload all images to AWS and get their URLs
       const uploadPromises = pictures.map(async (pic, index) => {
         if (pic) {
@@ -414,16 +464,15 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         console.log(submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/addSingleRecord`,
-          submitData, 
+          submitData,
           {
-            headers:{
-              "Authorization": `Bearer ${authData.token}`
-            }
-          }
+            headers: {
+              Authorization: `Bearer ${authData.token}`,
+            },
+          },
         )
-        console.log(response) 
-        toast.success("Master development record has been added successfully") 
-        
+        console.log(response)
+        toast.success("Master development record has been added successfully")
       }
 
       // Reset form after successful submission
@@ -432,6 +481,8 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
         setPictures(Array(6).fill(null))
         setAvailableCities([])
       }
+      // Reset images to delete array
+      setImagesToDelete([])
 
       if (onRecordSaved) {
         onRecordSaved()
@@ -439,12 +490,16 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
       setIsModalOpen(false)
     } catch (error: any) {
       console.error("Error submitting form:", error)
+
+      // Show specific error message from server response
+      const errorMessage = error?.response?.data?.message || error?.response?.message || error?.message
+
       if (error.response?.status === 400) {
-        toast.error(error.response.data.message || "Bad Request: Please check your input data")
+        toast.error(errorMessage || "Bad Request: Please check your input data")
       } else if (error.response?.status === 504) {
-        toast.error(error.response.data.message || "Bad Request")
+        toast.error(errorMessage || "Request timed out. Please try again.")
       } else {
-        toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
+        toast.error(errorMessage || `Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
       }
     } finally {
       setIsSubmitting(false)
@@ -857,6 +912,7 @@ export function AddRecordModal({ setIsModalOpen, editRecord = null, onRecordSave
                   setPictures(Array(6).fill(null))
                   setAvailableCities([])
                 }
+                setImagesToDelete([])
               }}
               disabled={isSubmitting}
             >

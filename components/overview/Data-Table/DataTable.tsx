@@ -262,7 +262,7 @@ function PropertyDataTable({
 
   const handleEditRecord = useCallback(
     (record: any) => {
-      onEdit?.(record)
+      onEdit?.(record) 
     },
     [onEdit],
   )
