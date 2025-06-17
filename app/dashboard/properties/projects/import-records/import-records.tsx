@@ -81,7 +81,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
 
       clearInterval(interval)
       setUploadProgress(100)
-      const data = (await response.json()) as ImportResponse
+      const data = (await response.json()) as any
       console.log("response data:", data)
 
       if (response.ok && data.success) {
@@ -89,7 +89,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
         fetchRecords()
         // Show toast with import results using react-toastify
         toast.success(
-          `Import successful: ${data.insertedEntries} entries added, ${data.skippedDuplicateEntires} duplicates skipped.`,
+          `Import successful: ${data.insertedCount} inserted entries, ${data.skippedCount} skipped entries.`,
           {
             position: "top-right",
             autoClose: 5000,
@@ -105,7 +105,15 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
           handleClose()
         }, 1500)
       } else {
-        throw new Error("Upload failed")
+        setUploadStatus("error")
+      toast.error(data.message || "Please Upload correct file", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
       }
     } catch (error) {
       console.error("Upload error:", error)
