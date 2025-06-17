@@ -17,16 +17,16 @@ import { Progress } from "@/components/ui/progress"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import useSWR from 'swr'
+import useSWR from "swr"
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 enum SalesStatus {
-   PRIMARY = 'Primary',
-  PEDING = 'Pending',
-  RESALE = 'Resale',
-  PRIMARY_RESALE = 'Primary Resale',
-  OFF_PLANN_RESALE = 'Off Plan Resale',
-  PRIMARYPLUSOFFPLANRESALE = 'Primary + Off Plan Resale',
+  PRIMARY = "Primary",
+  PEDING = "Pending",
+  RESALE = "Resale",
+  PRIMARY_RESALE = "Primary Resale",
+  OFF_PLANN_RESALE = "Off Plan Resale",
+  PRIMARYPLUSOFFPLANRESALE = "Primary + Off Plan Resale",
 }
 
 enum PlotPermission {
@@ -88,7 +88,7 @@ interface RecordModalProps {
   setIsModalOpen: (open: boolean) => void
   editRecord?: any | null
   open: boolean
-  onRecordSaved?: () => void 
+  onRecordSaved?: () => void
   setEditRecord?: () => void
   onRecordUpdated?: () => void
   onOpenChange?: (open: boolean) => void
@@ -113,13 +113,14 @@ export function AddRecordModal({
   open,
   setIsModalOpen,
   editRecord = null,
-  onRecordSaved, 
+  onRecordSaved,
   setEditRecord,
   onRecordUpdated,
   onOpenChange,
   multiStepFormData = null,
 }: any) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
@@ -127,7 +128,7 @@ export function AddRecordModal({
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
   const [isPlotModalOpen, setIsPlotModalOpen] = useState(false)
   const [plotDetails, setPlotDetails] = useState<any>(null)
-  const { data:authData } = useSWR('/api/me', fetcher);
+  const { data: authData } = useSWR("/api/me", fetcher)
 
   // React Hook Form setup
   const {
@@ -234,34 +235,53 @@ export function AddRecordModal({
       console.error("Error uploading file:", error)
       throw new Error("Failed to upload file")
     }
-  } 
-  useEffect(() => {
-  return () => { 
-    console.log('call');
-    reset({
-      masterDevelopment: "",
-      subDevelopment: "",
-      propertyType: "",
-      projectName: "",
-      projectQuality: "",
-      constructionStatus: null,
-      launchDate: undefined,
-      completionDate: undefined,
-      salesStatus: SalesStatus.PRIMARY,
-      downPayment: null,
-      height: "",
-      commission: "",
-      duringConstruction: "",
-      percentOfConstruction: null,
-      uponCompletion: undefined,
-      postHandOver: undefined,
-      facilityCategories: [],
-      amenitiesCategories: [],
-      pictures: [],
-    });
-  };
-}, [])
+  }
 
+  const deleteFromAWS = async (filename: string): Promise<void> => {
+    try {
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response) {
+        return response.data
+      } else {
+        throw new Error("Failed to delete file")
+      }
+    } catch (error) {
+      console.error("Error deleting file:", error)
+      throw new Error("Failed to delete file")
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      console.log("call")
+      reset({
+        masterDevelopment: "",
+        subDevelopment: "",
+        propertyType: "",
+        projectName: "",
+        projectQuality: "",
+        constructionStatus: null,
+        launchDate: undefined,
+        completionDate: undefined,
+        salesStatus: SalesStatus.PRIMARY,
+        downPayment: null,
+        height: "",
+        commission: "",
+        duringConstruction: "",
+        percentOfConstruction: null,
+        uponCompletion: undefined,
+        postHandOver: undefined,
+        facilityCategories: [],
+        amenitiesCategories: [],
+        pictures: [],
+      })
+    }
+  }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -288,11 +308,30 @@ export function AddRecordModal({
         URL.revokeObjectURL(image.preview)
       }
 
+      if (isEditMode && image.isExisting && image.awsUrl) {
+        // In edit mode, track the image for deletion but don't delete immediately
+        setImagesToDelete((prev) => [...prev, image.awsUrl!])
+        toast.success("Image marked for deletion")
+      } else if (!isEditMode && image.awsKey) {
+        // In create mode, delete immediately
+        try {
+          await deleteFromAWS(image.awsKey)
+          toast.success("Image deleted successfully")
+        } catch (error: any) {
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Failed to delete image. Please try again."
+          toast.error(deleteErrorMessage)
+        }
+      }
+
       const newPictures = [...pictures]
       newPictures[index] = null
       setPictures(newPictures)
     } catch (error) {
-      toast.error("Failed to delete image")
+      toast.error("Failed to remove image")
       console.error("Error removing picture:", error)
     }
   }
@@ -339,7 +378,7 @@ export function AddRecordModal({
       if (editRecord.completionDate) {
         setValue("completionDate", new Date(editRecord.completionDate))
       }
-     
+
       if (editRecord.uponCompletion) {
         setValue("uponCompletion", new Date(editRecord.uponCompletion))
       }
@@ -389,7 +428,7 @@ export function AddRecordModal({
 
   // Reset form when modal closes
   useEffect(() => {
-    if (!open) { 
+    if (!open) {
       // Reset form fields
       reset({
         masterDevelopment: multiStepFormData?.masterDevelopmentId || "",
@@ -424,10 +463,12 @@ export function AddRecordModal({
 
       // Reset plot details if any
       setPlotDetails(null)
-        setEditRecord(null)
-    setPictures?.(Array(6).fill(null)); // reset pictures if you use setPictures too
+      setEditRecord(null)
+      setPictures?.(Array(6).fill(null)) // reset pictures if you use setPictures too
       // Reset edit mode
       setIsEditMode(false)
+      // Reset images to delete array
+      setImagesToDelete([])
     }
   }, [open, reset, multiStepFormData])
 
@@ -439,15 +480,43 @@ export function AddRecordModal({
     setPlotDetails(updatedPlotDetails)
     setIsPlotModalOpen(false)
   }
- const convertEmptyToZero = (value: any) => {
-        if (value === "") return 0
-        return value
-      }
+  const convertEmptyToZero = (value: any) => {
+    if (value === "") return 0
+    return value
+  }
   const onSubmit = async (data: any) => {
     console.log(`Form submission started for ${isEditMode ? "edit" : "create"}`)
     setIsSubmitting(true)
 
     try {
+      // Delete all marked images from AWS in edit mode
+      if (isEditMode && imagesToDelete.length > 0) {
+        try {
+          console.log("Deleting images from AWS:", imagesToDelete)
+
+          // Extract keys from URLs for deletion
+          const deletePromises = imagesToDelete.map((imageUrl) => {
+            // Extract the key from the full AWS URL
+            const urlParts = imageUrl.split("/")
+            const imageKey = urlParts[urlParts.length - 1]
+            return deleteFromAWS(imageKey)
+          })
+
+          await Promise.all(deletePromises)
+          console.log("Successfully deleted all marked images from AWS")
+          toast.success(`Deleted ${imagesToDelete.length} image(s) from storage`)
+        } catch (error: any) {
+          console.error("Error deleting images from AWS:", error)
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Some images could not be deleted from storage"
+          toast.error(deleteErrorMessage)
+          // Continue with the update even if image deletion fails
+        }
+      }
+
       const uploadPromises = pictures.map(async (pic, index) => {
         if (pic) {
           if (pic.file && !pic.isExisting) {
@@ -499,7 +568,6 @@ export function AddRecordModal({
       }
 
       // Convert empty strings to 0 for numeric fields
-     
 
       // Update submitData for numeric fields
 
@@ -526,7 +594,7 @@ export function AddRecordModal({
       }
 
       console.log(`Submitting data to API for ${isEditMode ? "update" : "create"}:`, submitData)
-      
+
       let response
 
       if (isEditMode) {
@@ -534,14 +602,14 @@ export function AddRecordModal({
         response = await axios.patch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${editRecord._id}`, submitData)
         toast.success("Project record has been updated successfully")
 
-          onRecordSaved()
+        onRecordSaved()
       } else {
         // Create new record
-        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData,{
-            headers:{
-              "Authorization": `Bearer ${authData.token}`
-            }
-          })
+        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData, {
+          headers: {
+            Authorization: `Bearer ${authData.token}`,
+          },
+        })
         toast.success("Project record has been added successfully")
 
         if (onRecordSaved) {
@@ -585,18 +653,24 @@ export function AddRecordModal({
 
       // Reset plot details if any
       setPlotDetails(null)
+      // Reset images to delete array
+      setImagesToDelete([])
 
       setIsModalOpen(false)
     } catch (error: any) {
       console.error(`Error ${isEditMode ? "updating" : "submitting"} form:`, error)
+
+      // Show specific error message from server response
+      const errorMessage = error?.response?.data?.message || error?.response?.message || error?.message
+
       if (error.response?.data?.statusCode === 400) {
-        toast.error(error.response.data.message || "Bad Request: Please check your input data")
+        toast.error(errorMessage || "Bad Request: Please check your input data")
       } else if (error.response?.data?.statusCode === 504) {
         toast.error("Request timed out. Please try again.")
       } else if (error.response?.data?.statusCode === 409) {
-        toast.error(error.response.data.message)
+        toast.error(errorMessage || "Conflict: Record already exists")
       } else {
-        toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
+        toast.error(errorMessage || `Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
       }
     } finally {
       setIsSubmitting(false)
@@ -1091,8 +1165,6 @@ export function AddRecordModal({
                   <p className="text-sm text-destructive">{errors.duringConstruction.message}</p>
                 )}
               </div>
-
-            
 
               <div className="space-y-2">
                 <label htmlFor="uponCompletion" className="text-sm font-medium">

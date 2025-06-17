@@ -15,11 +15,11 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils" 
-import useSWR from 'swr'
+import { cn } from "@/lib/utils"
+import useSWR from "swr"
 
 import { Progress } from "@/components/ui/progress"
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface MasterDevelopment {
   _id: string
@@ -119,7 +119,8 @@ const emptyFormValues = {
 
 export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onRecordSaved }: AddRecordModalProps) {
   const [pictures, setPictures] = useState<Array<ImageData | null>>(Array(6).fill(null))
-  const [error, setError] = useState<any>(null) 
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([])
+  const [error, setError] = useState<any>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null)
   const [uploadProgress, setUploadProgress] = useState<Array<number>>(Array(6).fill(0))
@@ -128,9 +129,8 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
   const [isLoading, setIsLoading] = useState(true)
   const isEditMode = !!editRecord
   const [devNameSearchTerm, setDevNameSearchTerm] = useState("")
-  const [isSearchingDevName, setIsSearchingDevName] = useState(false) 
-      const { data:authData } = useSWR('/api/me', fetcher);
-
+  const [isSearchingDevName, setIsSearchingDevName] = useState(false)
+  const { data: authData } = useSWR("/api/me", fetcher)
 
   // Extract masterDevelopment ID if it's an object
   const getMasterDevelopmentId = () => {
@@ -200,6 +200,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       // Reset to empty values for add mode
       form.reset(emptyFormValues)
       setPictures(Array(6).fill(null))
+      setImagesToDelete([])
     }
   }, [editRecord, form, isEditMode])
 
@@ -268,6 +269,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
       setUploadProgress(Array(6).fill(0))
       setDevNameSearchTerm("")
       setIsSearchingDevName(false)
+      setImagesToDelete([])
     }
   }, [form])
 
@@ -391,12 +393,17 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
 
   const deleteFromAWS = async (filename: string): Promise<void> => {
     try {
-      const res = await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_PLUDO_SERVER}/aws/${filename}`, {
         headers: {
           "Content-Type": "application/json",
         },
       })
-      console.log("res", res)
+
+      if (response) {
+        return response.data
+      } else {
+        throw new Error("Failed to delete file")
+      }
     } catch (error) {
       console.error("Error deleting file:", error)
       throw new Error("Failed to delete file")
@@ -425,24 +432,34 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     if (!image) return
 
     try {
-      if (image.isExisting && image.awsUrl) {
-        // Extract the key from the AWS URL (the filename is the last part of the URL path)
-        const key = image.awsUrl.split("/").pop()
-        // if (key) {
-        //   await deleteFromAWS(key)
-        //   toast.success("Image deleted from cloud storage")
-        // }
-      }
-
       if (image.preview && image.preview.startsWith("blob:")) {
         URL.revokeObjectURL(image.preview)
+      }
+
+      if (isEditMode && image.isExisting && image.awsUrl) {
+        // In edit mode, track the image for deletion but don't delete immediately
+        setImagesToDelete((prev) => [...prev, image.awsUrl!])
+        toast.success("Image marked for deletion")
+      } else if (!isEditMode && image.awsKey) {
+        // In create mode, delete immediately
+        try {
+          await deleteFromAWS(image.awsKey)
+          toast.success("Image deleted successfully")
+        } catch (error: any) {
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Failed to delete image. Please try again."
+          toast.error(deleteErrorMessage)
+        }
       }
 
       const newPictures = [...pictures]
       newPictures[index] = null
       setPictures(newPictures)
     } catch (error) {
-      toast.error("Failed to delete image")
+      toast.error("Failed to remove image")
       console.error("Error removing picture:", error)
     }
   }
@@ -458,6 +475,34 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
     console.log("submitting", data)
     setIsSubmitting(true)
     try {
+      // Delete all marked images from AWS in edit mode
+      if (isEditMode && imagesToDelete.length > 0) {
+        try {
+          console.log("Deleting images from AWS:", imagesToDelete)
+
+          // Extract keys from URLs for deletion
+          const deletePromises = imagesToDelete.map((imageUrl) => {
+            // Extract the key from the full AWS URL
+            const urlParts = imageUrl.split("/")
+            const imageKey = urlParts[urlParts.length - 1]
+            return deleteFromAWS(imageKey)
+          })
+
+          await Promise.all(deletePromises)
+          console.log("Successfully deleted all marked images from AWS")
+          toast.success(`Deleted ${imagesToDelete.length} image(s) from storage`)
+        } catch (error: any) {
+          console.error("Error deleting images from AWS:", error)
+          const deleteErrorMessage =
+            error?.response?.data?.message ||
+            error?.response?.message ||
+            error?.message ||
+            "Some images could not be deleted from storage"
+          toast.error(deleteErrorMessage)
+          // Continue with the update even if image deletion fails
+        }
+      }
+
       // Upload all images to AWS and get their URLs
       const uploadPromises = pictures.map(async (pic, index) => {
         if (pic) {
@@ -522,20 +567,23 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
           try {
             const response = await axios.patch(
               `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/updateSingleRecord/${editRecord._id}`,
-              changedFields, 
-
+              changedFields,
             )
 
             console.log("Update response:", response)
             toast.success("Sub-development record has been updated successfully")
           } catch (error: any) {
             console.error("Error submitting form:", error)
+
+            // Show specific error message from server response
+            const errorMessage = error?.response?.data?.message || error?.response?.message || error?.message
+
             if (error.response?.data?.statusCode === 400) {
-              toast.error(error.response.data.message || "Bad Request: Please check your input data")
+              toast.error(errorMessage || "Bad Request: Please check your input data")
             } else if (error.response?.data?.statusCode === 409) {
-              toast.error(error.response.data.message || "Bad Request")
+              toast.error(errorMessage || "Conflict: Record already exists")
             } else {
-              toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
+              toast.error(errorMessage || `Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
             }
           }
           if (onRecordSaved) {
@@ -546,12 +594,12 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         console.log("Sending", submitData)
         const response = await axios.post(
           `${process.env.NEXT_PUBLIC_CMS_SERVER}/subDevelopment/addSingleRecord`,
-          submitData, 
-            {
-            headers:{
-              "Authorization": `Bearer ${authData.token}`
-            }
-          }
+          submitData,
+          {
+            headers: {
+              Authorization: `Bearer ${authData.token}`,
+            },
+          },
         )
         toast.success("Sub-development record has been added successfully")
         console.log("res", response)
@@ -565,16 +613,22 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
         form.reset(emptyFormValues)
         setPictures(Array(6).fill(null))
       }
+      // Reset images to delete array
+      setImagesToDelete([])
 
       setIsModalOpen(false)
     } catch (error: any) {
       console.error("Error submitting form:", error)
+
+      // Show specific error message from server response
+      const errorMessage = error?.response?.data?.message || error?.response?.message || error?.message
+
       if (error.response?.data?.status === 400) {
-        toast.error(error.response.data.message || "Bad Request: Please check your input data")
+        toast.error(errorMessage || "Bad Request: Please check your input data")
       } else if (error.response?.data?.status === 409) {
-        toast.error(error.response.data.message || "Bad Request")
+        toast.error(errorMessage || "Conflict: Record already exists")
       } else {
-        toast.error(`Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
+        toast.error(errorMessage || `Failed to ${isEditMode ? "update" : "add"} record. Please try again.`)
       }
     } finally {
       setIsSubmitting(false)
@@ -1166,6 +1220,7 @@ export function SubDevAddRecordModal({ setIsModalOpen, editRecord = null, onReco
                   form.reset(emptyFormValues)
                   setPictures(Array(6).fill(null))
                 }
+                setImagesToDelete([])
               }}
               disabled={isSubmitting}
             >
