@@ -517,7 +517,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         )
       } else {
         console.log("Adding property:", finalData)
-        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData)
+        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory`, finalData, {
+          headers: {
+            "Authorization": `Bearer ${data.token}`
+          }
+        })
       }
 
       setLoading(false)

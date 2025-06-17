@@ -8,7 +8,9 @@ import { Progress } from "@/components/ui/progress"
 import { FileSpreadsheet, Upload, CheckCircle, AlertCircle } from "lucide-react"
 import { toast, ToastContainer } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
+import useSWR from 'swr'
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 interface ImportRecordsModalProps {
   isOpen: boolean
   onClose: () => void
@@ -27,6 +29,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle")
+  const { data:authData } = useSWR('/api/me', fetcher);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -68,17 +71,29 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
       const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/import`, {
         method: "POST",
         body: formData,
+        headers: {
+          'Authorization': `Bearer ${authData.token}`, // Add your bearer token here
+        },
+
       })
 
       clearInterval(interval)
       setUploadProgress(100)
-      const data = (await response.json()) as ImportResponse
+      const data = (await response.json()) as any
       console.log("response data:", data)
        toast.success(data.message)
       if (response.ok && data.success) {
         setUploadStatus("success")
         fetchRecords()
         // Show toast with import results using react-toastify
+      toast.success(`Import succcessful: inserted entries ${data.insertedEntries} skipped entries ${data.skippedDuplicateEntries + data.skippedInvalidEntries} `, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
        
 
         // Close the modal after a short delay 
@@ -88,7 +103,15 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
         }, 1500) 
 
       } else {
-        throw new Error("Upload failed")
+        setUploadStatus("error")
+        toast.info(data.message, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
       }
     } catch (error) {
       console.error("Upload error:", error)
@@ -112,6 +135,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
     setUploadStatus("idle")
     onClose()
   }
+
 
   return (
     <>

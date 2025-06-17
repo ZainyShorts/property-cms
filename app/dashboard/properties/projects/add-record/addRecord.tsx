@@ -17,7 +17,9 @@ import { Progress } from "@/components/ui/progress"
 import { format } from "date-fns"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import useSWR from 'swr'
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 enum SalesStatus {
    PRIMARY = 'Primary',
   PEDING = 'Pending',
@@ -125,6 +127,7 @@ export function AddRecordModal({
   const [isEditMode, setIsEditMode] = useState<boolean>(false)
   const [isPlotModalOpen, setIsPlotModalOpen] = useState(false)
   const [plotDetails, setPlotDetails] = useState<any>(null)
+  const { data:authData } = useSWR('/api/me', fetcher);
 
   // React Hook Form setup
   const {
@@ -534,7 +537,11 @@ export function AddRecordModal({
           onRecordSaved()
       } else {
         // Create new record
-        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData)
+        response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project`, submitData,{
+            headers:{
+              "Authorization": `Bearer ${authData.token}`
+            }
+          })
         toast.success("Project record has been added successfully")
 
         if (onRecordSaved) {

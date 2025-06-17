@@ -8,6 +8,9 @@ import { Progress } from "@/components/ui/progress"
 import { FileSpreadsheet, Upload, CheckCircle, AlertCircle } from "lucide-react"
 import { toast, ToastContainer } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
+import useSWR from 'swr'
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface ImportRecordsModalProps {
   isOpen: boolean
@@ -27,6 +30,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadStatus, setUploadStatus] = useState<"idle" | "success" | "error">("idle")
+  const { data:authData } = useSWR('/api/me', fetcher);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -65,14 +69,19 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
         })
       }, 100)
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/import`, {
+      // Get token from localStorage (adjust if you use a different auth mechanism)
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/import`, {
         method: "POST",
         body: formData,
+        headers: {
+           "Authorization": `Bearer ${authData.token}` 
+        }
       })
 
       clearInterval(interval)
       setUploadProgress(100)
-      const data = (await response.json()) as ImportResponse
+      const data = (await response.json()) as any
       console.log("response data:", data)
 
       if (response.ok && data.success) {
@@ -80,7 +89,7 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
         fetchRecords()
         // Show toast with import results using react-toastify
         toast.success(
-          `Import successful: ${data.insertedEntries} entries added, ${data.skippedDuplicateEntires} duplicates skipped.`,
+          `Import successful: ${data.insertedCount} inserted entries, ${data.skippedCount} skipped entries.`,
           {
             position: "top-right",
             autoClose: 5000,
@@ -96,7 +105,15 @@ export function ImportRecordsModal({ isOpen, onClose,fetchRecords }: ImportRecor
           handleClose()
         }, 1500)
       } else {
-        throw new Error("Upload failed")
+        setUploadStatus("error")
+      toast.error(data.message || "Please Upload correct file", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
       }
     } catch (error) {
       console.error("Upload error:", error)
