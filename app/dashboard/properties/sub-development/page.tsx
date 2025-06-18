@@ -116,7 +116,7 @@ const tableHeaders = [
   { key: "amentiesCategories", label: "AMENITIES" },
   { key: "attachDocument", label: "DOCUMENT" },
   { key: "edit", label: "EDIT" },
-  { key: "delete", label: "DELETE" },
+  // { key: "delete", label: "DELETE" },
 ]
 
 export default function SubDevelopmentPage() {

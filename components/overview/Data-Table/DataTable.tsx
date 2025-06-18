@@ -218,6 +218,7 @@ function PropertyDataTable({
       toast.success("Payment plan saved successfully")
       setIsPaymentPlanModalOpen(false)
       setSelectedRowForPayment(null)
+      window.location.reload()
     } catch (error) {
       console.error("Error saving payment plan:", error)
       toast.error("Failed to save payment plan. Please try again.")
