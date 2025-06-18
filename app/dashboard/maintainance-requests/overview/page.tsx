@@ -1,6 +1,6 @@
 "use client"
 
-import { DataTable } from "@/components/overview/Data-Table/DataTable"
+// import { DataTable } from "@/components/overview/Data-Table/DataTable"
 import { FilterBar } from "@/components/overview/Filter-Bar/FilterBar"
 
 const filters = [
@@ -39,7 +39,7 @@ export default function ManagementRequestsPage() {
     <div className="min-h-screen bg-background">
       <FilterBar filters={filters} breadcrumbs={breadcrumbs} onAddButton={handleAdd} />
       <main className="container mx-auto px-4 py-6">
-        <DataTable headers={tableHeaders} onAddButton={handleAdd} />
+        {/* <DataTable headers={tableHeaders} onAddButton={handleAdd} /> */}
       </main>
     </div>
   )

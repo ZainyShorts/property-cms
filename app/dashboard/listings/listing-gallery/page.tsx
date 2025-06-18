@@ -1,4 +1,4 @@
-import { PropertyCard } from "@/components/gallery/Poperty-card/Card"
+// import { PropertyCard } from "@/components/gallery/Poperty-card/Card"
 
 const dummyData = [
  
@@ -57,9 +57,9 @@ export default function Page() {
           <p className="text-muted-foreground">Discover our exclusive collection of premium properties</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {dummyData.map((property, index) => (
-            <PropertyCard key={index} data={property} />
-          ))}
+          {/* {dummyData.map((property, index) => ( */}
+            {/* // <PropertyCard key={index} data={property} />
+          // ))} */}
         </div>
       </div>
     </div>

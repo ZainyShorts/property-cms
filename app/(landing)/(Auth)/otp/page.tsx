@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -327,4 +327,12 @@ export default function OTPPage() {
       </motion.div>
     </div>
   )
+}
+
+export function OTPPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OTPPage />
+    </Suspense>
+  );
 }
