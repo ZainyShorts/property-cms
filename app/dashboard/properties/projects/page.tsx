@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import {
   Filter,
   ChevronLeft,
@@ -109,7 +109,7 @@ export default function MasterDevelopmentPage() {
   const filters = useSelector((state: any) => state.projectFilter)
   const dispatch = useDispatch()
   const router = useRouter()
-  const searchParams = useSearchParams()
+  // const searchParams = useSearchParams()
   const [currentPage, setCurrentPage] = useState<any>(1)
   const [multiStepFormData, setMultiStepFormData] = useState<MultiStepFormData | null>(null)
   const [isMultiStepModalOpen, setIsMultiStepModalOpen] = useState(false)
