@@ -11,7 +11,11 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "AFS Real Estate",
   description: "Real Estate Management System",
-  generator: 'v0.dev'
+  generator: 'afs',
+  icons: {
+    icon: "/afs-logo.ico", // or .png
+  },
+  
 }
 
 export default function RootLayout({
