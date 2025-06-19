@@ -26,7 +26,7 @@ export function Navbar() {
         <div>
           <Button
             variant="outline"
-            className="text-black border-white  hover:text-white hover:bg-black transition-colors"
+            className="text-black border-white dark:text-white  hover:text-white hover:bg-black transition-colors"
             onClick={() => router.push("/sign-in")}
           >
             Sign In
