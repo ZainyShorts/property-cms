@@ -97,7 +97,7 @@ const tableHeaders = [
   { key: "view", label: "VIEW" },
 
   { key: "edit", label: "EDIT" },
-  // { key: "delete", label: "DELETE" },
+  { key: "delete", label: "DELETE" },
 ]
 
 export default function MasterDevelopmentPage() {
@@ -635,7 +635,7 @@ export default function MasterDevelopmentPage() {
 
   const confirmDelete = async () => {
     if (!recordToDelete) return
-
+// delete api call 
     try {
       await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`)
       toast.success("Record deleted successfully")

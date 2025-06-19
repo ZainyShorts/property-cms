@@ -262,7 +262,7 @@ export function OTPComponent() {
                 </motion.p>
               )}
 
-              <motion.div
+              {/* <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
@@ -285,7 +285,7 @@ export function OTPComponent() {
                     )}
                   </span>
                 </Button>
-              </motion.div>
+              </motion.div> */}
             </form>
           </CardContent>
           <CardFooter className="flex flex-col pb-8 pt-2">
