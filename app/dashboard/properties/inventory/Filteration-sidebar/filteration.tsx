@@ -683,19 +683,19 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
                   <input
                     type="checkbox"
                     id={`room-${room}`}
-                    checked={(filter.rooms || []).includes(room)}
+                    checked={(filter.additionalRooms || []).includes(room)}
                     onChange={(e) => {
-                      const currentRooms = filter.rooms || []
+                      const currentRooms = filter.additionalRooms || []
                       if (e.target.checked) {
                         dispatch(
                           updateFilter({
-                            rooms: [...currentRooms, room],
+                            additionalRooms: [...currentRooms, room],
                           }),
                         )
                       } else {
                         dispatch(
                           updateFilter({
-                            rooms: currentRooms.filter((r) => r !== room),
+                            additionalRooms: currentRooms.filter((r) => r !== room),
                           }),
                         )
                       }
