@@ -244,7 +244,6 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
             : getCleanValue(propertyToEdit.noOfWashroom, ""),
       })
 
-      // Initialize payment plans for editing
       if (propertyToEdit.paymentPlan1 && propertyToEdit.paymentPlan1 !== "-") {
         setPaymentPlan1([{ developerPrice: Number(propertyToEdit.paymentPlan1), plan: [] }])
       } else {
