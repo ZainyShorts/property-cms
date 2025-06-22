@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { X, Search, Loader2 } from "lucide-react"
+import { X } from "lucide-react"
 import { updateFilter, updateUnitView, resetFilters } from "@/lib/store/slices/filterSlice"
 import type { RootState } from "@/lib/store/store"
 import axios from "axios"
@@ -39,6 +39,19 @@ interface RoadLocation {
   _id: string
   name: string
 }
+
+const rooms = [
+  "Maid's Room",
+  "Study / Home Office",
+  "Storage Room",
+  "Laundry Room",
+  "Prayer Room",
+  "Driver's Room",
+  "Cinema Room",
+  "Pet Room",
+  "Nursery / Baby Room",
+  "Teen Lounge / Kids' Playroom",
+]
 
 export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSidebarProps) {
   const dispatch = useDispatch()
@@ -93,6 +106,7 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
     | "plotSizeSqFt"
     | "BuaSqFt"
     | "noOfBedRooms"
+    | "noOfWashroom"
 
   const handleRangeInputChange = (field: RangeField, minOrMax: "min" | "max", value: string) => {
     const numValue = value ? Number(value) : undefined
@@ -639,6 +653,62 @@ export function PropertyFilterSidebar({ open, onOpenChange }: PropertyFilterSide
               )}
             </div>
           </div> */}
+
+          <div className="space-y-4">
+            <Label className="text-sm font-normal">Number of Washrooms Range</Label>
+            <div className="flex items-center gap-2 mt-3">
+              <Input
+                type="number"
+                placeholder="Min"
+                value={filter.noOfWashroom?.min || ""}
+                onChange={(e) => handleRangeInputChange("noOfWashroom", "min", e.target.value)}
+                className="w-full"
+              />
+              <span>to</span>
+              <Input
+                type="number"
+                placeholder="Max"
+                value={filter.noOfWashroom?.max || ""}
+                onChange={(e) => handleRangeInputChange("noOfWashroom", "max", e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Additional Rooms</Label>
+            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
+              {rooms.map((room) => (
+                <div key={room} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id={`room-${room}`}
+                    checked={(filter.rooms || []).includes(room)}
+                    onChange={(e) => {
+                      const currentRooms = filter.rooms || []
+                      if (e.target.checked) {
+                        dispatch(
+                          updateFilter({
+                            rooms: [...currentRooms, room],
+                          }),
+                        )
+                      } else {
+                        dispatch(
+                          updateFilter({
+                            rooms: currentRooms.filter((r) => r !== room),
+                          }),
+                        )
+                      }
+                    }}
+                    className="rounded border-input"
+                  />
+                  <Label htmlFor={`room-${room}`} className="text-sm font-normal cursor-pointer">
+                    {room}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="unitNumber">Unit Number</Label>

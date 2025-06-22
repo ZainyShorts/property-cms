@@ -14,6 +14,19 @@ import { toast } from "react-toastify"
 import useSWR from "swr"
 import "react-toastify/dist/ReactToastify.css"
 
+const rooms = [
+  "Maid's Room",
+  "Study / Home Office",
+  "Storage Room",
+  "Laundry Room",
+  "Prayer Room",
+  "Driver's Room",
+  "Cinema Room",
+  "Pet Room",
+  "Nursery / Baby Room",
+  "Teen Lounge / Kids' Playroom",
+]
+
 interface AddPropertyModalProps {
   isOpen: boolean
   onClose: () => void
@@ -224,6 +237,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
           typeof propertyToEdit.payableTODevelopers === "number"
             ? propertyToEdit.payableTODevelopers
             : getCleanValue(propertyToEdit.payableTODevelopers, ""),
+        additionalRooms: Array.isArray(propertyToEdit.additionalRooms) ? propertyToEdit.additionalRooms : [],
+        noOfWashroom:
+          typeof propertyToEdit.noOfWashroom === "number"
+            ? propertyToEdit.noOfWashroom
+            : getCleanValue(propertyToEdit.noOfWashroom, ""),
       })
 
       // Initialize payment plans for editing
@@ -363,6 +381,11 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       clearTimeout(searchTimeoutRef.current)
       searchTimeoutRef.current = null
     }
+    setDataForm((prev) => ({
+      ...prev,
+      additionalRooms: [],
+      noOfWashroom: "",
+    }))
   }
 
   const handleSelectChange = (value: string, fieldKey: string) => {
@@ -498,6 +521,8 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
       paymentPlan1: paymentPlan1,
       paymentPlan2: paymentPlan2,
       paymentPlan3: paymentPlan3,
+      additionalRooms: dataForm.additionalRooms || [],
+      noOfWashroom: dataForm.noOfWashroom ? Number(dataForm.noOfWashroom) : 0,
     }
 
     try {
@@ -547,8 +572,8 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         })
       }
 
-      setLoading(false) 
-      console.log('response',response)
+      setLoading(false)
+      console.log("response", response)
 
       if (response.data.success) {
         toast.success(isEditing ? "Property updated successfully!" : "Property added successfully!")
@@ -557,9 +582,9 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
         }
         onClose()
         resetForm()
-      } else {  
-         const errorMessage: string = response?.data?.msg || "Something went wrong.";
-         toast.error(errorMessage);
+      } else {
+        const errorMessage: string = response?.data?.msg || "Something went wrong."
+        toast.error(errorMessage)
       }
     } catch (error: any) {
       setLoading(false)
@@ -1003,6 +1028,59 @@ export function AddPropertyModal({ fetchRecords, isOpen, onClose, propertyToEdit
                         </div>
                       ))}
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Room Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Additional Room Details</h3>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label>Additional Rooms</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {rooms.map((room) => (
+                      <div key={room} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`room-${room}`}
+                          checked={(dataForm.additionalRooms || []).includes(room)}
+                          onChange={(e) => {
+                            const currentRooms = dataForm.additionalRooms || []
+                            if (e.target.checked) {
+                              setDataForm((prev) => ({
+                                ...prev,
+                                additionalRooms: [...currentRooms, room],
+                              }))
+                            } else {
+                              setDataForm((prev) => ({
+                                ...prev,
+                                additionalRooms: currentRooms.filter((r) => r !== room),
+                              }))
+                            }
+                          }}
+                          className="rounded border-input"
+                        />
+                        <Label htmlFor={`room-${room}`} className="text-sm font-normal cursor-pointer">
+                          {room}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="noOfWashroom">Number of Washrooms</Label>
+                  <Input
+                    id="noOfWashroom"
+                    name="noOfWashroom"
+                    value={dataForm.noOfWashroom || ""}
+                    onChange={(e) => handleChange(e, "noOfWashroom", "number")}
+                    type="number"
+                    className="bg-input border-input"
+                    placeholder="e.g., 2"
+                    min="0"
+                  />
                 </div>
               </div>
             </div>

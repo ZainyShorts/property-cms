@@ -13,7 +13,9 @@ interface FilterState {
   unitInternalDesign?: string
   unitExternalDesign?: string
   unitView?: string[]
-  pictures?: string[]
+  pictures?: string[] 
+  rooms ? : string[] 
+  noOfWashroom ? : Range
   unitPurpose?: string
   unitType?: string
   listingDate?: string
@@ -44,7 +46,9 @@ const initialState: FilterState = {
   unitInternalDesign: undefined,
   unitExternalDesign: undefined,
   unitView: [],
-  pictures: [],
+  pictures: [], 
+  rooms:[], 
+  noOfWashroom: undefined,
   unitPurpose: undefined,
   unitType: undefined,
   listingDate: undefined,

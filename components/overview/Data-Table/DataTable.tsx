@@ -2,7 +2,7 @@
 
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { DropdownMenuLabel } from "@/components/ui/dropdown-menu"
-import { useState, useEffect, memo, useCallback, use } from "react"
+import { useState, useEffect, memo, useCallback } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import {
@@ -48,6 +48,8 @@ const unitDetails = [
   "unitType",
   "BuaSqFt",
   "noOfBedRooms",
+  "additionalRooms",
+  "noOfWashroom",
   "unitView",
 ]
 
@@ -158,6 +160,8 @@ function PropertyDataTable({
     { key: "plotSizeSqFt", label: "PLOT SIZE (SQ. FT)" },
     { key: "BuaSqFt", label: "BUA (SQ. FT)" },
     { key: "noOfBedRooms", label: "BED ROOMS" },
+    { key: "additionalRooms", label: "ADDITIONAL ROOMS" },
+    { key: "noOfWashroom", label: "NO OF WASHROOMS" },
     { key: "unitType", label: "UNIT TYPE" },
     { key: "unitView", label: "UNIT VIEW" },
     { key: "unitPurpose", label: "PURPOSE" },
@@ -187,10 +191,10 @@ function PropertyDataTable({
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
   )
-  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false) 
-  useEffect(()=>{
-  console.log('data',data)
-  },[data])
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
+  useEffect(() => {
+    console.log("data", data)
+  }, [data])
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
 
   const handlePaymentPlan = async (recordId: string, planType: string, record: any) => {
@@ -263,7 +267,7 @@ function PropertyDataTable({
 
   const handleEditRecord = useCallback(
     (record: any) => {
-      onEdit?.(record) 
+      onEdit?.(record)
     },
     [onEdit],
   )
@@ -517,9 +521,51 @@ function PropertyDataTable({
         case "paymentPlan3":
         case "premiumAndLoss":
           return record[key] ? record[key].toLocaleString() : "N/A"
+        case "noOfWashroom":
+          return record[key] ? record[key].toLocaleString() : "N/A"
+
+        case "additionalRooms":
+          if (Array.isArray(record[key]) && record[key].length > 0) {
+            return (
+              <HoverCard>
+                <HoverCardTrigger asChild>
+                  <div className="flex items-center justify-center gap-2 cursor-pointer">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200">
+                      {record[key].length}
+                    </Badge>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </HoverCardTrigger>
+                <HoverCardContent className="w-80 p-0">
+                  <div className="p-4">
+                    <h4 className="font-medium text-sm mb-2 text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                      Additional Rooms ({record[key].length})
+                    </h4>
+                    {record[key].length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {record[key].map((room: string, idx: number) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-blue-50 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
+                          >
+                            {room}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No additional rooms</p>
+                    )}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
+            )
+          }
+          return record[key] && Array.isArray(record[key]) && record[key].length > 0 ? record[key].length : "N/A"
 
         case "addEditPlan1":
-          console.log('recor -- d', record)
+          console.log("recor -- d", record)
           const hasPaymentPlan1 = record.plan1 && Array.isArray(record.plan1) && record.plan1.length > 0
           const paymentPlan1Amount = record.paymentPlan1
           const canAddPlan1 = paymentPlan1Amount && paymentPlan1Amount !== "-" && paymentPlan1Amount > 0
@@ -1055,6 +1101,8 @@ function PropertyDataTable({
                           header.key === "plotSizeSqFt" && "w-[120px]",
                           header.key === "BuaSqFt" && "w-[120px]",
                           header.key === "noOfBedRooms" && "w-[120px]",
+                          header.key === "additionalRooms" && "w-[150px]",
+                          header.key === "noOfWashroom" && "w-[120px]",
                           header.key === "unitView" && "w-[100px]",
                           header.key === "unitPurpose" && "w-[100px]",
                           header.key === "listingDate" && "w-[120px]",

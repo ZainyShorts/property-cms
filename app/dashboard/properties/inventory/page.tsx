@@ -173,7 +173,9 @@ export default function PropertiesPage() {
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
     unitPurpose: property.unitPurpose || "N/A",
     listingDate: property.listingDate || "N/A", 
-pictures: [...(property.pictures || [])],
+pictures: [...(property.pictures || [])], 
+additionalRooms: [...(property.additionalRooms || [])], 
+noOfWashroom : property.noOfWashroom,
     rentedAt: property.rentedAt || "N/A",
     rentedTill: property.rentedTill || "N/A",
     purchasePrice: property.purchasePrice || "N/A",
@@ -639,16 +641,16 @@ pictures: [...(property.pictures || [])],
     )
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
+  // if (error) {
+  //   return (
+  //     <div className="min-h-screen bg-background flex items-center justify-center">
+  //       <Alert variant="destructive">
+  //         <AlertTitle>Error</AlertTitle>
+  //         <AlertDescription>{error}</AlertDescription>
+  //       </Alert>
+  //     </div>
+  //   )
+  // }
 
   return (
     <div className="min-h-screen bg-background ">
