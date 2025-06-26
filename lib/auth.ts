@@ -31,10 +31,15 @@ export function isTokenExpired(token: string) {
 
 export const logoutUser = () => {
   // Remove token cookie
-  deleteCookie('token');
-  console.log('User logged out, token removed');
+  // deleteCookie('token');
+  // console.log('User logged out, token removed');
   
-  // Redirect to login page
+  // // Redirect to login page
+  // window.location.href = '/sign-in';
+  deleteCookie('token', { path: '/' });
+  localStorage.clear();
+
+  console.log('Cleared cookie and localStorage')
   window.location.href = '/sign-in';
 };
 
