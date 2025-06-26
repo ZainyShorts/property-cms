@@ -54,6 +54,8 @@ import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities, actions } from "./data/data"
+import useSWR from "swr"
+
 export interface MasterDevelopment {
   _id: string
   country: string
@@ -100,6 +102,14 @@ const tableHeaders = [
   { key: "delete", label: "DELETE" },
 ]
 
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
 export default function MasterDevelopmentPage() {
   const { theme } = useTheme()
   const filters = useSelector((state: any) => state.masterFilter)
@@ -144,6 +154,7 @@ export default function MasterDevelopmentPage() {
   )
   const [limit, setLimit] = useState<number>(10)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
+  const { data: authData } = useSWR<any>("/api/me", fetcher)
   const handleShareButton = (data: any) => {
     setShareData(data)
     setShareModalOpen(true)
@@ -635,9 +646,14 @@ export default function MasterDevelopmentPage() {
 
   const confirmDelete = async () => {
     if (!recordToDelete) return
-// delete api call 
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`)
+      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authData?.token}`
+          }
+        }
+      )
       toast.success("Record deleted successfully")
       setCurrentPage(1)
       fetchRecords()
