@@ -21,6 +21,7 @@ import { ShareModal } from "./share-modal/shareModal"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { ExportModal } from "./Export-Modal/ExportModal"
 import { exportToExcel } from "@/lib/exportProperty"
+import useSWR from "swr"
 
 const filter = [
   {
@@ -63,7 +64,13 @@ const tableHeaders = [
   "payableTODevelopers",
   "premiumAndLoss",
 ]
-
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+};
 export default function PropertiesPage() {
   const [selectionModalOpen, setSelectionModalOpen] = useState(false)
   const [addPropertyModalOpen, setAddPropertyModalOpen] = useState(false)
@@ -102,6 +109,7 @@ export default function PropertiesPage() {
 
   const sidebarFilters = useSelector((state: RootState) => state.filter)
   const rangeFilters = useSelector((state: any) => state.range)
+  const { data: authData } = useSWR<any>("/api/me", fetcher);
 
   const fetchProperties = useCallback(
     async (params: any = {}, page?: number) => {
@@ -413,7 +421,11 @@ noOfWashroom : property.noOfWashroom,
 
   const handleDelete = async (_id: string) => {
     try {
-      const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${_id}`)
+      const response = await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${_id}`,{
+        headers:{
+          Authorization:`Bearer ${authData?.token}`
+        }
+      })
       if (response) {
         toast.success("Property Deleted successfully!")
         setDataChanged(true)
@@ -426,10 +438,16 @@ noOfWashroom : property.noOfWashroom,
       })
 
       return response.data
-    } catch (error) {
-      console.error("Error deleting property")
-      throw error
-    }
+    } catch (error: any) {
+          console.error("Error deleting record:", error)
+          if (error.response && error.response.status === 403 && error.response.data?.message === 'You do not have permission (roles) to access this resource') {
+            toast.error("You do not have permission to access this resource.")
+          } else if (error.response && error.response.status === 400) {
+            toast.error(error.response.data.message || "Failed to delete record")
+          } else {
+            toast.error("Failed to delete record. Please try again.")
+          }
+        }
   }
 
   const handleUpdate = (property: any) => {

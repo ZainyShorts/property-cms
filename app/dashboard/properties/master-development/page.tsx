@@ -261,7 +261,7 @@ export default function MasterDevelopmentPage() {
       })
     } catch (error) {
       console.error("Error fetching records:", error)
-      toast.error("Failed to fetch records. Please try again.")
+        toast.error("Failed to fetch records. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -445,7 +445,7 @@ export default function MasterDevelopmentPage() {
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
-          toast.error("Failed to fetch records. Please try again.")
+                      toast.error("Failed to fetch records. Please try again.")
         })
         .finally(() => {
           setLoading(false)
@@ -563,7 +563,7 @@ export default function MasterDevelopmentPage() {
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
-          toast.error("Failed to fetch records. Please try again.")
+            toast.error("Failed to fetch records. Please try again.")
         })
         .finally(() => {
           setLoading(false)
@@ -634,7 +634,7 @@ export default function MasterDevelopmentPage() {
       setSelectedRowId(null)
     } catch (error) {
       console.error("Error attaching document:", error)
-      toast.error("Failed to attach document. Please try again.")
+        toast.error("Failed to attach document. Please try again.")
     } finally {
       setIsAttachingDocument(false)
     }
@@ -659,7 +659,9 @@ export default function MasterDevelopmentPage() {
       fetchRecords()
     } catch (error: any) {
       console.error("Error deleting record:", error)
-      if (error.response && error.response.status === 400) {
+      if (error.response && error.response.status === 403 && error.response.data?.message === 'You do not have permission (roles) to access this resource') {
+        toast.error("You do not have permission to access this resource.")
+      } else if (error.response && error.response.status === 400) {
         toast.error(error.response.data.message || "Failed to delete record")
       } else {
         toast.error("Failed to delete record. Please try again.")
@@ -1151,7 +1153,7 @@ export default function MasterDevelopmentPage() {
       })
     } catch (error) {
       console.error("Error exporting data:", error)
-      toast.error("Failed to export data. Please try again.")
+        toast.error("Failed to export data. Please try again.")
     }
   }
   return (
