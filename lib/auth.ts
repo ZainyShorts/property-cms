@@ -29,17 +29,17 @@ export function isTokenExpired(token: string) {
 }
 
 
-export const logoutUser = () => {
-  // Remove token cookie
-  // deleteCookie('token');
-  // console.log('User logged out, token removed');
-  
-  // // Redirect to login page
-  // window.location.href = '/sign-in';
-  deleteCookie('token', { path: '/' });
-  localStorage.clear();
+export const logoutUser =async () => {
+  try {
+    await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/auth/logout`, {
+      method: 'POST',
+      credentials: 'include', // Include cookies in request
+    });
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
 
-  console.log('Cleared cookie and localStorage')
+  localStorage.clear();
   window.location.href = '/sign-in';
 };
 
