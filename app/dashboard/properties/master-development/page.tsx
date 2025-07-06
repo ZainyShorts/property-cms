@@ -54,6 +54,8 @@ import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities, actions } from "./data/data"
+import useSWR from "swr"
+
 export interface MasterDevelopment {
   _id: string
   country: string
@@ -100,6 +102,14 @@ const tableHeaders = [
   { key: "delete", label: "DELETE" },
 ]
 
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const res = await fetch(url)
+  if (!res.ok) {
+    throw new Error(`Request failed with status ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
 export default function MasterDevelopmentPage() {
   const { theme } = useTheme()
   const filters = useSelector((state: any) => state.masterFilter)
@@ -144,6 +154,7 @@ export default function MasterDevelopmentPage() {
   )
   const [limit, setLimit] = useState<number>(10)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
+  const { data: authData } = useSWR<any>("/api/me", fetcher)
   const handleShareButton = (data: any) => {
     setShareData(data)
     setShareModalOpen(true)
@@ -250,7 +261,7 @@ export default function MasterDevelopmentPage() {
       })
     } catch (error) {
       console.error("Error fetching records:", error)
-      toast.error("Failed to fetch records. Please try again.")
+        toast.error("Failed to fetch records. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -434,7 +445,7 @@ export default function MasterDevelopmentPage() {
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
-          toast.error("Failed to fetch records. Please try again.")
+                      toast.error("Failed to fetch records. Please try again.")
         })
         .finally(() => {
           setLoading(false)
@@ -552,7 +563,7 @@ export default function MasterDevelopmentPage() {
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
-          toast.error("Failed to fetch records. Please try again.")
+            toast.error("Failed to fetch records. Please try again.")
         })
         .finally(() => {
           setLoading(false)
@@ -623,7 +634,7 @@ export default function MasterDevelopmentPage() {
       setSelectedRowId(null)
     } catch (error) {
       console.error("Error attaching document:", error)
-      toast.error("Failed to attach document. Please try again.")
+        toast.error("Failed to attach document. Please try again.")
     } finally {
       setIsAttachingDocument(false)
     }
@@ -635,15 +646,22 @@ export default function MasterDevelopmentPage() {
 
   const confirmDelete = async () => {
     if (!recordToDelete) return
-// delete api call 
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`)
+      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`,
+        {
+          headers: {
+            Authorization: `Bearer ${authData?.token}`
+          }
+        }
+      )
       toast.success("Record deleted successfully")
       setCurrentPage(1)
       fetchRecords()
     } catch (error: any) {
       console.error("Error deleting record:", error)
-      if (error.response && error.response.status === 400) {
+      if (error.response && error.response.status === 403 && error.response.data?.message === 'You do not have permission (roles) to access this resource') {
+        toast.error("You do not have permission to access this resource.")
+      } else if (error.response && error.response.status === 400) {
         toast.error(error.response.data.message || "Failed to delete record")
       } else {
         toast.error("Failed to delete record. Please try again.")
@@ -1135,7 +1153,7 @@ export default function MasterDevelopmentPage() {
       })
     } catch (error) {
       console.error("Error exporting data:", error)
-      toast.error("Failed to export data. Please try again.")
+        toast.error("Failed to export data. Please try again.")
     }
   }
   return (
