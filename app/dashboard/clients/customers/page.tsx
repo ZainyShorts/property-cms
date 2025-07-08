@@ -1,5 +1,4 @@
 "use client"
-
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -36,7 +35,37 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { SimpleDatePicker } from "./simple-date-picker/date-picker"
 import { AddCustomerModal } from "./add-customer-modal/add-customer-modal"
+import { CustomerFilterSidebar } from "./filter-sidebar/customer-filter-sidebar"
 import useSWR from "swr"
+import { ImportCustomersModal } from "./import-modal/import-modal"
+
+interface ApiResponse {
+  message: string
+  meta: {
+    total: number
+    page: number
+    limit: number
+    sortBy: string
+    sortOrder: string
+    totalPages: number
+  }
+  data: Customer[]
+}
+
+export enum CustomerSegment {
+  Customer = "Customer",
+  Supplier = "Supplier",
+}
+
+export enum CustomerCategory {
+  Organisation = "Organisation",
+  Individual = "Individual",
+}
+
+export enum CustomerSubCategory {
+  EndUser = "End User",
+  Investor = "Investor",
+}
 
 export interface Customer {
   _id: string
@@ -52,19 +81,14 @@ export interface Customer {
   customerDepartment: string
   customerDesignation: string
   telOffice: string
+  tellDirect: string
+  emailAddress: string
   mobile1: string
   mobile2: string
   webAddress: string
   officeLocation: string
   createdAt: string
   updatedAt: string
-}
-
-interface ApiResponse {
-  data: Customer[]
-  totalCount: number
-  totalPages: number
-  pageNumber: number
 }
 
 const tableHeaders = [
@@ -82,21 +106,40 @@ const tableHeaders = [
   { key: "customerDepartment", label: "DEPARTMENT" },
   { key: "customerDesignation", label: "DESIGNATION" },
   { key: "telOffice", label: "TEL OFFICE" },
+  { key: "tellDirect", label: "TEL DIRECT" },
+  { key: "emailAddress", label: "Email Address" },
   { key: "mobile1", label: "MOBILE 1" },
   { key: "mobile2", label: "MOBILE 2" },
   { key: "webAddress", label: "WEB ADDRESS" },
   { key: "officeLocation", label: "OFFICE LOCATION" },
-  { key: "view", label: "VIEW" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
 
-// Header categories for grouping
-const customerInfo = ["index", "_id", "customerSegment", "customerCategory", "customerSubCategory"]
-const businessInfo = ["customerType", "customerSubType", "customerBusinessSector", "customerNationality"]
-const contactInfo = ["customerName", "contactPerson", "customerDepartment", "customerDesignation"]
-const communicationInfo = ["telOffice", "mobile1", "mobile2", "webAddress", "officeLocation"]
-const actions = ["view", "edit", "delete"]
+const customerCategory = [
+  "index",
+  "_id",
+  "customerSegment",
+  "customerCategory",
+  "customerSubCategory",
+  "customerType",
+  "customerSubType",
+  "customerBusinessSector",
+  "customerNationality",
+]
+const customerContactDetails = [
+  "contactPerson",
+  "customerDepartment",
+  "customerDesignation",
+  "telOffice",
+  "tellDirect",
+  "emailAddress",
+  "mobile1",
+  "mobile2",
+  "webAddress",
+  "officeLocation",
+]
+const actions = ["edit", "delete"]
 
 const fetcher = async <T,>(url: string): Promise<T> => {
   const res = await fetch(url)
@@ -106,11 +149,27 @@ const fetcher = async <T,>(url: string): Promise<T> => {
   return res.json() as Promise<T>
 }
 
+export interface CustomerFilters {
+  customerSegment: string
+  customerCategory: string
+  customerSubCategory: string
+  customerType: string[]
+  customerSubType: string[]
+  customerBusinessSector: string
+  customerNationality: string
+  customerName: string
+  contactPerson: string
+  emailAddress: string
+  mobile1: string
+  startDate: Date | undefined
+  endDate: Date | undefined
+}
+
 export default function CustomerPage() {
   const { theme } = useTheme()
   const router = useRouter()
-  const [currentPage, setCurrentPage] = useState<any>(1)
-  const sortOrder = "desc"
+  const [currentPage, setCurrentPage] = useState<number>(1)
+  const [sortOrder, setSortOrder] = useState("desc")
   const [isSelectionMode, setIsSelectionMode] = useState(false)
   const [records, setRecords] = useState<Customer[]>([])
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -123,7 +182,7 @@ export default function CustomerPage() {
     pageNumber: 1,
   })
   const [editRecord, setEditRecord] = useState<Customer | null>(null)
-  const [pageInputValue, setPageInputValue] = useState(currentPage.toString())
+  const [pageInputValue, setPageInputValue] = useState(String(currentPage))
   const [copiedIds, setCopiedIds] = useState<Record<string, boolean>>({})
   const [selectedRecordsCache, setSelectedRecordsCache] = useState<any>({})
   const [currentIndex, setCurrentIndex] = useState(1)
@@ -135,16 +194,43 @@ export default function CustomerPage() {
   )
   const [limit, setLimit] = useState<number>(10)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
-  const { data: authData } = useSWR<any>("/api/me", fetcher)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+
+  // Filter sidebar state
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
+  const [filters, setFilters] = useState<CustomerFilters>({
+    customerSegment: "",
+    customerCategory: "",
+    customerSubCategory: "",
+    customerType: [],
+    customerSubType: [],
+    customerBusinessSector: "",
+    customerNationality: "",
+    customerName: "",
+    contactPerson: "",
+    emailAddress: "",
+    mobile1: "",
+    startDate: undefined,
+    endDate: undefined,
+  })
+
+  const { data, error } = useSWR<any>("/api/me", fetcher)
 
   useEffect(() => {
-    fetchRecords()
-  }, [sortOrder, limit])
+    if (data) console.log("data →", data)
+    if (error) console.error("error →", error)
+  }, [data, error])
 
   useEffect(() => {
-    setPageInputValue(currentPage.toString())
+    if (data) {
+      fetchRecords()
+    }
+  }, [sortOrder, limit, data])
+
+  useEffect(() => {
+    setPageInputValue(String(currentPage))
     setStartingIndex((currentPage - 1) * limit)
-  }, [currentPage])
+  }, [currentPage, limit])
 
   useEffect(() => {
     const newCache = { ...selectedRecordsCache }
@@ -162,37 +248,101 @@ export default function CustomerPage() {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
 
-  const fetchRecords = async (reset?: any, page?: any) => {
+  const buildFilterParams = (params: URLSearchParams, filtersToApply: CustomerFilters) => {
+    // Text filters
+    if (filtersToApply.customerName) {
+      params.append("customerName", filtersToApply.customerName)
+    }
+    if (filtersToApply.contactPerson) {
+      params.append("contactPerson", filtersToApply.contactPerson)
+    }
+    if (filtersToApply.emailAddress) {
+      params.append("emailAddress", filtersToApply.emailAddress)
+    }
+    if (filtersToApply.mobile1) {
+      params.append("mobile1", filtersToApply.mobile1)
+    }
+
+    // Select filters
+    if (filtersToApply.customerSegment) {
+      params.append("customerSegment", filtersToApply.customerSegment)
+    }
+    if (filtersToApply.customerCategory) {
+      params.append("customerCategory", filtersToApply.customerCategory)
+    }
+    if (filtersToApply.customerSubCategory) {
+      params.append("customerSubCategory", filtersToApply.customerSubCategory)
+    }
+    if (filtersToApply.customerBusinessSector) {
+      params.append("customerBusinessSector", filtersToApply.customerBusinessSector)
+    }
+    if (filtersToApply.customerNationality) {
+      params.append("customerNationality", filtersToApply.customerNationality)
+    }
+
+    // Array filters
+    if (filtersToApply.customerType && filtersToApply.customerType.length > 0) {
+      filtersToApply.customerType.forEach((type) => {
+        params.append("customerType", type)
+      })
+    }
+    if (filtersToApply.customerSubType && filtersToApply.customerSubType.length > 0) {
+      filtersToApply.customerSubType.forEach((subType) => {
+        params.append("customerSubType", subType)
+      })
+    }
+
+    // Date filters
+    if (filtersToApply.startDate) {
+      params.append("startDate", filtersToApply.startDate.toISOString())
+    }
+    if (filtersToApply.endDate) {
+      params.append("endDate", filtersToApply.endDate.toISOString())
+    }
+  }
+
+  const fetchRecords = async (reset?: boolean, page?: number) => {
     setLoading(true)
     try {
       const params = new URLSearchParams()
-      if (page) {
-        params.append("page", page.toString())
-      } else {
-        params.append("page", currentPage.toString())
-      }
-      params.append("sortOrder", sortOrder)
-      params.append("limit", limit.toString())
+      const targetPage = page || currentPage
+
+      params.append("page", String(targetPage))
+      params.append("sortOrder", String(sortOrder))
+      params.append("limit", String(limit))
 
       if (!reset) {
-        if (startDate) {
+        // Apply sidebar filters
+        buildFilterParams(params, filters)
+
+        // Apply legacy date filters if no sidebar date filters
+        if (!filters.startDate && startDate) {
           params.append("startDate", startDate.toISOString())
         }
-        if (endDate) {
+        if (!filters.endDate && endDate) {
           params.append("endDate", endDate.toISOString())
         }
       }
 
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/customer?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${data?.token}`,
+          },
+        },
       )
+
       console.log("response", response)
       setRecords(response.data.data)
       setPagination({
-        totalCount: response.data.totalCount,
-        totalPages: response.data.totalPages,
-        pageNumber: response.data.pageNumber,
+        totalCount: response.data.meta.total,
+        totalPages: response.data.meta.totalPages,
+        pageNumber: response.data.meta.page,
       })
+
+      // Update current page to match the response
+      setCurrentPage(response.data.meta.page)
     } catch (error) {
       console.error("Error fetching records:", error)
       toast.error("Failed to fetch records. Please try again.")
@@ -204,7 +354,7 @@ export default function CustomerPage() {
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
     setCurrentPage(page)
-    pageChange(page)
+    fetchRecords(false, page)
   }
 
   const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -223,86 +373,77 @@ export default function CustomerPage() {
 
   const handleSortChange = async (value: string) => {
     setLoading(true)
-    const response = await axios.get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer?sortOrder=${value}`)
-    setLoading(false)
-    setRecords(response.data.data)
-    setPagination({
-      totalCount: response.data.totalCount,
-      totalPages: response.data.totalPages,
-      pageNumber: response.data.pageNumber,
-    })
+    setSortOrder(value)
+
+    const params = new URLSearchParams()
+    params.append("page", "1") // Reset to page 1 when sorting
+    params.append("sortOrder", String(value))
+    params.append("limit", String(limit))
+    buildFilterParams(params, filters)
+
+    try {
+      const response = await axios.get<ApiResponse>(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/customer?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${data?.token}`,
+          },
+        },
+      )
+
+      setRecords(response.data.data)
+      setPagination({
+        totalCount: response.data.meta.total,
+        totalPages: response.data.meta.totalPages,
+        pageNumber: response.data.meta.page,
+      })
+      setCurrentPage(1) // Reset to page 1 when sorting
+    } catch (error) {
+      console.error("Error fetching records:", error)
+      toast.error("Failed to fetch records. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleLimitChange = (value: string) => {
     setLimit(Number(value))
+    setCurrentPage(1) // Reset to page 1 when changing limit
   }
 
   const handleResetFilters = () => {
     setStartDate(undefined)
     setEndDate(undefined)
-    fetchRecords("reset")
+    setFilters({
+      customerSegment: "",
+      customerCategory: "",
+      customerSubCategory: "",
+      customerType: [],
+      customerSubType: [],
+      customerBusinessSector: "",
+      customerNationality: "",
+      customerName: "",
+      contactPerson: "",
+      emailAddress: "",
+      mobile1: "",
+      startDate: undefined,
+      endDate: undefined,
+    })
+    setCurrentPage(1) // Reset to page 1 when clearing filters
+    fetchRecords(true, 1)
   }
 
   const applyFilters = () => {
-    setCurrentPage(1)
-    fetchRecords()
+    setCurrentPage(1) // Reset to page 1 when applying filters
+    fetchRecords(false, 1)
   }
 
-  const pageChange = (page: any) => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      params.append("page", page.toString())
-      params.append("sortOrder", sortOrder)
-      params.append("limit", limit.toString())
-
-      if (startDate) {
-        const formattedStartDate = new Date(startDate)
-        formattedStartDate.setHours(0, 0, 0, 0)
-        params.append("startDate", formattedStartDate.toISOString())
-      }
-
-      if (endDate) {
-        const formattedEndDate = new Date(endDate)
-        formattedEndDate.setHours(23, 59, 59, 999)
-        params.append("endDate", formattedEndDate.toISOString())
-      }
-
-      console.log("API params:", params.toString())
-
-      axios
-        .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer?${params.toString()}`)
-        .then((response) => {
-          setRecords(response.data.data)
-          setPagination({
-            totalCount: response.data.totalCount,
-            totalPages: response.data.totalPages,
-            pageNumber: response.data.pageNumber,
-          })
-          console.log("API response:", response.data)
-        })
-        .catch((error) => {
-          console.error("Error fetching records:", error)
-          toast.error("Failed to fetch records. Please try again.")
-        })
-        .finally(() => {
-          setLoading(false)
-        })
-    } catch (error) {
-      console.error("Error fetching records:", error)
-      toast.error("Failed to fetch records. Please try again.")
-      setLoading(false)
-    }
-  }
-
-  // Handle copy ID
   const handleCopyId = (id: string) => {
     navigator.clipboard
       .writeText(id)
       .then(() => {
         setCopiedIds({ ...copiedIds, [id]: true })
         toast.success("ID copied to clipboard")
-        // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedIds((prev) => {
             const newState = { ...prev }
@@ -323,11 +464,9 @@ export default function CustomerPage() {
   }
 
   const handleDeleteClick = (recordId: string) => {
-    // Delete functionality can be implemented here
     toast.info("Delete functionality to be implemented")
   }
 
-  // Close modal and reset edit record
   const handleModalClose = (open: boolean) => {
     setIsModalOpen(open)
     if (!open) {
@@ -340,38 +479,20 @@ export default function CustomerPage() {
 
   const toggleColumnVisibility = (columnKey: string, headers?: any) => {
     if (headers) {
-      if (headers === "customerInfo") {
-        setCheckState("customerInfo")
+      if (headers === "customerCategory") {
+        setCheckState("customerCategory")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = customerInfo.includes(key)
+            acc[key] = customerCategory.includes(key)
             return acc
           }, {})
           return updated
         })
-      } else if (headers === "businessInfo") {
-        setCheckState("businessInfo")
+      } else if (headers === "customerContactDetails") {
+        setCheckState("customerContactDetails")
         setVisibleColumns((prev) => {
           const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = businessInfo.includes(key)
-            return acc
-          }, {})
-          return updated
-        })
-      } else if (headers === "contactInfo") {
-        setCheckState("contactInfo")
-        setVisibleColumns((prev) => {
-          const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = contactInfo.includes(key)
-            return acc
-          }, {})
-          return updated
-        })
-      } else if (headers === "communicationInfo") {
-        setCheckState("communicationInfo")
-        setVisibleColumns((prev) => {
-          const updated = Object.keys(prev).reduce((acc: any, key) => {
-            acc[key] = communicationInfo.includes(key)
+            acc[key] = customerContactDetails.includes(key)
             return acc
           }, {})
           return updated
@@ -549,6 +670,15 @@ export default function CustomerPage() {
         pauseOnHover
         theme={theme === "dark" ? "dark" : "light"}
       />
+
+      {/* Filter Sidebar */}
+      <CustomerFilterSidebar
+        open={isFilterSidebarOpen}
+        onOpenChange={setIsFilterSidebarOpen}
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
+
       <div className="border-b">
         <div className="flex h-16 items-center px-4 justify-between">
           <div className="flex items-center space-x-2">
@@ -557,7 +687,7 @@ export default function CustomerPage() {
             <h2 className="text-lg font-semibold">Customer Management</h2>
           </div>
           <div className="flex items-center space-x-2">
-            <Select defaultValue={limit.toString()} onValueChange={handleLimitChange}>
+            <Select value={String(limit)} onValueChange={handleLimitChange}>
               <SelectTrigger className="w-[100px]">
                 <SelectValue placeholder="Limit" />
               </SelectTrigger>
@@ -568,7 +698,7 @@ export default function CustomerPage() {
                 <SelectItem value="100">100 rows</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2 bg-transparent">
+            <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
             </Button>
@@ -588,7 +718,7 @@ export default function CustomerPage() {
       <div className="p-4 space-y-4">
         {/* Filters */}
         <div className="flex flex-wrap gap-2">
-          <Select defaultValue={sortOrder} onValueChange={handleSortChange}>
+          <Select value={String(sortOrder)} onValueChange={handleSortChange}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Sort By Time" />
             </SelectTrigger>
@@ -600,7 +730,7 @@ export default function CustomerPage() {
           <SimpleDatePicker placeholder="Start Date" date={startDate} setDate={setStartDate} />
           <SimpleDatePicker placeholder="End Date" date={endDate} setDate={setEndDate} />
           <div className="flex-1 flex justify-end gap-2">
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={() => setIsFilterSidebarOpen(true)}>
               <Filter className="h-4 w-4" />
             </Button>
             <DropdownMenu>
@@ -630,17 +760,11 @@ export default function CustomerPage() {
                   </div>
                 </div>
                 <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "all")}>All Headers</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "customerInfo")}>
-                  Customer Info
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "customerCategory")}>
+                  Customer Category
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "businessInfo")}>
-                  Business Info
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "contactInfo")}>
-                  Contact Info
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "communicationInfo")}>
-                  Communication Info
+                <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "customerContactDetails")}>
+                  Customer Contact Details
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>Actions</DropdownMenuItem>
               </DropdownMenuContent>
@@ -657,6 +781,7 @@ export default function CustomerPage() {
             </Button>
           </div>
         </div>
+
         <Card>
           <CardContent className="p-0">
             <div className="flex w-full items-center mb-2 mt-2">
@@ -675,24 +800,18 @@ export default function CustomerPage() {
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="ml-2 gap-1 bg-transparent">
-                          Select Header <ChevronDown className="h-4 w-4" />
+                          Select Header <ChevronDown className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "all")}>
                           All Headers
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "customerInfo")}>
-                          Customer Info
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "customerCategory")}>
+                          Customer Category
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "businessInfo")}>
-                          Business Info
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "contactInfo")}>
-                          Contact Info
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "communicationInfo")}>
-                          Communication Info
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "customerContactDetails")}>
+                          Customer Contact Details
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
                           Actions
@@ -708,14 +827,14 @@ export default function CustomerPage() {
                 <TableHeader>
                   {showHeaderCategories && (
                     <TableRow>
-                      {(checkState === "customerInfo" || checkState === "all") && (
+                      {(checkState === "customerCategory" || checkState === "all") && (
                         <TableHead
-                          onClick={() => toggleColumnVisibility("a", "customerInfo")}
-                          colSpan={isSelectionMode ? 6 : 5}
+                          onClick={() => toggleColumnVisibility("a", "customerCategory")}
+                          colSpan={isSelectionMode ? 9 : 9}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-amber-300 to-amber-100 border-r border-border relative"
                         >
-                          Customer Info
-                          {checkState === "customerInfo" && (
+                          Customer Category
+                          {checkState === "customerCategory" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -729,56 +848,14 @@ export default function CustomerPage() {
                           )}
                         </TableHead>
                       )}
-                      {(checkState === "businessInfo" || checkState === "all") && (
+                      {(checkState === "customerContactDetails" || checkState === "all") && (
                         <TableHead
-                          onClick={() => toggleColumnVisibility("a", "businessInfo")}
-                          colSpan={isSelectionMode ? 5 : 4}
+                          onClick={() => toggleColumnVisibility("a", "customerContactDetails")}
+                          colSpan={isSelectionMode ? 11 : 11}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-teal-300 to-teal-100 border-r border-border relative"
                         >
-                          Business Info
-                          {checkState === "businessInfo" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleColumnVisibility("a", "all")
-                              }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
-                            >
-                              <ArrowLeft className="w-4 h-4" />
-                              Back
-                            </button>
-                          )}
-                        </TableHead>
-                      )}
-                      {(checkState === "contactInfo" || checkState === "all") && (
-                        <TableHead
-                          onClick={() => toggleColumnVisibility("a", "contactInfo")}
-                          colSpan={isSelectionMode ? 5 : 4}
-                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
-                        >
-                          Contact Info
-                          {checkState === "contactInfo" && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                toggleColumnVisibility("a", "all")
-                              }}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-3 py-1 text-xs font-medium bg-white border rounded-full shadow hover:bg-gray-100 transition"
-                            >
-                              <ArrowLeft className="w-4 h-4" />
-                              Back
-                            </button>
-                          )}
-                        </TableHead>
-                      )}
-                      {(checkState === "communicationInfo" || checkState === "all") && (
-                        <TableHead
-                          onClick={() => toggleColumnVisibility("a", "communicationInfo")}
-                          colSpan={isSelectionMode ? 6 : 5}
-                          className="text-center cursor-pointer font-bold bg-gradient-to-b from-purple-300 to-purple-100 border-r border-border relative"
-                        >
-                          Communication Info
-                          {checkState === "communicationInfo" && (
+                          Customer Contact Details
+                          {checkState === "customerContactDetails" && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -854,7 +931,6 @@ export default function CustomerPage() {
                             header.key === "mobile2" && "w-[120px]",
                             header.key === "webAddress" && "w-[200px]",
                             header.key === "officeLocation" && "w-[200px]",
-                            header.key === "view" && "w-[100px]",
                             header.key === "edit" && "w-[100px]",
                             header.key === "delete" && "w-[100px]",
                           )}
@@ -930,15 +1006,16 @@ export default function CustomerPage() {
                 </TableBody>
               </Table>
             </div>
-            {/* Pagination */}
-            {pagination.totalPages > 0 && (
+
+            {/* Pagination - Right below the table */}
+            {(pagination.totalPages > 0 || loading) && (
               <div className="flex items-center justify-between p-4 border-t">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(pagination.pageNumber - 1)}
-                    disabled={pagination.pageNumber === 1}
+                    disabled={pagination.pageNumber === 1 || loading}
                     className="h-9 w-9 rounded-md"
                   >
                     <ChevronLeft className="h-4 w-4" />
@@ -951,12 +1028,13 @@ export default function CustomerPage() {
                         onChange={handlePageInputChange}
                         className="h-9 w-16 text-center rounded-md"
                         aria-label="Page number"
+                        disabled={loading}
                       />
                     </div>
                     <span className="text-sm text-muted-foreground">...</span>
                     <div className="flex items-center">
                       <div className="h-9 px-3 flex items-center justify-center border rounded-md bg-muted/50">
-                        {pagination.totalPages}
+                        {loading ? "-" : pagination.totalPages}
                       </div>
                     </div>
                   </form>
@@ -964,21 +1042,27 @@ export default function CustomerPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(pagination.pageNumber + 1)}
-                    disabled={pagination.pageNumber === pagination.totalPages}
+                    disabled={pagination.pageNumber === pagination.totalPages || loading}
                     className="h-9 w-9 rounded-md"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                   <div className="text-sm text-muted-foreground ml-2">
-                    Page {pagination.pageNumber} of {pagination.totalPages}
+                    {loading ? "Loading..." : `Page ${pagination.pageNumber} of ${pagination.totalPages}`}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">Total Records: {pagination.totalCount}</div>
+                <div className="flex items-center gap-2">Total Records: {loading ? "-" : pagination.totalCount}</div>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+      {/* Import Modal */}
+      <ImportCustomersModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        fetchRecords={fetchRecords}
+      />
     </div>
   )
 }

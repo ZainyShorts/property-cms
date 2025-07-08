@@ -31,13 +31,30 @@ enum CustomerSubCategory {
 }
 
 enum CustomerType {
-  Buyer = "Buyer",
-  Seller = "Seller",
+   Seller = 'Seller',
+  TenantLongTerm = 'Tenant-Long Term',
+  TenantShortTerm = 'Tenant-Short Term', 
+  Buyer = 'Buyer',
+  ProspectBuyer = 'Prospect Buyer',
+  PropertyOwner = 'Property Owner',
+  SubLease = 'Sub-Lease',
+  Landlord = 'Landlord',
+  Underwriter = 'Underwriter',
+  ShortTermTrader = 'Short Term Trader',
 }
 
 enum CustomerSubType {
-  MasterDeveloper = "Master Developer",
-  Banks = "Banks",
+    MasterDeveloper = 'Master Developer',
+  SubDeveloper = 'Sub-Developer',
+  RealEstateInvestor = 'Real Estate Investor',
+  RealEstateBroker = 'Real Estate Broker',
+  PropertyManagement = 'Property Management',
+  Banks = 'Banks',
+  Auction = 'Auction',
+  Contractor = 'Contractor',
+  ArchitectConsultant = 'Architect-Consultant',
+  REIT = 'REIT',
+  PrivateInvestor = 'Private Investor',
 }
 
 // Define Customer interface
@@ -177,7 +194,7 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
         if (Object.keys(changedFields).length === 0) {
           toast.info("No changes detected")
         } else {
-          const response = await axios.patch(
+          const response = await axios.put(
             `${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/${editRecord._id}`,
             changedFields,
             {
