@@ -29,7 +29,7 @@ const sidebarItems = [
     enabled: true,
   },
   { title: "Agents", icon: Users, items: ["Overview", "Agents Gallery", "Agents Dashboard"], enabled: false },
-  { title: "Clients", icon: UserCircle, items: ["Overview"], enabled: false },
+  { title: "Clients", icon: UserCircle, items: ["Customers"], enabled: true },
   { title: "Listings", icon: ClipboardList, items: ["Overview", "Listing Gallery", "Listing Kanban"], enabled: false },
   { title: "Transactions", icon: FileCheck, items: ["Overview", "Transactions Dashboard"], enabled: false },
   { title: "Appointments", icon: Calendar, items: ["Overview", "Appointments Calender"], enabled: false },
