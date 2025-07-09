@@ -1,8 +1,5 @@
 "use client"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-import { DropdownMenuContent } from "@/components/ui/dropdown-menu"
-import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { DropdownMenu } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import type React from "react"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
@@ -36,6 +33,7 @@ import { cn } from "@/lib/utils"
 import { SimpleDatePicker } from "./simple-date-picker/date-picker"
 import { AddCustomerModal } from "./add-customer-modal/add-customer-modal"
 import { CustomerFilterSidebar } from "./filter-sidebar/customer-filter-sidebar"
+import { DeleteConfirmationModal } from "./delete-confirmation-modal"
 import useSWR from "swr"
 import { ImportCustomersModal } from "./import-modal/import-modal"
 
@@ -127,6 +125,7 @@ const customerCategory = [
   "customerBusinessSector",
   "customerNationality",
 ]
+
 const customerContactDetails = [
   "contactPerson",
   "customerDepartment",
@@ -139,6 +138,7 @@ const customerContactDetails = [
   "webAddress",
   "officeLocation",
 ]
+
 const actions = ["edit", "delete"]
 
 const fetcher = async <T,>(url: string): Promise<T> => {
@@ -195,6 +195,11 @@ export default function CustomerPage() {
   const [limit, setLimit] = useState<number>(10)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+
+  // Delete confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [recordToDelete, setRecordToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Filter sidebar state
   const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState(false)
@@ -262,7 +267,6 @@ export default function CustomerPage() {
     if (filtersToApply.mobile1) {
       params.append("mobile1", filtersToApply.mobile1)
     }
-
     // Select filters
     if (filtersToApply.customerSegment) {
       params.append("customerSegment", filtersToApply.customerSegment)
@@ -279,7 +283,6 @@ export default function CustomerPage() {
     if (filtersToApply.customerNationality) {
       params.append("customerNationality", filtersToApply.customerNationality)
     }
-
     // Array filters
     if (filtersToApply.customerType && filtersToApply.customerType.length > 0) {
       filtersToApply.customerType.forEach((type) => {
@@ -291,7 +294,6 @@ export default function CustomerPage() {
         params.append("customerSubType", subType)
       })
     }
-
     // Date filters
     if (filtersToApply.startDate) {
       params.append("startDate", filtersToApply.startDate.toISOString())
@@ -306,15 +308,12 @@ export default function CustomerPage() {
     try {
       const params = new URLSearchParams()
       const targetPage = page || currentPage
-
       params.append("page", String(targetPage))
       params.append("sortOrder", String(sortOrder))
       params.append("limit", String(limit))
-
       if (!reset) {
         // Apply sidebar filters
         buildFilterParams(params, filters)
-
         // Apply legacy date filters if no sidebar date filters
         if (!filters.startDate && startDate) {
           params.append("startDate", startDate.toISOString())
@@ -332,7 +331,6 @@ export default function CustomerPage() {
           },
         },
       )
-
       console.log("response", response)
       setRecords(response.data.data)
       setPagination({
@@ -340,7 +338,6 @@ export default function CustomerPage() {
         totalPages: response.data.meta.totalPages,
         pageNumber: response.data.meta.page,
       })
-
       // Update current page to match the response
       setCurrentPage(response.data.meta.page)
     } catch (error) {
@@ -374,13 +371,11 @@ export default function CustomerPage() {
   const handleSortChange = async (value: string) => {
     setLoading(true)
     setSortOrder(value)
-
     const params = new URLSearchParams()
     params.append("page", "1") // Reset to page 1 when sorting
     params.append("sortOrder", String(value))
     params.append("limit", String(limit))
     buildFilterParams(params, filters)
-
     try {
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/customer?${params.toString()}`,
@@ -390,7 +385,6 @@ export default function CustomerPage() {
           },
         },
       )
-
       setRecords(response.data.data)
       setPagination({
         totalCount: response.data.meta.total,
@@ -464,7 +458,47 @@ export default function CustomerPage() {
   }
 
   const handleDeleteClick = (recordId: string) => {
-    toast.info("Delete functionality to be implemented")
+    // Check if user is admin 
+   if (data?.role !== "admin" && data?.role !== "manager") {
+  toast.error("Permission not granted. Only administrators can delete records.");
+  return;
+}
+
+    // If admin, show confirmation modal
+    setRecordToDelete(recordId)
+    setIsDeleteModalOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!recordToDelete) return
+
+    setIsDeleting(true)
+    try {
+      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/${recordToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${data?.token}`,
+        },
+      })
+
+      toast.success("Record deleted successfully")
+
+      // Refresh the records
+      await fetchRecords()
+
+      // Close the modal and reset state
+      setIsDeleteModalOpen(false)
+      setRecordToDelete(null)
+    } catch (error) {
+      console.error("Error deleting record:", error)
+      toast.error("Failed to delete record. Please try again.")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleDeleteCancel = () => {
+    setIsDeleteModalOpen(false)
+    setRecordToDelete(null)
   }
 
   const handleModalClose = (open: boolean) => {
@@ -671,6 +705,13 @@ export default function CustomerPage() {
         theme={theme === "dark" ? "dark" : "light"}
       />
 
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+      />
+
       {/* Filter Sidebar */}
       <CustomerFilterSidebar
         open={isFilterSidebarOpen}
@@ -715,6 +756,7 @@ export default function CustomerPage() {
           </div>
         </div>
       </div>
+
       <div className="p-4 space-y-4">
         {/* Filters */}
         <div className="flex flex-wrap gap-2">
@@ -1006,7 +1048,6 @@ export default function CustomerPage() {
                 </TableBody>
               </Table>
             </div>
-
             {/* Pagination - Right below the table */}
             {(pagination.totalPages > 0 || loading) && (
               <div className="flex items-center justify-between p-4 border-t">
@@ -1057,6 +1098,7 @@ export default function CustomerPage() {
           </CardContent>
         </Card>
       </div>
+
       {/* Import Modal */}
       <ImportCustomersModal
         isOpen={isImportModalOpen}

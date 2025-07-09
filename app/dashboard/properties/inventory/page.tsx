@@ -175,7 +175,8 @@ export default function PropertiesPage() {
     unitExternalDesign: property.unitExternalDesign || "N/A",
     plotSizeSqFt: property.plotSizeSqFt || "N/A",
     BuaSqFt: property.BuaSqFt || "N/A",
-    unitNumber: property.unitNumber || "N/A",
+    unitNumber: property.unitNumber || "N/A", 
+    customers: [...(property.customers || [])],
     unitType: property.unitType || "N/A",
     noOfBedRooms: property.noOfBedRooms || "N/A",
     unitView: Array.isArray(property.unitView) && property.unitView.length > 0 ? property.unitView : "N/A",
@@ -722,7 +723,8 @@ noOfWashroom : property.noOfWashroom,
             setSelectedColumns={setSelectedColumns}
             selectedRows={selectedRows}
             selectedColumns={selectedColumns}
-            setSelectedRows={setSelectedRows}
+            setSelectedRows={setSelectedRows} 
+            token={authData?.token}
             data={transformedData}
             isRowSelected={isRowSelected}
             onShare={handleShareButton}

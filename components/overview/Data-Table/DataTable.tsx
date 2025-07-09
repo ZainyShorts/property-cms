@@ -1,5 +1,4 @@
 "use client"
-
 import { DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { DropdownMenuLabel } from "@/components/ui/dropdown-menu"
 import { useState, useEffect, memo, useCallback } from "react"
@@ -20,6 +19,8 @@ import {
   Edit,
   Settings,
   Plus,
+  UserPlus,
+  Users,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "react-toastify"
@@ -35,10 +36,10 @@ import { cn } from "@/lib/utils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
 import { Checkbox as UICheckbox } from "@/components/ui/checkbox"
+import { CustomerManagementModal } from "./customer-management-modal"
 
 // Define categories for column grouping
 const projectDetails = ["index", "_id", "roadLocation", "developmentName", "subDevelopmentName", "projectName"]
-
 const unitDetails = [
   "unitNumber",
   "unitHeight",
@@ -52,11 +53,8 @@ const unitDetails = [
   "noOfWashroom",
   "unitView",
 ]
-
 const availability = ["unitPurpose", "listingDate"]
-
 const unitTenancyDetails = ["rentedAt", "rentedTill"]
-
 const paymentDetails = [
   "purchasePrice",
   "marketPrice",
@@ -67,7 +65,6 @@ const paymentDetails = [
   "payableTODevelopers",
   "premiumAndLoss",
 ]
-
 const paymentPlanDetails = [
   "paymentPlan1",
   "paymentPlan2",
@@ -76,8 +73,7 @@ const paymentPlanDetails = [
   "addEditPlan2",
   "addEditPlan3",
 ]
-
-const actions = ["edit", "attachDocument", "view"]
+const actions = ["customers", "edit", "attachDocument", "view"]
 
 interface PropertyDataTableProps {
   data?: any[]
@@ -88,7 +84,8 @@ interface PropertyDataTableProps {
   onDelete?: (id: string) => void
   onShare?: (data: any) => void
   onEdit?: (row: any) => void
-  totalPages?: any
+  totalPages?: any 
+  token? : string
   totalRecord?: any
   onAttachDocument?: (id: string) => void
   loading?: boolean
@@ -113,7 +110,8 @@ function PropertyDataTable({
   Count,
   onDelete,
   totalPages,
-  onShare,
+  onShare, 
+  token,
   startingIndex,
   selectedRows = [],
   setSelectedColumns = () => {},
@@ -142,6 +140,11 @@ function PropertyDataTable({
   const [selectedRowForPayment, setSelectedRowForPayment] = useState<string | null>(null)
   const [paymentPlanType, setPaymentPlanType] = useState("paymentPlan1")
   const [editPlanData, setEditPlanData] = useState<any>(null)
+
+  // Customer modal states
+  const [isCustomerManagementModalOpen, setIsCustomerManagementModalOpen] = useState(false)
+  const [selectedRowForCustomerManagement, setSelectedRowForCustomerManagement] = useState<string | null>(null)
+  const [selectedRowCustomerIds, setSelectedRowCustomerIds] = useState<string[]>([])
 
   const itemsPerPage = 10
 
@@ -182,6 +185,7 @@ function PropertyDataTable({
     { key: "addEditPlan2", label: "ADD/EDIT PLAN 2" },
     { key: "addEditPlan3", label: "ADD/EDIT PLAN 3" },
     { key: "premiumAndLoss", label: "PREMIUM / LOSS" },
+    { key: "customers", label: "CUSTOMERS" },
     { key: "attachDocument", label: "DOCUMENT" },
     { key: "view", label: "VIEW" },
     { key: "edit", label: "EDIT" },
@@ -192,25 +196,41 @@ function PropertyDataTable({
     tableHeaders.reduce((acc, header) => ({ ...acc, [header.key]: true }), {}),
   )
   const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false)
+
   useEffect(() => {
     console.log("data", data)
   }, [data])
+
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
+
+  const handleManageCustomers = useCallback((recordId: string, customerIds: string[]) => {
+    setSelectedRowForCustomerManagement(recordId)
+    setSelectedRowCustomerIds(customerIds || [])
+    setIsCustomerManagementModalOpen(true)
+  }, [])
+
+  const handleCustomersUpdated = () => {
+    // Refresh the data or update the specific row
+    window.location.reload() // You can replace this with a more elegant solution
+  }
+
+  const handleCustomerManagementModalClose = () => {
+    setIsCustomerManagementModalOpen(false)
+    setSelectedRowForCustomerManagement(null)
+    setSelectedRowCustomerIds([])
+  }
 
   const handlePaymentPlan = async (recordId: string, planType: string, record: any) => {
     setSelectedRowForPayment(recordId)
     setPaymentPlanType(planType)
-
     // Check if plan data exists for editing
     const planKey = planType.replace("paymentPlan", "plan")
     const existingPlanData = record[planKey]
-
     if (existingPlanData && Array.isArray(existingPlanData) && existingPlanData.length > 0) {
       setEditPlanData(existingPlanData)
     } else {
       setEditPlanData(null)
     }
-
     setIsPaymentPlanModalOpen(true)
   }
 
@@ -231,14 +251,11 @@ function PropertyDataTable({
 
   const handleDocumentSave = async (documentData: any) => {
     setIsAttachingDocument(true)
-
     try {
       console.log("Document data to save:", documentData)
-
       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
       console.log(response)
       toast.success("Document attached successfully")
-
       setIsDocumentModalOpen(false)
       setSelectedRowId(null)
     } catch (error) {
@@ -390,7 +407,6 @@ function PropertyDataTable({
   const getSelectedData = useCallback(() => {
     if (isSelectionMode) {
       if (selectedRows.length === 0 || selectedColumns.length === 0) return []
-
       return data
         .filter((row) => selectedRows.includes(row._id))
         .map((row) => {
@@ -404,7 +420,6 @@ function PropertyDataTable({
       // When not in selection mode but columns are modified via settings wheel
       const visibleKeys = Object.keys(visibleColumns).filter((key) => visibleColumns[key])
       if (visibleKeys.length === 0) return []
-
       return data.map((row) => {
         const filteredRow: Record<string, any> = {}
         visibleKeys.forEach((key) => {
@@ -423,7 +438,6 @@ function PropertyDataTable({
   const selectAllRows = useCallback(() => {
     const newSelectedRows = data.map((row) => row._id)
     setSelectedRows(newSelectedRows)
-
     const newMap = { ...selectedRowsMap }
     data.forEach((row) => {
       newMap[row._id] = true
@@ -440,7 +454,6 @@ function PropertyDataTable({
     if (!paymentPlan || !Array.isArray(paymentPlan) || paymentPlan.length === 0) {
       return <span className="text-muted-foreground">No plan</span>
     }
-
     return (
       <HoverCard>
         <HoverCardTrigger asChild>
@@ -523,7 +536,6 @@ function PropertyDataTable({
           return record[key] ? record[key].toLocaleString() : "N/A"
         case "noOfWashroom":
           return record[key] ? record[key].toLocaleString() : "N/A"
-
         case "additionalRooms":
           if (Array.isArray(record[key]) && record[key].length > 0) {
             return (
@@ -563,19 +575,51 @@ function PropertyDataTable({
             )
           }
           return record[key] && Array.isArray(record[key]) && record[key].length > 0 ? record[key].length : "N/A"
-
-        case "addEditPlan1":
-          console.log("recor -- d", record)
-          const hasPaymentPlan1 = record.plan1 && Array.isArray(record.plan1) && record.plan1.length > 0
-          const paymentPlan1Amount = record.paymentPlan1
-          const canAddPlan1 = paymentPlan1Amount && paymentPlan1Amount !== "-" && paymentPlan1Amount > 0
+        case "customers":
+          const customerCount = record.customers?.length || 0
 
           return (
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700"
+                className={`h-8 px-2 gap-1 bg-transparent ${
+                  customerCount === 0
+                    ? "text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                    : "text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                }`}
+                onClick={() => handleManageCustomers(record._id, record.customers || [])}
+              >
+                {customerCount === 0 ? (
+                  <>
+                    <UserPlus className="h-4 w-4" />
+                    Add Customer
+                  </>
+                ) : (
+                  <>
+                    <Users className="h-4 w-4" />
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                    >
+                      {customerCount}
+                    </Badge>
+                  </>
+                )}
+              </Button>
+            </div>
+          )
+        case "addEditPlan1":
+          console.log("recor -- d", record)
+          const hasPaymentPlan1 = record.plan1 && Array.isArray(record.plan1) && record.plan1.length > 0
+          const paymentPlan1Amount = record.paymentPlan1
+          const canAddPlan1 = paymentPlan1Amount && paymentPlan1Amount !== "-" && paymentPlan1Amount > 0
+          return (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-purple-600 border-purple-200 hover:bg-purple-50 hover:text-purple-700 bg-transparent"
                 disabled={!canAddPlan1 && !hasPaymentPlan1}
                 onClick={() => handlePaymentPlan(record._id, "paymentPlan1", record)}
               >
@@ -584,18 +628,16 @@ function PropertyDataTable({
               </Button>
             </div>
           )
-
         case "addEditPlan2":
           const hasPaymentPlan2 = record.plan2 && Array.isArray(record.plan2) && record.plan2.length > 0
           const paymentPlan2Amount = record.paymentPlan2
           const canAddPlan2 = paymentPlan2Amount && paymentPlan2Amount !== "-" && paymentPlan2Amount > 0
-
           return (
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 bg-transparent"
                 disabled={!canAddPlan2 && !hasPaymentPlan2}
                 onClick={() => handlePaymentPlan(record._id, "paymentPlan2", record)}
               >
@@ -604,18 +646,16 @@ function PropertyDataTable({
               </Button>
             </div>
           )
-
         case "addEditPlan3":
           const hasPaymentPlan3 = record.plan3 && Array.isArray(record.plan3) && record.plan3.length > 0
           const paymentPlan3Amount = record.paymentPlan3
           const canAddPlan3 = paymentPlan3Amount && paymentPlan3Amount !== "-" && paymentPlan3Amount > 0
-
           return (
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 bg-transparent"
                 disabled={!canAddPlan3 && !hasPaymentPlan3}
                 onClick={() => handlePaymentPlan(record._id, "paymentPlan3", record)}
               >
@@ -630,7 +670,7 @@ function PropertyDataTable({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 bg-transparent"
                 onClick={() => handleAttachDocument(record._id)}
                 disabled={isAttachingDocument}
               >
@@ -645,7 +685,7 @@ function PropertyDataTable({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 bg-transparent"
                 onClick={() => window.open(`/inventory-details/${record._id}`, "_blank")}
                 disabled={isAttachingDocument}
               >
@@ -696,14 +736,13 @@ function PropertyDataTable({
             )
           }
           return record[key] || "-"
-
         case "edit":
           return (
             <div className="flex justify-center">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 bg-transparent"
                 onClick={() => handleEditRecord(record)}
               >
                 <Edit className="h-4 w-4 mr-1" />
@@ -717,7 +756,7 @@ function PropertyDataTable({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
                 onClick={() => {
                   setRecordToDelete(record._id)
                   setIsDeleteModalOpen(true)
@@ -736,12 +775,11 @@ function PropertyDataTable({
           if (!value) return "N/A"
           const date = new Date(value)
           return isNaN(date.getTime()) ? "N/A" : date.toLocaleDateString()
-
         default:
           return record[key] || "-"
       }
     },
-    [copiedIds, handleCopyId, handleEditRecord],
+    [copiedIds, handleCopyId, handleEditRecord, handleManageCustomers],
   )
 
   const handlePaymentPlanClose = () => {
@@ -768,14 +806,6 @@ function PropertyDataTable({
                     onClick={selectAllRows}
                     className="h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
                   >
-                    Select All Rows
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={selectAllColumns}
-                    className="h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
-                  >
                     Select All Columns
                   </Button>
                   <Button
@@ -788,24 +818,21 @@ function PropertyDataTable({
                   </Button>
                 </div>
               </div>
-
               <div className="flex flex-wrap justify-center items-center gap-2">
                 {(selectedRows.length > 0 || selectedColumns.length > 0) && (
                   <Badge className="border-border">
                     {selectedRows.length} rows × {selectedColumns.length} columns
                   </Badge>
                 )}
-
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={toggleSelectionMode}
-                  className="h-8 gap-1 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600"
+                  className="h-8 gap-1 border-red-200 text-red-500 hover:bg-red-50 hover:text-red-600 bg-transparent"
                 >
                   <X className="h-3.5 w-3.5" />
                   Exit Selection
                 </Button>
-
                 {selectedRows.length > 0 && selectedColumns.length > 0 && (
                   <Button variant="default" size="sm" onClick={logSelectedData} className="h-8 gap-1.5">
                     <ClipboardCheck className="h-3.5 w-3.5" />
@@ -816,7 +843,6 @@ function PropertyDataTable({
             </div>
           </div>
         )}
-
         {/* Main toolbar */}
         <div className="p-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2">
@@ -825,11 +851,10 @@ function PropertyDataTable({
               <label htmlFor="show-headers" className="text-sm cursor-pointer">
                 Show Headers
               </label>
-
               {showHeaderCategories && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="ml-2 gap-1">
+                    <Button variant="outline" size="sm" className="ml-2 gap-1 bg-transparent">
                       Select Header <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -904,7 +929,6 @@ function PropertyDataTable({
             </DropdownMenu>
           )}
         </div>
-
         <div className="overflow-x-auto thin-scrollbar sm:mx-0">
           <div className="min-w-full inline-block align-middle">
             <Table>
@@ -916,7 +940,6 @@ function PropertyDataTable({
                         <span className="sr-only">Selection</span>
                       </TableHead>
                     )}
-
                     {(checkState === "projectDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "projectDetails")}
@@ -938,7 +961,6 @@ function PropertyDataTable({
                         )}
                       </TableHead>
                     )}
-
                     {(checkState === "unitDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "unitDetails")}
@@ -960,7 +982,6 @@ function PropertyDataTable({
                         )}
                       </TableHead>
                     )}
-
                     {(checkState === "availability" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "availability")}
@@ -982,7 +1003,6 @@ function PropertyDataTable({
                         )}
                       </TableHead>
                     )}
-
                     {(checkState === "unitTenancyDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "unitTenancyDetails")}
@@ -1004,7 +1024,6 @@ function PropertyDataTable({
                         )}
                       </TableHead>
                     )}
-
                     {(checkState === "paymentDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "paymentDetails")}
@@ -1026,7 +1045,6 @@ function PropertyDataTable({
                         )}
                       </TableHead>
                     )}
-
                     {(checkState === "paymentPlanDetails" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "paymentPlanDetails")}
@@ -1048,7 +1066,6 @@ function PropertyDataTable({
                         )}
                       </TableHead>
                     )}
-
                     {(checkState === "actions" || checkState === "all") && (
                       <TableHead
                         onClick={() => toggleColumnVisibility("a", "actions")}
@@ -1072,7 +1089,6 @@ function PropertyDataTable({
                     )}
                   </TableRow>
                 )}
-
                 <TableRow className="border-b border-border hover:bg-transparent">
                   {isSelectionMode && (
                     <TableHead className="w-12 px-4 py-3 text-center text-xs font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
@@ -1081,7 +1097,6 @@ function PropertyDataTable({
                       </div>
                     </TableHead>
                   )}
-
                   {tableHeaders
                     .filter((header) => visibleColumns[header.key])
                     .map((header) => (
@@ -1122,6 +1137,7 @@ function PropertyDataTable({
                           header.key === "addEditPlan2" && "w-[150px]",
                           header.key === "addEditPlan3" && "w-[150px]",
                           header.key === "premiumAndLoss" && "w-[120px]",
+                          header.key === "customers" && "w-[150px]",
                           header.key === "edit" && "w-[100px]",
                           header.key === "delete" && "w-[100px]",
                         )}
@@ -1200,7 +1216,6 @@ function PropertyDataTable({
             </Table>
           </div>
         </div>
-
         {/* Pagination */}
         <div className="p-3 sm:p-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex justify-center items-center flex-wrap gap-2 w-full sm:w-auto">
@@ -1213,7 +1228,6 @@ function PropertyDataTable({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-
             {totalPages <= 3 ? (
               Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNumber) => (
                 <Button
@@ -1252,7 +1266,6 @@ function PropertyDataTable({
                 </div>
               </div>
             )}
-
             <Button
               variant="outline"
               size="sm"
@@ -1262,7 +1275,6 @@ function PropertyDataTable({
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-
             <span className="text-sm text-muted-foreground ml-2">
               Page {page} of {totalPages || 1}
             </span>
@@ -1291,6 +1303,14 @@ function PropertyDataTable({
         type={paymentPlanType}
         editPlan={editPlanData}
         onPaymentPlanSave={handlePaymentPlanSave}
+      />
+      <CustomerManagementModal
+        isOpen={isCustomerManagementModalOpen}
+        onClose={handleCustomerManagementModalClose}
+        rowId={selectedRowForCustomerManagement} 
+        token = {token}
+        existingCustomerIds={selectedRowCustomerIds}
+        onCustomersUpdated={handleCustomersUpdated}
       />
     </>
   )

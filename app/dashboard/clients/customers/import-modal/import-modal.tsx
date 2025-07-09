@@ -46,87 +46,91 @@ export function ImportCustomersModal({ isOpen, onClose, fetchRecords }: ImportCu
     maxFiles: 1,
   })
 
-  const handleUpload = async () => {
-    if (!file) return
+ const handleUpload = async () => {
+  if (!file) return;
 
-    setUploading(true)
-    setUploadProgress(0)
+  setUploading(true);
+  setUploadProgress(0);
 
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 95) {
-            clearInterval(interval)
-            return prev
-          }
-          return prev + 5
-        })
-      }, 100)
+    const interval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 95) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 5;
+      });
+    }, 100);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/import`, {
-        method: "POST",
-        body: formData,
-        headers: {
-          Authorization: `Bearer ${authData?.token}`,
-        },
-      })
+    const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/import`, {
+      method: "POST",
+      body: formData,
+      headers: {
+        Authorization: `Bearer ${authData?.token}`,
+      },
+    });
 
-      clearInterval(interval)
-      setUploadProgress(100)
+    clearInterval(interval);
+    setUploadProgress(100);
 
-      const data = (await response.json()) as any
-      console.log("response data:", data)
+    const data = await response.json();
+    console.log("response data:", data);
 
-      if (response) {
-        setUploadStatus("success")
-        fetchRecords()
+    if (!response.ok) {
+      setUploadStatus("error");
 
-        // Show toast with import results using react-toastify
-        toast.success(
-          `Import successful`,
-          {
-            position: "top-right",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          },
-        )
-
-        // Close the modal after a short delay
-        setTimeout(() => {
-          handleClose()
-        }, 1500)
-      } else {
-        setUploadStatus("error")
-        toast.error(data.message || "Please upload correct file", {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        })
-      }
-    } catch (error) {
-      console.error("Upload error:", error)
-      setUploadStatus("error")
-      toast.error("There was an error importing your customer data. Please try again.", {
+      toast.error(data.message || "Invalid file format or headers", {
         position: "top-right",
         autoClose: 5000,
         hideProgressBar: false,
         closeOnClick: true,
         pauseOnHover: true,
         draggable: true,
-      })
-    } finally {
-      setUploading(false)
+      });
+
+      return; // Don't proceed to success UI
     }
+
+    // ✅ 200 - Success
+    setUploadStatus("success");
+    fetchRecords();
+
+    toast.success(data.message || "Import successful", {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+    });
+
+    setTimeout(() => {
+      handleClose();
+    }, 1500);
+  } catch (error) {
+    console.error("Upload error:", error);
+    setUploadStatus("error");
+
+    toast.error(
+      "There was an error importing your customer data. Please try again.",
+      {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      }
+    );
+  } finally {
+    setUploading(false);
   }
+};
+
 
   const handleClose = () => {
     setFile(null)
