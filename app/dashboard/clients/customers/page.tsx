@@ -109,7 +109,8 @@ const tableHeaders = [
   { key: "mobile1", label: "MOBILE 1" },
   { key: "mobile2", label: "MOBILE 2" },
   { key: "webAddress", label: "WEB ADDRESS" },
-  { key: "officeLocation", label: "OFFICE LOCATION" },
+  { key: "officeLocation", label: "OFFICE LOCATION" },  
+    { key: "view", label: "View" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
@@ -139,8 +140,7 @@ const customerContactDetails = [
   "officeLocation",
 ]
 
-const actions = ["edit", "delete"]
-
+const actions = ["view", "edit", "delete"]
 const fetcher = async <T,>(url: string): Promise<T> => {
   const res = await fetch(url)
   if (!res.ok) {
@@ -559,7 +559,12 @@ export default function CustomerPage() {
         [columnKey]: !prev[columnKey],
       }))
     }
-  }
+  } 
+ const handleViewDetails = (customerId: string) => {
+  const url = `/customer-details/${customerId}`;
+  window.open(url, '_blank'); // opens in a new tab
+};
+
 
   const renderCellContent = (record: Customer, key: string, index: number) => {
     switch (key) {
@@ -612,7 +617,8 @@ export default function CustomerPage() {
           </a>
         ) : (
           "-"
-        )
+        ) 
+        
       case "edit":
         return (
           <Button
@@ -624,6 +630,20 @@ export default function CustomerPage() {
             <Edit className="h-4 w-4 mr-1" />
             Edit
           </Button>
+        ) 
+        case "view":
+        return (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 bg-transparent"
+              onClick={() => handleViewDetails(record._id)}
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              View
+            </Button>
+          </div>
         )
       case "delete":
         return (
@@ -972,7 +992,8 @@ export default function CustomerPage() {
                             header.key === "mobile1" && "w-[120px]",
                             header.key === "mobile2" && "w-[120px]",
                             header.key === "webAddress" && "w-[200px]",
-                            header.key === "officeLocation" && "w-[200px]",
+                            header.key === "officeLocation" && "w-[200px]", 
+                            header.key === "view" && "w-[120px]",
                             header.key === "edit" && "w-[100px]",
                             header.key === "delete" && "w-[100px]",
                           )}

@@ -10,11 +10,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, User, UserPlus, Search, Trash2, Users, History } from "lucide-react"
+import { Loader2, User, UserPlus, Search, Trash2, Users } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card" 
+import { Card, CardContent } from "@/components/ui/card"
 import axios from "axios"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -32,8 +32,8 @@ interface Customer {
 
 interface CustomerManagementModalProps {
   isOpen: boolean
-  onClose: () => void 
-  token : string
+  onClose: () => void
+  token: string
   rowId: string | null
   existingCustomerIds: string[]
   previousCustomerIds?: string[]
@@ -43,7 +43,7 @@ interface CustomerManagementModalProps {
 export function CustomerManagementModal({
   isOpen,
   onClose,
-  rowId, 
+  rowId,
   token,
   existingCustomerIds = [],
   previousCustomerIds = [],
@@ -62,46 +62,37 @@ export function CustomerManagementModal({
 
   // Fetch existing customer details, previous customers, and all customers when modal opens
   useEffect(() => {
-      fetchExistingCustomers()
-        fetchAllCustomers()
+    fetchExistingCustomers()
+    fetchAllCustomers()
   }, [isOpen, rowId, showAddSection])
 
   const fetchExistingCustomers = async () => {
-
-  setLoadingExisting(true);
-
-  try {
-    const response = await axios.get(
-      `${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/customerDetail/${rowId}`,
-      
-    );
-    console.log('data',response.data)
-    const { currentCustomers = [] } = response.data.data;
-
-    setExistingCustomers(currentCustomers); 
-    // setPreviousCustomers(previousCustomers)
-    // optionally store previousCustomers too
-  } catch (error) {
-    console.error('Error fetching customer details:', error);
-    toast.error('Failed to fetch customer details');
-  } finally {
-    setLoadingExisting(false);
+    setLoadingExisting(true)
+    try {
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/customerDetails/${rowId}`)
+      console.log("data", response.data)
+      const { currentCustomers = [] } = response.data.data
+      setExistingCustomers(currentCustomers)
+      // setPreviousCustomers(previousCustomers)
+      // optionally store previousCustomers too
+    } catch (error) {
+      console.error("Error fetching customer details:", error)
+      toast.error("Failed to fetch customer details")
+    } finally {
+      setLoadingExisting(false)
+    }
   }
-};
-
-  
 
   const fetchAllCustomers = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/inventory/${rowId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/masterdevelopment/${rowId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
-      
-      const data = await response.json()
 
+      const data = await response.json()
       if (data) {
         setAllCustomers(data)
       } else if (data) {
@@ -126,7 +117,6 @@ export function CustomerManagementModal({
 
     // Check if customer is already added
     const isAlreadyAdded = existingCustomerIds.includes(selectedCustomer._id)
-
     if (isAlreadyAdded) {
       toast.error("This customer is already added to this property")
       return
@@ -136,11 +126,10 @@ export function CustomerManagementModal({
     try {
       // Create updated customers array with IDs
       const updatedCustomerIds = [...existingCustomerIds, selectedCustomer._id]
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${rowId}`, {
-        method: 'PATCH',
+      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`, {
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -150,11 +139,12 @@ export function CustomerManagementModal({
 
       if (response.ok) {
         toast.success("Customer added successfully!")
-        onCustomersUpdated()
+        onCustomersUpdated() 
+
         setSelectedCustomer(null)
-        setShowAddSection(false)
-       // Refresh customer data
-       fetchExistingCustomers()
+        setShowAddSection(false) 
+        fetchExistingCustomers()
+        // Refresh customer data
       }
     } catch (error) {
       console.error("Error adding customer:", error)
@@ -165,38 +155,36 @@ export function CustomerManagementModal({
   }
 
   const handleRemoveCustomer = async (customerId: string) => {
-  if (!rowId) return
+    if (!rowId) return
+    setRemoving(customerId)
+    try {
+      const updatedCustomerIds = existingCustomerIds.filter((id) => id !== customerId)
 
-  setRemoving(customerId)
-  try {
-    const updatedCustomerIds = existingCustomerIds.filter((id) => id !== customerId)
-    
+      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          customers: updatedCustomerIds,
+        }),
+      })
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/inventory/${rowId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        customers: updatedCustomerIds,
-      }),
-    })
-
-    if (response.ok) {
-      toast.success("Customer Removed!")
-      onCustomersUpdated() 
-      onClose()
-      // Refresh customer data
-      fetchExistingCustomers()
+      if (response.ok) {
+        toast.success("Customer removed")
+        onClose()
+        onCustomersUpdated() 
+        // Refresh customer data
+        fetchExistingCustomers()
+      }
+    } catch (error) {
+      console.error("Error removing customer:", error)
+      toast.error("Failed to remove customer. Please try again.")
+    } finally {
+      setRemoving(null)
     }
-  } catch (error) {
-    console.error("Error removing customer:", error)
-    toast.error("Failed to remove customer. Please try again.")
-  } finally {
-    setRemoving(null)
   }
-}
 
   const handleClose = () => {
     setSelectedCustomer(null)
@@ -206,7 +194,7 @@ export function CustomerManagementModal({
   }
 
   // Filter customers based on search term (exclude already added customers and previous customers)
- let filteredCustomers: typeof allCustomers = [];
+let filteredCustomers: typeof allCustomers = [];
 
 if (allCustomers && allCustomers.length > 0) {
   filteredCustomers = allCustomers.filter(
@@ -232,7 +220,7 @@ if (allCustomers && allCustomers.length > 0) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[96vh] overflow-auto flex flex-col">
+      <DialogContent className="sm:max-w-[800px] max-h-[96vh] overflow-hidden flex flex-col">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -287,7 +275,6 @@ if (allCustomers && allCustomers.length > 0) {
                                 </p>
                               </div>
                             </div>
-
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge
                                 variant="outline"
@@ -295,14 +282,12 @@ if (allCustomers && allCustomers.length > 0) {
                               >
                                 {customer.customerType || "N/A"}
                               </Badge>
-
                               {customer.customerSegment && (
                                 <Badge variant="outline" className="text-xs">
                                   {customer.customerSegment}
                                 </Badge>
                               )}
                             </div>
-
                             {(customer.emailAddress || customer.mobile1) && (
                               <div className="text-xs text-muted-foreground space-y-1">
                                 {customer.emailAddress && <div>Email: {customer.emailAddress}</div>}
@@ -310,7 +295,6 @@ if (allCustomers && allCustomers.length > 0) {
                               </div>
                             )}
                           </div>
-
                           <Button
                             variant="outline"
                             size="sm"
@@ -334,7 +318,6 @@ if (allCustomers && allCustomers.length > 0) {
           </div>
 
           {/* Previous Customers Section */}
-          
 
           {/* Add Customer Section */}
           {showAddSection && (
@@ -401,7 +384,6 @@ if (allCustomers && allCustomers.length > 0) {
                                       </p>
                                     </div>
                                   </div>
-
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <Badge
                                       variant="outline"
@@ -409,14 +391,12 @@ if (allCustomers && allCustomers.length > 0) {
                                     >
                                       {customer.customerType || "N/A"}
                                     </Badge>
-
                                     {customer.customerSegment && (
                                       <Badge variant="outline" className="text-xs">
                                         {customer.customerSegment}
                                       </Badge>
                                     )}
                                   </div>
-
                                   {(customer.emailAddress || customer.mobile1) && (
                                     <div className="text-xs text-muted-foreground space-y-1">
                                       {customer.emailAddress && <div>Email: {customer.emailAddress}</div>}
@@ -424,7 +404,6 @@ if (allCustomers && allCustomers.length > 0) {
                                     </div>
                                   )}
                                 </div>
-
                                 {selectedCustomer?._id === customer._id && (
                                   <div className="ml-2 p-1 bg-blue-500 rounded-full">
                                     <div className="h-2 w-2 bg-white rounded-full" />

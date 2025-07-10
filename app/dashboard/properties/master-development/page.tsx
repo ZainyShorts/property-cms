@@ -1,15 +1,6 @@
 "use client"
-
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
-
-import { DropdownMenuContent } from "@/components/ui/dropdown-menu"
-
-import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
-import { DropdownMenu } from "@/components/ui/dropdown-menu"
-
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
@@ -20,13 +11,15 @@ import {
   Trash2,
   Edit,
   Info,
+  Eye,
   Upload,
   Copy,
-  Eye,
   Check,
   ArrowLeft,
   Settings,
   ChevronDown,
+  UserPlus,
+  Users,
 } from "lucide-react"
 import { toast } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
@@ -54,6 +47,7 @@ import { resetFilters } from "@/lib/store/slices/masterFilterSlice"
 import { ShareModal } from "../inventory/share-modal/shareModal"
 import { ExportModal } from "../inventory/Export-Modal/ExportModal"
 import { locationDetails, overview, facilities, actions } from "./data/data"
+import { CustomerManagementModal } from "./customer-management-modal"
 import useSWR from "swr"
 
 export interface MasterDevelopment {
@@ -70,6 +64,7 @@ export interface MasterDevelopment {
   pictures: string[]
   facilitiesCategories: string[]
   amentiesCategories: string[]
+  customers?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -80,6 +75,7 @@ interface ApiResponse {
   totalPages: number
   pageNumber: number
 }
+
 const tableHeaders = [
   { key: "index", label: "INDEX" },
   { key: "_id", label: "ID" },
@@ -90,14 +86,13 @@ const tableHeaders = [
   { key: "locationQuality", label: "LOCATION QUALITY" },
   { key: "buaAreaSqFt", label: "BUA AREA (SQ FT)" },
   { key: "facilitiesAreaSqFt", label: "FACILITIES AREA (SQ FT)" },
-
   { key: "amentiesAreaSqFt", label: "AMENITIES AREA (SQ FT)" },
   { key: "totalAreaSqFt", label: "TOTAL AREA (SQ FT)" },
   { key: "facilitiesCategories", label: "FACILITIES" },
   { key: "amentiesCategories", label: "AMENITIES" },
+  { key: "customers", label: "CUSTOMERS" },
   { key: "attachDocument", label: "DOCUMENT" },
   { key: "view", label: "VIEW" },
-
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
@@ -154,22 +149,40 @@ export default function MasterDevelopmentPage() {
   )
   const [limit, setLimit] = useState<number>(10)
   const [selectedRowsMap, setSelectedRowsMap] = useState<Record<string, boolean>>({})
+
+  // Customer management modal states
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false)
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
+  const [selectedRecordCustomers, setSelectedRecordCustomers] = useState<string[]>([])
+
   const { data: authData } = useSWR<any>("/api/me", fetcher)
+
   const handleShareButton = (data: any) => {
     setShareData(data)
     setShareModalOpen(true)
   }
+
+  const handleManageCustomers = (recordId: string, customers: string[] = []) => {
+    setSelectedRecordId(recordId)
+    setSelectedRecordCustomers(customers)
+    setIsCustomerModalOpen(true)
+  }
+
+  const handleCustomersUpdated = () => {
+    fetchRecords()
+  }
+
   useEffect(() => {
     fetchRecords()
   }, [sortOrder, limit])
 
   useEffect(() => {
-    setPageInputValue(currentPage.toString()) 
+    setPageInputValue(currentPage.toString())
     setStartingIndex((currentPage - 1) * limit)
   }, [currentPage])
+
   useEffect(() => {
     const newCache = { ...selectedRecordsCache }
-
     records.forEach((record) => {
       if (selectedRowsMap[record._id]) {
         newCache[record._id] = record
@@ -177,9 +190,9 @@ export default function MasterDevelopmentPage() {
         delete newCache[record._id]
       }
     })
-
     setSelectedRecordsCache(newCache)
   }, [selectedRowsMap, records])
+
   useEffect(() => {
     setSelectedRows(Object.keys(selectedRowsMap).filter((id) => selectedRowsMap[id]))
   }, [selectedRowsMap])
@@ -195,54 +208,42 @@ export default function MasterDevelopmentPage() {
       }
       params.append("sortOrder", sortOrder)
       params.append("limit", limit.toString())
-
       if (!reset) {
         if (searchTerm) {
           params.append("search", searchTerm)
         }
-
         if (startDate) {
           params.append("startDate", startDate.toISOString())
         }
-
         if (endDate) {
           params.append("endDate", endDate.toISOString())
         }
-
         if (activeFilters.roadLocation) {
           params.append("roadLocation", activeFilters.roadLocation)
         }
-
         if (activeFilters.developmentName) {
           params.append("developmentName", activeFilters.developmentName)
         }
-
         if (activeFilters.locationQuality) {
           params.append("locationQuality", activeFilters.locationQuality)
         }
-
         if (activeFilters.buaAreaSqFtRange?.min) {
           params.append("buaAreaSqFtMin", activeFilters.buaAreaSqFtRange.min.toString())
         }
-
         if (activeFilters.buaAreaSqFtRange?.max) {
           params.append("buaAreaSqFtMax", activeFilters.buaAreaSqFtRange.max.toString())
         }
-
         if (activeFilters.totalAreaSqFtRange?.min) {
           params.append("totalAreaSqFtMin", activeFilters.totalAreaSqFtRange.min.toString())
         }
-
         if (activeFilters.totalAreaSqFtRange?.max) {
           params.append("totalAreaSqFtMax", activeFilters.totalAreaSqFtRange.max.toString())
         }
-
         if (activeFilters.facilitiesCategories?.length) {
           activeFilters.facilitiesCategories.forEach((facility) => {
             params.append("facilitiesCategories", facility)
           })
         }
-
         if (activeFilters.amentiesCategories?.length) {
           activeFilters.amentiesCategories.forEach((amenity) => {
             params.append("amentiesCategories", amenity)
@@ -261,7 +262,7 @@ export default function MasterDevelopmentPage() {
       })
     } catch (error) {
       console.error("Error fetching records:", error)
-        toast.error("Failed to fetch records. Please try again.")
+      toast.error("Failed to fetch records. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -269,7 +270,7 @@ export default function MasterDevelopmentPage() {
 
   const handlePageChange = (page: number) => {
     if (page < 1 || page > pagination.totalPages) return
-    setCurrentPage(page) 
+    setCurrentPage(page)
     pageChange(page)
   }
 
@@ -293,7 +294,6 @@ export default function MasterDevelopmentPage() {
       `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?sortOrder=${value}`,
     )
     setLoading(false)
-
     setRecords(response.data.data)
     setPagination({
       totalCount: response.data.totalCount,
@@ -325,7 +325,6 @@ export default function MasterDevelopmentPage() {
 
   const cleanObject = (obj: Record<string, any>): Record<string, any> => {
     const result: Record<string, any> = {}
-
     Object.entries(obj).forEach(([key, value]) => {
       if (!isEmpty(value)) {
         if (typeof value === "object" && value !== null && !(value instanceof Date) && !Array.isArray(value)) {
@@ -338,11 +337,11 @@ export default function MasterDevelopmentPage() {
         }
       }
     })
-
     return result
   }
-  const pageChange = (page : any) => { 
-       setLoading(true)
+
+  const pageChange = (page: any) => {
+    setLoading(true)
     try {
       // Create a filter object with all possible filters
       const allFilters: Record<string, any> = {
@@ -356,13 +355,10 @@ export default function MasterDevelopmentPage() {
         facilitiesCategories: filters.facilitiesCategories,
         amentiesCategories: filters.amentiesCategories,
       }
-
       // Clean the filter object to remove empty values
       const cleanedFilters = cleanObject(allFilters)
-
       // Log the cleaned filters
       console.log("Applying filters:", cleanedFilters)
-
       // Create the request data object with only non-empty values
       const requestData: Record<string, any> = {
         page: page,
@@ -370,7 +366,6 @@ export default function MasterDevelopmentPage() {
         limit: limit,
         ...cleanedFilters,
       }
-
       // Add date filters from the page component
       if (startDate) {
         // Format start date to beginning of the day
@@ -379,7 +374,6 @@ export default function MasterDevelopmentPage() {
         requestData.startDate = formattedStartDate.toISOString()
         console.log("Start date:", requestData.startDate)
       }
-
       if (endDate) {
         // Format end date to end of the day (23:59:59.999)
         const formattedEndDate = new Date(endDate)
@@ -387,50 +381,39 @@ export default function MasterDevelopmentPage() {
         requestData.endDate = formattedEndDate.toISOString()
         console.log("End date:", requestData.endDate)
       }
-
       // Log the final request data
       console.log("API request data:", requestData)
-
       // Convert the request data to URL parameters
       const params = new URLSearchParams()
-
       // Add basic params
       params.append("page", requestData.page.toString())
       params.append("limit", requestData.limit.toString())
-
       // Add string filters
       if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
       if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
       if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
-
       // Add range objects as JSON strings
       if (requestData.buaAreaSqFtRange) {
         params.append("buaAreaSqFtRange", JSON.stringify(requestData.buaAreaSqFtRange))
       }
-
       if (requestData.totalAreaSqFtRange) {
         params.append("totalAreaSqFtRange", JSON.stringify(requestData.totalAreaSqFtRange))
       }
-
       // Add array filters
       if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
         requestData.facilitiesCategories.forEach((facility: string) => {
           params.append("facilitiesCategories", facility)
         })
       }
-
       if (requestData.amentiesCategories && requestData.amentiesCategories.length > 0) {
         requestData.amentiesCategories.forEach((amenity: string) => {
           params.append("amentiesCategories", amenity)
         })
       }
-
       // Add date filters
       if (requestData.startDate) params.append("startDate", requestData.startDate)
       if (requestData.endDate) params.append("endDate", requestData.endDate)
-
       console.log("API params:", params.toString())
-
       // Directly call the API with the filter parameters
       axios
         .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`)
@@ -445,7 +428,7 @@ export default function MasterDevelopmentPage() {
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
-                      toast.error("Failed to fetch records. Please try again.")
+          toast.error("Failed to fetch records. Please try again.")
         })
         .finally(() => {
           setLoading(false)
@@ -455,8 +438,8 @@ export default function MasterDevelopmentPage() {
       toast.error("Failed to apply filters. Please try again.")
       setLoading(false)
     }
-  } 
-  
+  }
+
   const applyFilters = () => {
     setCurrentPage(1)
     setLoading(true)
@@ -473,12 +456,9 @@ export default function MasterDevelopmentPage() {
         facilitiesCategories: filters.facilitiesCategories,
         amentiesCategories: filters.amentiesCategories,
       }
-
       const cleanedFilters = cleanObject(allFilters)
-
       // Log the cleaned filters
       console.log("Applying filters:", cleanedFilters)
-
       // Create the request data object with only non-empty values
       const requestData: Record<string, any> = {
         page: currentPage,
@@ -486,7 +466,6 @@ export default function MasterDevelopmentPage() {
         limit: limit,
         ...cleanedFilters,
       }
-
       // Add date filters from the page component
       if (startDate) {
         // Format start date to beginning of the day
@@ -495,7 +474,6 @@ export default function MasterDevelopmentPage() {
         requestData.startDate = formattedStartDate.toISOString()
         console.log("Start date:", requestData.startDate)
       }
-
       if (endDate) {
         // Format end date to end of the day (23:59:59.999)
         const formattedEndDate = new Date(endDate)
@@ -503,52 +481,41 @@ export default function MasterDevelopmentPage() {
         requestData.endDate = formattedEndDate.toISOString()
         console.log("End date:", requestData.endDate)
       }
-
       // Log the final request data
       console.log("API request data:", requestData)
-
       // Convert the request data to URL parameters
       const params = new URLSearchParams()
-
       // Add basic params
       params.append("page", requestData.page.toString())
       params.append("limit", requestData.limit.toString())
-
       // Add string filters
-      if (requestData.developmentName) params.append("developmentName", requestData.developmentName) 
-        if (requestData.country) params.append("country", requestData.country) 
-                  if (requestData.city) params.append("city", requestData.city)
+      if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
+      if (requestData.country) params.append("country", requestData.country)
+      if (requestData.city) params.append("city", requestData.city)
       if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
       if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
-
       // Add range objects as JSON strings
       if (requestData.buaAreaSqFtRange) {
         params.append("buaAreaSqFtRange", JSON.stringify(requestData.buaAreaSqFtRange))
       }
-
       if (requestData.totalAreaSqFtRange) {
         params.append("totalAreaSqFtRange", JSON.stringify(requestData.totalAreaSqFtRange))
       }
-
       // Add array filters
       if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
         requestData.facilitiesCategories.forEach((facility: string) => {
           params.append("facilitiesCategories", facility)
         })
       }
-
       if (requestData.amentiesCategories && requestData.amentiesCategories.length > 0) {
         requestData.amentiesCategories.forEach((amenity: string) => {
           params.append("amentiesCategories", amenity)
         })
       }
-
       // Add date filters
       if (requestData.startDate) params.append("startDate", requestData.startDate)
       if (requestData.endDate) params.append("endDate", requestData.endDate)
-
       console.log("API params:", params.toString())
-
       // Directly call the API with the filter parameters
       axios
         .get<ApiResponse>(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`)
@@ -563,7 +530,7 @@ export default function MasterDevelopmentPage() {
         })
         .catch((error) => {
           console.error("Error fetching records:", error)
-            toast.error("Failed to fetch records. Please try again.")
+          toast.error("Failed to fetch records. Please try again.")
         })
         .finally(() => {
           setLoading(false)
@@ -582,7 +549,6 @@ export default function MasterDevelopmentPage() {
       .then(() => {
         setCopiedIds({ ...copiedIds, [id]: true })
         toast.success("ID copied to clipboard")
-
         // Reset the copied state after 2 seconds
         setTimeout(() => {
           setCopiedIds((prev) => {
@@ -622,19 +588,16 @@ export default function MasterDevelopmentPage() {
 
   const handleDocumentSave = async (documentData: DocumentData) => {
     setIsAttachingDocument(true)
-
     try {
       console.log("Document data to save:", documentData)
-
       const response = await axios.post(`${process.env.NEXT_PUBLIC_CMS_SERVER}/document/attachDocument`, documentData)
       console.log(response)
       toast.success("Document attached successfully")
-
       setIsDocumentModalOpen(false)
       setSelectedRowId(null)
     } catch (error) {
       console.error("Error attaching document:", error)
-        toast.error("Failed to attach document. Please try again.")
+      toast.error("Failed to attach document. Please try again.")
     } finally {
       setIsAttachingDocument(false)
     }
@@ -647,19 +610,21 @@ export default function MasterDevelopmentPage() {
   const confirmDelete = async () => {
     if (!recordToDelete) return
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`,
-        {
-          headers: {
-            Authorization: `Bearer ${authData?.token}`
-          }
-        }
-      )
+      await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${recordToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${authData?.token}`,
+        },
+      })
       toast.success("Record deleted successfully")
       setCurrentPage(1)
       fetchRecords()
     } catch (error: any) {
       console.error("Error deleting record:", error)
-      if (error.response && error.response.status === 403 && error.response.data?.message === 'You do not have permission (roles) to access this resource') {
+      if (
+        error.response &&
+        error.response.status === 403 &&
+        error.response.data?.message === "You do not have permission (roles) to access this resource"
+      ) {
         toast.error("You do not have permission to access this resource.")
       } else if (error.response && error.response.status === 400) {
         toast.error(error.response.data.message || "Failed to delete record")
@@ -679,6 +644,7 @@ export default function MasterDevelopmentPage() {
       setEditRecord(null)
     }
   }
+
   const [checkState, setCheckState] = useState<any>("all")
   const [showHeaderCategories, setShowHeaderCategories] = useState(false)
 
@@ -766,13 +732,46 @@ export default function MasterDevelopmentPage() {
         )
       case "index":
         return <div className="flex justify-center">{startingIndex + index + 1}</div>
+      case "customers":
+        const customerCount = record.customers?.length || 0
+        return (
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className={`h-8 px-2 gap-1 bg-transparent ${
+                customerCount === 0
+                  ? "text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                  : "text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+              }`}
+              onClick={() => handleManageCustomers(record._id, record.customers || [])}
+            >
+              {customerCount === 0 ? (
+                <>
+                  <UserPlus className="h-4 w-4" />
+                  Add Customer
+                </>
+              ) : (
+                <>
+                  <Users className="h-4 w-4" />
+                  <Badge
+                    variant="secondary"
+                    className="ml-1 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                  >
+                    {customerCount}
+                  </Badge>
+                </>
+              )}
+            </Button>
+          </div>
+        )
       case "view":
         return (
           <div className="flex justify-center">
             <Button
               variant="outline"
               size="sm"
-              className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+              className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 bg-transparent"
               onClick={() => window.open(`/masterDev-details/${record._id}`, "_blank")}
               disabled={isAttachingDocument}
             >
@@ -863,7 +862,7 @@ export default function MasterDevelopmentPage() {
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+            className="h-8 px-2 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 bg-transparent"
             onClick={() => handleAttachDocument(record._id)}
             disabled={isAttachingDocument}
           >
@@ -876,7 +875,7 @@ export default function MasterDevelopmentPage() {
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 bg-transparent"
             onClick={() => handleEditRecord(record)}
           >
             <Edit className="h-4 w-4 mr-1" />
@@ -888,7 +887,7 @@ export default function MasterDevelopmentPage() {
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+            className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
             onClick={() => handleDeleteClick(record._id)}
           >
             <Trash2 className="h-4 w-4 mr-1" />
@@ -899,15 +898,18 @@ export default function MasterDevelopmentPage() {
         return record[key as keyof MasterDevelopment]
     }
   }
+
   useEffect(() => {
     if (selectedRows) {
       console.log(selectedRows)
     }
   }, [selectedRows])
+
   const [mounted, setMounted] = useState<any>(false)
   useEffect(() => {
     setMounted(true)
   }, [])
+
   if (!mounted) {
     return null
   }
@@ -948,21 +950,16 @@ export default function MasterDevelopmentPage() {
   }
 
   // First, add this state to store selected records data across pages
-
   // Update this useEffect to maintain the cache when rows are selected/deselected
-
   // Updated getSelectedData function
   const getSelectedData = () => {
     if (selectedRows.length === 0 || selectedColumns.length === 0) {
       return []
     }
-
     return selectedRows
       .map((id) => {
         const record = selectedRecordsCache[id] || records.find((r) => r._id === id)
-
         if (!record) return null
-
         const selectedData: Record<string, any> = {}
         selectedColumns.forEach((col) => {
           selectedData[col] = record[col]
@@ -986,11 +983,8 @@ export default function MasterDevelopmentPage() {
       toast.error("Please select at least one row and one column to export")
       return
     }
-
     const selectedData = getSelectedData()
-
     let csvContent = selectedColumns.join(",") + "\n"
-
     selectedData.forEach((item) => {
       const row = selectedColumns.map((col) => {
         const value = item[col]
@@ -1001,7 +995,6 @@ export default function MasterDevelopmentPage() {
       })
       csvContent += row.join(",") + "\n"
     })
-
     // Create and download the file
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
@@ -1012,25 +1005,21 @@ export default function MasterDevelopmentPage() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-
     toast.success(`Exported ${selectedData.length} records successfully`)
   }
+
   const handleSubmitExport = async (withFilters: boolean, count: number) => {
     setIsExportModalOpen(false)
-
     // If in selection mode and we have selected rows and columns, export only selected data
     if (isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0) {
       exportSelectedData()
       return
     }
-
     try {
       const toastId = toast.loading("Preparing export...")
-
       const params = new URLSearchParams()
       params.append("limit", count.toString())
       params.append("sortOrder", sortOrder)
-
       if (withFilters) {
         const allFilters: Record<string, any> = {
           developmentName: filters.developmentName,
@@ -1041,29 +1030,23 @@ export default function MasterDevelopmentPage() {
           facilitiesCategories: filters.facilitiesCategories,
           amentiesCategories: filters.amentiesCategories,
         }
-
         const cleanedFilters = cleanObject(allFilters)
-
         const requestData: Record<string, any> = {
           ...cleanedFilters,
         }
-
         if (startDate) {
           const formattedStartDate = new Date(startDate)
           formattedStartDate.setHours(0, 0, 0, 0)
           requestData.startDate = formattedStartDate.toISOString()
         }
-
         if (endDate) {
           const formattedEndDate = new Date(endDate)
           formattedEndDate.setHours(23, 59, 59, 999)
           requestData.endDate = formattedEndDate.toISOString()
         }
-
         if (requestData.developmentName) params.append("developmentName", requestData.developmentName)
         if (requestData.roadLocation) params.append("roadLocation", requestData.roadLocation)
         if (requestData.locationQuality) params.append("locationQuality", requestData.locationQuality)
-
         if (requestData.buaAreaSqFtRange) {
           if (requestData.buaAreaSqFtRange.min) {
             params.append("buaAreaSqFtMin", requestData.buaAreaSqFtRange.min.toString())
@@ -1072,7 +1055,6 @@ export default function MasterDevelopmentPage() {
             params.append("buaAreaSqFtMax", requestData.buaAreaSqFtRange.max.toString())
           }
         }
-
         if (requestData.totalAreaSqFtRange) {
           if (requestData.totalAreaSqFtRange.min) {
             params.append("totalAreaSqFtMin", requestData.totalAreaSqFtRange.min.toString())
@@ -1081,34 +1063,27 @@ export default function MasterDevelopmentPage() {
             params.append("totalAreaSqFtMax", requestData.totalAreaSqFtRange.max.toString())
           }
         }
-
         // Add array filters
         if (requestData.facilitiesCategories && requestData.facilitiesCategories.length > 0) {
           requestData.facilitiesCategories.forEach((facility: string) => {
             params.append("facilitiesCategories", facility)
           })
         }
-
         if (requestData.amentiesCategories && requestData.amentiesCategories.length > 0) {
           requestData.amentiesCategories.forEach((amenity: string) => {
             params.append("amentiesCategories", amenity)
           })
         }
-
         // Add date filters
         if (requestData.startDate) params.append("startDate", requestData.startDate)
         if (requestData.endDate) params.append("endDate", requestData.endDate)
       }
-
       const response = await axios.get<ApiResponse>(
         `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment?${params.toString()}`,
       )
-
       const exportData = response.data.data
-
       let csvContent =
         "Road Location,Development Name,Location Quality,BUA Area (Sq Ft),Facilities Area (Sq Ft),Amenities Area (Sq Ft),Total Area (Sq Ft),Facilities Count,Amenities Count\n"
-
       exportData.forEach((record) => {
         const row = [
           record.roadLocation,
@@ -1121,30 +1096,23 @@ export default function MasterDevelopmentPage() {
           record.facilitiesCategories.length,
           record.amentiesCategories.length,
         ]
-
         const escapedRow = row.map((field) => {
           if (typeof field === "string" && field.includes(",")) {
             return `"${field}"`
           }
           return field
         })
-
         csvContent += escapedRow.join(",") + "\n"
       })
-
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
-
       const link = document.createElement("a")
       const url = URL.createObjectURL(blob)
-
       link.setAttribute("href", url)
       link.setAttribute("download", `master-development-export-${new Date().toISOString().split("T")[0]}.csv`)
       link.style.visibility = "hidden"
-
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-
       toast.update(toastId, {
         render: `Export completed successfully (${exportData.length} records)`,
         type: "success",
@@ -1153,9 +1121,10 @@ export default function MasterDevelopmentPage() {
       })
     } catch (error) {
       console.error("Error exporting data:", error)
-        toast.error("Failed to export data. Please try again.")
+      toast.error("Failed to export data. Please try again.")
     }
   }
+
   return (
     <div className="min-h-screen w-full">
       <div className="border-b">
@@ -1177,11 +1146,11 @@ export default function MasterDevelopmentPage() {
                 <SelectItem value="100">100 rows</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2" onClick={() => setIsImportModalOpen(true)}>
+            <Button variant="outline" className="gap-2 bg-transparent" onClick={() => setIsImportModalOpen(true)}>
               <Upload size={18} />
               Import Records
             </Button>
-            {/* <Button variant="outline" onClick={handleExport} className="gap-2">
+            {/* <Button variant="outline" onClick={handleExport} className="gap-2 bg-transparent">
               <Download size={18} />
               {isSelectionMode && selectedRows.length > 0 && selectedColumns.length > 0 ? "Export Selected" : "Export"}
             </Button> */}
@@ -1194,7 +1163,6 @@ export default function MasterDevelopmentPage() {
           </div>
         </div>
       </div>
-
       <div className="p-4 space-y-4">
         {/* Filters */}
         <div className="flex flex-wrap gap-2">
@@ -1207,11 +1175,8 @@ export default function MasterDevelopmentPage() {
               <SelectItem value="asc">Oldest</SelectItem>
             </SelectContent>
           </Select>
-
           <SimpleDatePicker placeholder="Start Date" date={startDate} setDate={setStartDate} />
-
           <SimpleDatePicker placeholder="End Date" date={endDate} setDate={setEndDate} />
-
           <div className="flex-1 flex justify-end gap-2">
             <Button
               variant="outline"
@@ -1227,7 +1192,6 @@ export default function MasterDevelopmentPage() {
             >
               <Filter className="h-4 w-4" />
             </Button>
-
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" disabled={checkState !== "all"} size="icon">
@@ -1279,7 +1243,6 @@ export default function MasterDevelopmentPage() {
             </Button>
           </div>
         </div>
-
         <Card>
           <CardContent className="p-0">
             <div className="flex w-full items-center mb-2 mt-2">
@@ -1290,11 +1253,10 @@ export default function MasterDevelopmentPage() {
                     onChange={() => setShowHeaderCategories(!showHeaderCategories)}
                     label="Show Headers"
                   />
-
                   {showHeaderCategories && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="ml-2 gap-1">
+                        <Button variant="outline" size="sm" className="ml-2 gap-1 bg-transparent">
                           Select Header <ChevronDown className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -1310,15 +1272,14 @@ export default function MasterDevelopmentPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "facilities")}>
                           Facilities & Amenities
-                        </DropdownMenuItem> 
-                         <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleColumnVisibility("a", "actions")}>
                           Actions
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
                 </div>
-
                 {/* {!isSelectionMode ? (
                   <Button
                     variant="outline"
@@ -1351,7 +1312,6 @@ export default function MasterDevelopmentPage() {
                       <Button variant="ghost" size="sm" onClick={clearSelection} className="rounded-none h-9 px-4">
                         Clear Selection
                       </Button>
-
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1401,7 +1361,6 @@ export default function MasterDevelopmentPage() {
                           )}
                         </TableHead>
                       )}
-
                       {(checkState === "overview" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "overview")}
@@ -1423,11 +1382,10 @@ export default function MasterDevelopmentPage() {
                           )}
                         </TableHead>
                       )}
-
                       {(checkState === "facilities" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "facilities")}
-                          colSpan={isSelectionMode ? 3 : 2}
+                          colSpan={isSelectionMode ? 4 : 3}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-emerald-300 to-emerald-100 border-r border-border relative"
                         >
                           Facilities & Amenities
@@ -1445,11 +1403,10 @@ export default function MasterDevelopmentPage() {
                           )}
                         </TableHead>
                       )}
-
                       {(checkState === "actions" || checkState === "all") && (
                         <TableHead
                           onClick={() => toggleColumnVisibility("a", "actions")}
-                          colSpan={isSelectionMode ? 4 : 4}
+                          colSpan={isSelectionMode ? 5 : 5}
                           className="text-center cursor-pointer font-bold bg-gradient-to-b from-red-400 to-red-300 border-r border-border relative"
                         >
                           Other Actions
@@ -1469,7 +1426,6 @@ export default function MasterDevelopmentPage() {
                       )}
                     </TableRow>
                   )}
-
                   <TableRow>
                     {isSelectionMode && (
                       <TableHead className="w-[50px] text-center border-b">
@@ -1485,7 +1441,6 @@ export default function MasterDevelopmentPage() {
                         />
                       </TableHead>
                     )}
-
                     {tableHeaders
                       .filter((header) => visibleColumns[header.key])
                       .map((header) => (
@@ -1501,11 +1456,10 @@ export default function MasterDevelopmentPage() {
                             header.key === "totalAreaSqFt" && "w-[150px]",
                             header.key === "facilitiesCategories" && "w-[120px]",
                             header.key === "amentiesCategories" && "w-[120px]",
+                            header.key === "customers" && "w-[120px]",
                             header.key === "attachDocument" && "w-[120px]",
                             header.key === "view" && "w-[100px]",
-
                             header.key === "edit" && "w-[100px]",
-
                             header.key === "delete" && "w-[100px]",
                           )}
                         >
@@ -1580,7 +1534,6 @@ export default function MasterDevelopmentPage() {
                 </TableBody>
               </Table>
             </div>
- 
             {/* Pagination - Updated to match the image */}
             {pagination.totalPages > 0 && (
               <div className="flex items-center justify-between p-4 border-t">
@@ -1594,7 +1547,6 @@ export default function MasterDevelopmentPage() {
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
-
                   <form onSubmit={handlePageInputSubmit} className="flex items-center gap-2">
                     <div className="flex items-center">
                       <Input
@@ -1605,16 +1557,13 @@ export default function MasterDevelopmentPage() {
                         aria-label="Page number"
                       />
                     </div>
-
                     <span className="text-sm text-muted-foreground">...</span>
-
                     <div className="flex items-center">
                       <div className="h-9 px-3 flex items-center justify-center border rounded-md bg-muted/50">
                         {pagination.totalPages}
                       </div>
                     </div>
                   </form>
-
                   <Button
                     variant="outline"
                     size="icon"
@@ -1624,28 +1573,22 @@ export default function MasterDevelopmentPage() {
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
-
                   <div className="text-sm text-muted-foreground ml-2">
                     Page {pagination.pageNumber} of {pagination.totalPages}
                   </div>
-                </div> 
-                <div className="flex items-center gap-2"> 
-                Total Records: {pagination.totalCount}
                 </div>
-              </div> 
-              
+                <div className="flex items-center gap-2">Total Records: {pagination.totalCount}</div>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
-
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDelete}
       />
-
       {/* Filter Sidebar */}
       <FilterSidebar open={isFilterSidebarOpen} onOpenChange={setIsFilterSidebarOpen} />
       <ImportRecordsModal
@@ -1653,7 +1596,6 @@ export default function MasterDevelopmentPage() {
         onClose={() => setIsImportModalOpen(false)}
         fetchRecords={fetchRecords}
       />
-
       {/* Export Modal */}
       <ExportModal
         isOpen={isExportModalOpen}
@@ -1675,6 +1617,15 @@ export default function MasterDevelopmentPage() {
         onClose={() => setIsDocumentModalOpen(false)}
         rowId={selectedRowId}
         onDocumentSave={handleDocumentSave}
+      />
+      {/* Customer Management Modal */}
+      <CustomerManagementModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        rowId={selectedRecordId}
+        token={authData?.token || ""}
+        existingCustomerIds={selectedRecordCustomers}
+        onCustomersUpdated={handleCustomersUpdated}
       />
     </div>
   )
