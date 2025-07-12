@@ -143,7 +143,8 @@ export function CustomerManagementModal({
       if (response.ok) {
         toast.success("Customer added successfully!")
         onCustomersUpdated() // Notify parent component of update
-        setSelectedCustomer(null)
+        setSelectedCustomer(null) 
+        onClose()
         setSearchTerm("") // Clear search term after adding
         setShowAddSection(false) // Hide add section after adding
         fetchExistingCustomers() // Refresh existing customers list

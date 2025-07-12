@@ -150,7 +150,7 @@ function PropertyDataTable({
 
   // Table headers configuration - Updated with payment plan columns
   const tableHeaders = [
-    { key: "index", label: "INDEX" },
+    // { key: "index", label: "INDEX" },
     { key: "_id", label: "ID" },
     { key: "roadLocation", label: "LOCATION NAME" },
     { key: "developmentName", label: "DEVELOPMENT NAME" },
@@ -498,7 +498,7 @@ function PropertyDataTable({
         case "_id":
           return (
             <div className="flex items-center justify-center gap-2">
-              <span>{record._id.substring(0, 8) + "..."}</span>
+              <span>{record._id.substring(0, 0) + ""}</span>
               <Button
                 variant="ghost"
                 size="icon"

@@ -81,7 +81,7 @@ interface ApiResponse {
 }
 
 const tableHeaders = [
-  { key: "index", label: "INDEX" },
+  // { key: "index", label: "INDEX" },
   { key: "_id", label: "ID" },
   { key: "masterDevelopment", label: "MASTER DEVELOPMENT" },
   { key: "subDevelopment", label: "SUB DEVELOPMENT" },
@@ -747,7 +747,7 @@ export default function MasterDevelopmentPage() {
       case "_id":
         return (
           <div className="flex items-center justify-center gap-2">
-            <span>{record._id.substring(0, 8) + "..."}</span>
+            <span>{record._id.substring(0, 0) + ""}</span>
             <Button
               variant="ghost"
               size="icon"

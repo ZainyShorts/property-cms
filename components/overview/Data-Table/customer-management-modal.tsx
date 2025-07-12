@@ -151,7 +151,9 @@ export function CustomerManagementModal({
       if (response.ok) {
         toast.success("Customer added successfully!")
         onCustomersUpdated()
-        setSelectedCustomer(null)
+        setSelectedCustomer(null) 
+                onClose()
+        
         setShowAddSection(false)
        // Refresh customer data
        fetchExistingCustomers()
