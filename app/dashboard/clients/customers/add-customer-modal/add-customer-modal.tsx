@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -31,30 +32,370 @@ enum CustomerSubCategory {
 }
 
 enum CustomerType {
-   Seller = 'Seller',
-  TenantLongTerm = 'Tenant-Long Term',
-  TenantShortTerm = 'Tenant-Short Term', 
-  Buyer = 'Buyer',
-  ProspectBuyer = 'Prospect Buyer',
-  PropertyOwner = 'Property Owner',
-  SubLease = 'Sub-Lease',
-  Landlord = 'Landlord',
-  Underwriter = 'Underwriter',
-  ShortTermTrader = 'Short Term Trader',
+  Seller = "Seller",
+  TenantLongTerm = "Tenant-Long Term",
+  TenantShortTerm = "Tenant-Short Term",
+  Buyer = "Buyer",
+  ProspectBuyer = "Prospect Buyer",
+  PropertyOwner = "Property Owner",
+  SubLease = "Sub-Lease",
+  Landlord = "Landlord",
+  Underwriter = "Underwriter",
+  ShortTermTrader = "Short Term Trader",
 }
 
 enum CustomerSubType {
-    MasterDeveloper = 'Master Developer',
-  SubDeveloper = 'Sub-Developer',
-  RealEstateInvestor = 'Real Estate Investor',
-  RealEstateBroker = 'Real Estate Broker',
-  PropertyManagement = 'Property Management',
-  Banks = 'Banks',
-  Auction = 'Auction',
-  Contractor = 'Contractor',
-  ArchitectConsultant = 'Architect-Consultant',
-  REIT = 'REIT',
-  PrivateInvestor = 'Private Investor',
+  MasterDeveloper = "Master Developer",
+  SubDeveloper = "Sub-Developer",
+  RealEstateInvestor = "Real Estate Investor",
+  RealEstateBroker = "Real Estate Broker",
+  PropertyManagement = "Property Management",
+  Banks = "Banks",
+  Auction = "Auction",
+  Contractor = "Contractor",
+  ArchitectConsultant = "Architect-Consultant",
+  REIT = "REIT",
+  PrivateInvestor = "Private Investor",
+}
+
+enum customerBusinessSector {
+  RealEstateInvestmentAndDevelopment = "Real Estate Investment & Development",
+  AgricultureForestryAndFishing = "Agriculture, Forestry & Fishing",
+  MiningAndExtraction = "Mining & Extraction",
+  Manufacturing = "Manufacturing",
+  ConstructionAndRealEstate = "Construction & Real Estate",
+  WholesaleAndRetailTrade = "Wholesale & Retail Trade",
+  TransportationAndLogistics = "Transportation & Logistics",
+  InformationTechnologyAndTelecommunications = "Information Technology & Telecommunications",
+  FinancialServices = "Financial Services",
+  ProfessionalScientificAndTechnicalServices = "Professional, Scientific & Technical Services",
+  HealthcareAndSocialAssistance = "Healthcare & Social Assistance",
+  Education = "Education",
+  ArtsEntertainmentAndRecreation = "Arts, Entertainment & Recreation",
+  AccommodationAndFoodServices = "Accommodation & Food Services",
+  PublicAdministrationAndDefense = "Public Administration & Defense",
+  Utilities = "Utilities",
+  PersonalAndOtherServices = "Personal & Other Services",
+  EnvironmentalServicesAndRenewableEnergy = "Environmental Services & Renewable Energy",
+  MediaAndPublishing = "Media & Publishing",
+  ChemicalsAndPetrochemicals = "Chemicals & Petrochemicals",
+  AerospaceDefenseManufacturing = "Aerospace & Defense Manufacturing",
+  Automotive = "Automotive",
+  BiotechnologyLifeSciences = "Biotechnology & Life Sciences",
+  EcommerceDigitalTrade = "E-commerce & Digital Trade",
+  TelecommunicationsServices = "Telecommunications Services",
+  LogisticsTechnologySupplyChain = "Logistics Technology & Supply Chain",
+  HospitalityTourism = "Hospitality & Tourism",
+  TextileApparel = "Textile & Apparel",
+  Pharmaceuticals = "Pharmaceuticals",
+  RenewableEnergy = "Renewable Energy",
+  AdvertisingMarketing = "Advertising & Marketing",
+  AerospaceAviationServices = "Aerospace & Aviation Services",
+  AutomotiveServicesRepair = "Automotive Services & Repair",
+  BankingFinancialInstitutions = "Banking & Financial Institutions",
+  BeautyPersonalCare = "Beauty & Personal Care",
+  ChemicalsManufacturing = "Chemicals Manufacturing",
+  ConsumerElectronics = "Consumer Electronics",
+  DataCentersCloudInfrastructure = "Data Centers & Cloud Infrastructure",
+  DefenseSecurity = "Defense & Security",
+  DigitalMediaContentCreation = "Digital Media & Content Creation",
+  EducationTechnology = "Education Technology (EdTech)",
+  EnergyEquipmentServices = "Energy Equipment & Services",
+  EnvironmentalTechnologyConsulting = "Environmental Technology & Consulting",
+  FilmVideoProduction = "Film & Video Production",
+  FoodBeverageProcessing = "Food & Beverage Processing",
+  GamblingGaming = "Gambling & Gaming",
+  HealthcareEquipmentSupplies = "Healthcare Equipment & Supplies",
+  HumanResourcesRecruitment = "Human Resources & Recruitment",
+  IndustrialAutomation = "Industrial Automation",
+  Insurance = "Insurance",
+  LegalServices = "Legal Services",
+  MarineOffshoreServices = "Marine & Offshore Services",
+  MediaBroadcasting = "Media & Broadcasting",
+  MetalsMiningEquipment = "Metals & Mining Equipment",
+  NonProfitNGOs = "Non-Profit & NGOs",
+  PrintingPublishing = "Printing & Publishing",
+  ProfessionalTrainingCoaching = "Professional Training & Coaching",
+  PublicRelations = "Public Relations",
+  SoftwareDevelopment = "Software Development",
+  SportsRecreation = "Sports & Recreation",
+  TourismTravelServices = "Tourism & Travel Services",
+  TradeExportServices = "Trade & Export Services",
+  WasteManagementRecycling = "Waste Management & Recycling",
+  WaterSupplyTreatment = "Water Supply & Treatment",
+  WholesaleDistribution = "Wholesale Distribution",
+  WoodPaperProducts = "Wood & Paper Products",
+  SecurityServices = "Security Services",
+  ShippingMaritimeServices = "Shipping & Maritime Services",
+  SoftwareAsAService = "Software as a Service (SaaS)",
+  VentureCapitalPrivateEquity = "Venture Capital & Private Equity",
+  VideoGameDevelopment = "Video Game Development",
+  VirtualRealityAugmentedReality = "Virtual Reality & Augmented Reality",
+  WarehouseInventoryManagement = "Warehouse & Inventory Management",
+  WebDevelopmentDesign = "Web Development & Design",
+  WindEnergy = "Wind Energy",
+  YachtMarineEquipmentManufacturing = "Yacht & Marine Equipment Manufacturing",
+  ZoologicalParksAquariums = "Zoological Parks & Aquariums",
+  ZeroWasteCircularEconomy = "Zero Waste & Circular Economy",
+  ThreeDPrintingServices = "3D Printing Services",
+  AcademicResearch = "Academic Research",
+  AdventureTourism = "Adventure Tourism",
+  AgriculturalEquipmentManufacturing = "Agricultural Equipment Manufacturing",
+  AirConditioningHVAC = "Air Conditioning & HVAC",
+  AnimalHealthVeterinaryServices = "Animal Health & Veterinary Services",
+  ArtDealersGalleries = "Art Dealers & Galleries",
+  AuctionHouses = "Auction Houses",
+  AutoRepairMaintenance = "Auto Repair & Maintenance",
+  AviationServices = "Aviation Services",
+  BabyProductsServices = "Baby Products & Services",
+  BlockchainServices = "Blockchain Services",
+  BoatManufacturingServices = "Boat Manufacturing & Services",
+  BookPublishing = "Book Publishing",
+  BuildingMaterials = "Building Materials",
+  BusinessIntelligenceAnalytics = "Business Intelligence & Analytics",
+  CarDealershipsLeasing = "Car Dealerships & Leasing",
+  CharityFundraising = "Charity & Fundraising",
+  ChildcareServices = "Childcare Services",
+  CleaningServices = "Cleaning Services",
+  CoachingPersonalDevelopment = "Coaching & Personal Development",
+  CommercialCleaningServices = "Commercial Cleaning Services",
+  CommercialRealEstate = "Commercial Real Estate",
+  ComputerHardwareManufacturing = "Computer Hardware Manufacturing",
+  ConsultingServices = "Consulting Services",
+  ConsumerGoodsManufacturing = "Consumer Goods Manufacturing",
+  CorporateTrainingDevelopment = "Corporate Training & Development",
+  CourierDeliveryServices = "Courier & Delivery Services",
+  DataAnalyticsBusinessIntelligence = "Data Analytics & Business Intelligence",
+  DefenseContracting = "Defense Contracting",
+  DigitalContentCreation = "Digital Content Creation",
+  EcommercePlatforms = "E-commerce Platforms",
+  EducationalSoftwareTools = "Educational Software & Tools",
+  ElectricalContracting = "Electrical Contracting",
+  ElectronicsManufacturingServices = "Electronics Manufacturing Services",
+  EnergyTrading = "Energy Trading",
+  EnvironmentalEngineering = "Environmental Engineering",
+  EventPlanningManagement = "Event Planning & Management",
+  FashionRetail = "Fashion Retail",
+  FinancialTechnologyFinTech = "Financial Technology (FinTech)",
+  FilmTVProduction = "Film & TV Production",
+  FoodProcessingPackaging = "Food Processing & Packaging",
+  FreightShippingServices = "Freight & Shipping Services",
+  FurnitureManufacturing = "Furniture Manufacturing",
+  GamingIndustry = "Gaming Industry",
+  GeneralMerchandiseRetail = "General Merchandise Retail",
+  GraphicDesignServices = "Graphic Design Services",
+  HealthWellnessServices = "Health & Wellness Services",
+  HigherEducation = "Higher Education",
+  HospitalityEventServices = "Hospitality & Event Services",
+  HouseholdAppliancesManufacturing = "Household Appliances Manufacturing",
+  HVACServices = "HVAC Services",
+  ImportExportServices = "Import & Export Services",
+  IndustrialEquipmentManufacturing = "Industrial Equipment Manufacturing",
+  InformationServices = "Information Services",
+  InsuranceBrokerage = "Insurance Brokerage",
+  InteriorDesign = "Interior Design",
+  InvestmentServices = "Investment Services",
+  ITHardwareNetworking = "IT Hardware & Networking",
+  JewelryLuxuryGoods = "Jewelry & Luxury Goods",
+  JournalismNewsMedia = "Journalism & News Media",
+}
+
+enum CustomerNationality {
+  Afghanistan = "Afghanistan",
+  Albania = "Albania",
+  Algeria = "Algeria",
+  Andorra = "Andorra",
+  Angola = "Angola",
+  AntiguaAndBarbuda = "Antigua and Barbuda",
+  Argentina = "Argentina",
+  Armenia = "Armenia",
+  Australia = "Australia",
+  Austria = "Austria",
+  Azerbaijan = "Azerbaijan",
+  Bahamas = "Bahamas",
+  Bahrain = "Bahrain",
+  Bangladesh = "Bangladesh",
+  Barbados = "Barbados",
+  Belarus = "Belarus",
+  Belgium = "Belgium",
+  Belize = "Belize",
+  Benin = "Benin",
+  Bhutan = "Bhutan",
+  Bolivia = "Bolivia",
+  BosniaAndHerzegovina = "Bosnia and Herzegovina",
+  Botswana = "Botswana",
+  Brazil = "Brazil",
+  Brunei = "Brunei",
+  Bulgaria = "Bulgaria",
+  BurkinaFaso = "Burkina Faso",
+  Burundi = "Burundi",
+  CaboVerde = "Cabo Verde",
+  Cambodia = "Cambodia",
+  Cameroon = "Cameroon",
+  Canada = "Canada",
+  CentralAfricanRepublic = "Central African Republic",
+  Chad = "Chad",
+  Chile = "Chile",
+  China = "China",
+  Colombia = "Colombia",
+  Comoros = "Comoros",
+  CongoBrazzaville = "Congo (Congo-Brazzaville)",
+  CostaRica = "Costa Rica",
+  Croatia = "Croatia",
+  Cuba = "Cuba",
+  Cyprus = "Cyprus",
+  Czechia = "Czechia (Czech Republic)",
+  DRofCongo = "Democratic Republic of the Congo",
+  Denmark = "Denmark",
+  Djibouti = "Djibouti",
+  Dominica = "Dominica",
+  DominicanRepublic = "Dominican Republic",
+  EastTimor = "East Timor (Timor-Leste)",
+  Ecuador = "Ecuador",
+  Egypt = "Egypt",
+  ElSalvador = "El Salvador",
+  EquatorialGuinea = "Equatorial Guinea",
+  Eritrea = "Eritrea",
+  Estonia = "Estonia",
+  Eswatini = "Eswatini",
+  Ethiopia = "Ethiopia",
+  Fiji = "Fiji",
+  Finland = "Finland",
+  France = "France",
+  Gabon = "Gabon",
+  Gambia = "Gambia",
+  Georgia = "Georgia",
+  Germany = "Germany",
+  Ghana = "Ghana",
+  Greece = "Greece",
+  Grenada = "Grenada",
+  Guatemala = "Guatemala",
+  Guinea = "Guinea",
+  GuineaBissau = "Guinea-Bissau",
+  Guyana = "Guyana",
+  Haiti = "Haiti",
+  Honduras = "Honduras",
+  Hungary = "Hungary",
+  Iceland = "Iceland",
+  India = "India",
+  Indonesia = "Indonesia",
+  Iran = "Iran",
+  Iraq = "Iraq",
+  Ireland = "Ireland",
+  Israel = "Israel",
+  Italy = "Italy",
+  IvoryCoast = "Ivory Coast",
+  Jamaica = "Jamaica",
+  Japan = "Japan",
+  Jordan = "Jordan",
+  Kazakhstan = "Kazakhstan",
+  Kenya = "Kenya",
+  Kiribati = "Kiribati",
+  KoreaNorth = "Korea, North",
+  KoreaSouth = "Korea, South",
+  Kosovo = "Kosovo",
+  Kuwait = "Kuwait",
+  Kyrgyzstan = "Kyrgyzstan",
+  Laos = "Laos",
+  Latvia = "Latvia",
+  Lebanon = "Lebanon",
+  Lesotho = "Lesotho",
+  Liberia = "Liberia",
+  Libya = "Libya",
+  Liechtenstein = "Liechtenstein",
+  Lithuania = "Lithuania",
+  Luxembourg = "Luxembourg",
+  Madagascar = "Madagascar",
+  Malawi = "Malawi",
+  Malaysia = "Malaysia",
+  Maldives = "Maldives",
+  Mali = "Mali",
+  MarshallIslands = "Marshall Islands",
+  Mauritania = "Mauritania",
+  Mauritius = "Mauritius",
+  Mexico = "Mexico",
+  Micronesia = "Micronesia",
+  Moldova = "Moldova",
+  Monaco = "Monaco",
+  Mongolia = "Mongolia",
+  Montenegro = "Montenegro",
+  Morocco = "Morocco",
+  Mozambique = "Mozambique",
+  Myanmar = "Myanmar (Burma)",
+  Namibia = "Namibia",
+  Nauru = "Nauru",
+  Nepal = "Nepal",
+  Netherlands = "Netherlands",
+  NewZealand = "New Zealand",
+  Nicaragua = "Nicaragua",
+  Niger = "Niger",
+  Nigeria = "Nigeria",
+  NorthMacedonia = "North Macedonia",
+  Norway = "Norway",
+  Oman = "Oman",
+  Pakistan = "Pakistan",
+  Palau = "Palau",
+  Panama = "Panama",
+  PapuaNewGuinea = "Papua New Guinea",
+  Paraguay = "Paraguay",
+  Peru = "Peru",
+  Philippines = "Philippines",
+  Poland = "Poland",
+  Portugal = "Portugal",
+  Qatar = "Qatar",
+  Romania = "Romania",
+  Russia = "Russia",
+  Rwanda = "Rwanda",
+  SaintKittsAndNevis = "Saint Kitts and Nevis",
+  SaintLucia = "Saint Lucia",
+  SaintVincentAndTheGrenadines = "Saint Vincent and the Grenadines",
+  Samoa = "Samoa",
+  SanMarino = "San Marino",
+  SaoTomeAndPrincipe = "Sao Tome and Principe",
+  SaudiArabia = "Saudi Arabia",
+  Senegal = "Senegal",
+  Serbia = "Serbia",
+  Seychelles = "Seychelles",
+  SierraLeone = "Sierra Leone",
+  Singapore = "Singapore",
+  Slovakia = "Slovakia",
+  Slovenia = "Slovenia",
+  SolomonIslands = "Solomon Islands",
+  Somalia = "Somalia",
+  SouthAfrica = "South Africa",
+  SouthSudan = "South Sudan",
+  Spain = "Spain",
+  SriLanka = "Sri Lanka",
+  Sudan = "Sudan",
+  Suriname = "Suriname",
+  Sweden = "Sweden",
+  Switzerland = "Switzerland",
+  Syria = "Syria",
+  Taiwan = "Taiwan",
+  Tajikistan = "Tajikistan",
+  Tanzania = "Tanzania",
+  Thailand = "Thailand",
+  Togo = "Togo",
+  Tonga = "Tonga",
+  TrinidadAndTobago = "Trinidad and Tobago",
+  Tunisia = "Tunisia",
+  Turkey = "Turkey",
+  Turkmenistan = "Turkmenistan",
+  Tuvalu = "Tuvalu",
+  Uganda = "Uganda",
+  Ukraine = "Ukraine",
+  UnitedArabEmirates = "United Arab Emirates",
+  UnitedKingdom = "United Kingdom",
+  UnitedStates = "United States",
+  Uruguay = "Uruguay",
+  Uzbekistan = "Uzbekistan",
+  Vanuatu = "Vanuatu",
+  VaticanCity = "Vatican City",
+  Venezuela = "Venezuela",
+  Vietnam = "Vietnam",
+  Yemen = "Yemen",
+  Zambia = "Zambia",
+  Zimbabwe = "Zimbabwe",
 }
 
 // Define Customer interface
@@ -65,13 +406,14 @@ interface Customer {
   customerSubCategory: string
   customerType: string
   customerSubType: string
-  customerBusinessSector?: string
-  customerNationality?: string
-  customerName?: string
-  contactPerson?: string
+  customerBusinessSector: string
+  customerNationality: string
+  customerName: string
+  contactPerson: string
   customerDepartment?: string
   customerDesignation?: string
-  telOffice?: string
+  tellDirect?: string 
+  telOffice? :string
   mobile1?: string
   mobile2?: string
   webAddress?: string
@@ -84,12 +426,13 @@ const formSchema = z.object({
   customerSubCategory: z.string().min(1, "Customer sub-category is required"),
   customerType: z.string().min(1, "Customer type is required"),
   customerSubType: z.string().min(1, "Customer sub-type is required"),
-  customerBusinessSector: z.string().optional(),
-  customerNationality: z.string().optional(),
-  customerName: z.string().optional(),
-  contactPerson: z.string().optional(),
+  customerBusinessSector: z.string().min(1, "Customer Business Sector  is required"),
+  customerNationality:z.string().min(1, "Customer Nationality is required"),
+  customerName: z.string().min(1, "Customer Name is required"),
+  contactPerson: z.string().min(1, "Contact Person Name is required"),
   customerDepartment: z.string().optional(),
   customerDesignation: z.string().optional(),
+  tellDirect: z.string().optional(), 
   telOffice: z.string().optional(),
   mobile1: z.string().optional(),
   mobile2: z.string().optional(),
@@ -118,6 +461,7 @@ const emptyFormValues: FormValues = {
   contactPerson: "",
   customerDepartment: "",
   customerDesignation: "",
+  tellDirect: "", 
   telOffice: "",
   mobile1: "",
   mobile2: "",
@@ -151,7 +495,8 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
         contactPerson: editRecord.contactPerson || "",
         customerDepartment: editRecord.customerDepartment || "",
         customerDesignation: editRecord.customerDesignation || "",
-        telOffice: editRecord.telOffice || "",
+        tellDirect: editRecord.tellDirect || "", 
+        telOffice : editRecord.telOffice || "",
         mobile1: editRecord.mobile1 || "",
         mobile2: editRecord.mobile2 || "",
         webAddress: editRecord.webAddress || "",
@@ -174,14 +519,12 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
   const handleCheckChangedFields = () => {
     const currentValues = form.getValues()
     const changedFields: Record<string, any> = {}
-
     Object.entries(currentValues).forEach(([key, value]) => {
       const editValue = editRecord?.[key as keyof typeof editRecord]
       if (value !== editValue) {
         changedFields[key] = value
       }
     })
-
     return changedFields
   }
 
@@ -190,7 +533,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
     try {
       if (isEditMode && editRecord) {
         const changedFields = handleCheckChangedFields()
-
         if (Object.keys(changedFields).length === 0) {
           toast.info("No changes detected")
         } else {
@@ -212,15 +554,13 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
             Authorization: `Bearer ${authData?.token}`,
           },
         })
-        console.log(response)
+        console.log('response added',response)
         toast.success("Customer record has been added successfully")
       }
-
       // Reset form after successful submission
       if (!isEditMode) {
         form.reset(emptyFormValues)
       }
-
       if (onRecordSaved) {
         onRecordSaved()
       }
@@ -276,7 +616,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="customerCategory"
@@ -301,7 +640,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="customerSubCategory"
@@ -326,7 +664,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="customerType"
@@ -350,8 +687,7 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                     <FormMessage />
                   </FormItem>
                 )}
-              />
-
+              />   
               <FormField
                 control={form.control}
                 name="customerSubType"
@@ -374,44 +710,58 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                     </Select>
                     <FormMessage />
                   </FormItem>
-                )}
+                )} 
+                
               />
-            </div>
-          </div>
-
-          {/* Optional Fields */}
-          <div className="p-4 border rounded-lg shadow-sm">
-            <h3 className="text-lg font-medium mb-4">Additional Information (Optional)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="customerBusinessSector"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Business Sector</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Real Estate, Technology" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select business sector" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-[200px]">
+                        {Object.values(customerBusinessSector).map((sector) => (
+                          <SelectItem key={sector} value={sector}>
+                            {sector}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="customerNationality"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nationality</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. UAE, Indian, British" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select nationality" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-[200px]">
+                        {Object.values(CustomerNationality).map((nationality) => (
+                          <SelectItem key={nationality} value={nationality}>
+                            {nationality}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
-                )}
-              />
-
-              <FormField
+                )} 
+                /> 
+                 <FormField
                 control={form.control}
                 name="customerName"
                 render={({ field }) => (
@@ -424,7 +774,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="contactPerson"
@@ -438,7 +787,15 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
+              
+            </div>
+          </div>
+          {/* Optional Fields */}
+          <div className="p-4 border rounded-lg shadow-sm">
+            <h3 className="text-lg font-medium mb-4">Additional Information (Optional)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+             
               <FormField
                 control={form.control}
                 name="customerDepartment"
@@ -452,7 +809,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="customerDesignation"
@@ -466,13 +822,25 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
+              <FormField
+                control={form.control}
+                name="tellDirect"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tell Direct</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. +971-4-1234567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              /> 
               <FormField
                 control={form.control}
                 name="telOffice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Office Phone</FormLabel>
+                    <FormLabel>Tell Office</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g. +971-4-1234567" {...field} />
                     </FormControl>
@@ -480,7 +848,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="mobile1"
@@ -494,7 +861,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="mobile2"
@@ -508,7 +874,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="webAddress"
@@ -522,7 +887,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="officeLocation"
@@ -538,7 +902,6 @@ export function AddCustomerModal({ setIsModalOpen, editRecord = null, onRecordSa
               />
             </div>
           </div>
-
           <DialogFooter>
             <Button
               type="button"

@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, User, UserPlus, Search, Trash2, Users } from "lucide-react"
+import { Loader2, User, UserPlus, Search, Trash2, Users, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,7 +36,7 @@ interface CustomerManagementModalProps {
   onClose: () => void
   token: string
   rowId: string | null
-  existingCustomerIds: string[]
+  existingCustomerIds: string[] // This prop is likely for initial state or external checks, but internal state `existingCustomers` is used for logic.
   previousCustomerIds?: string[]
   onCustomersUpdated: () => void
 }
@@ -45,36 +46,36 @@ export function CustomerManagementModal({
   onClose,
   rowId,
   token,
-  existingCustomerIds = [],
+  existingCustomerIds = [], // Keeping this prop for compatibility, but internal state is primary.
   previousCustomerIds = [],
   onCustomersUpdated,
 }: CustomerManagementModalProps) {
-  const [existingCustomers, setExistingCustomers] = useState<any[]>([])
-  const [allCustomers, setAllCustomers] = useState<any[]>([])
-  const [selectedCustomer, setSelectedCustomer] = useState<any | null>(null)
+  const [existingCustomers, setExistingCustomers] = useState<Customer[]>([])
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([])
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null)
   const [loading, setLoading] = useState(false)
   const [loadingExisting, setLoadingExisting] = useState(false)
-  const [loadingPrevious, setLoadingPrevious] = useState(false)
   const [adding, setAdding] = useState(false)
   const [removing, setRemoving] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [showAddSection, setShowAddSection] = useState(false)
 
-  // Fetch existing customer details, previous customers, and all customers when modal opens
+  // Fetch existing customer details and all customers when modal opens or relevant dependencies change
   useEffect(() => {
-    fetchExistingCustomers()
-    fetchAllCustomers()
-  }, [isOpen, rowId, showAddSection])
+    if (isOpen) {
+      fetchExistingCustomers()
+      fetchAllCustomers()
+    }
+  }, [isOpen, rowId, showAddSection, token]) // Added token to dependencies [^1]
 
   const fetchExistingCustomers = async () => {
     setLoadingExisting(true)
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/customerDetails/${rowId}`)
-      console.log("data", response.data)
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/customerDetails/${rowId}`,
+      )
       const { currentCustomers = [] } = response.data.data
       setExistingCustomers(currentCustomers)
-      // setPreviousCustomers(previousCustomers)
-      // optionally store previousCustomers too
     } catch (error) {
       console.error("Error fetching customer details:", error)
       toast.error("Failed to fetch customer details")
@@ -91,11 +92,8 @@ export function CustomerManagementModal({
           Authorization: `Bearer ${token}`,
         },
       })
-
       const data = await response.json()
-      if (data) {
-        setAllCustomers(data)
-      } else if (data) {
+      if (Array.isArray(data)) {
         setAllCustomers(data)
       } else {
         setAllCustomers([])
@@ -115,8 +113,8 @@ export function CustomerManagementModal({
       return
     }
 
-    // Check if customer is already added
-    const isAlreadyAdded = existingCustomerIds.includes(selectedCustomer._id)
+    // Check if customer is already added using the current state
+    const isAlreadyAdded = existingCustomers.some((cust) => cust._id === selectedCustomer._id)
     if (isAlreadyAdded) {
       toast.error("This customer is already added to this property")
       return
@@ -124,27 +122,34 @@ export function CustomerManagementModal({
 
     setAdding(true)
     try {
-      // Create updated customers array with IDs
-      const updatedCustomerIds = [...existingCustomerIds, selectedCustomer._id]
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      // Get current existing customer IDs from state, then add the new one
+      const currentExistingIds = existingCustomers.map((cust) => cust._id)
+      const updatedCustomerIds = [...currentExistingIds, selectedCustomer._id]
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            customers: updatedCustomerIds,
+          }),
         },
-        body: JSON.stringify({
-          customers: updatedCustomerIds,
-        }),
-      })
+      )
 
       if (response.ok) {
         toast.success("Customer added successfully!")
-        onCustomersUpdated() 
-
+        onCustomersUpdated() // Notify parent component of update
         setSelectedCustomer(null)
-        setShowAddSection(false) 
-        fetchExistingCustomers()
-        // Refresh customer data
+        setSearchTerm("") // Clear search term after adding
+        setShowAddSection(false) // Hide add section after adding
+        fetchExistingCustomers() // Refresh existing customers list
+        fetchAllCustomers() // Refresh all customers list to update filtered list
+      } else {
+        toast.error("Failed to add customer. Server error.")
       }
     } catch (error) {
       console.error("Error adding customer:", error)
@@ -158,25 +163,30 @@ export function CustomerManagementModal({
     if (!rowId) return
     setRemoving(customerId)
     try {
-      const updatedCustomerIds = existingCustomerIds.filter((id) => id !== customerId)
+      // Filter existingCustomers state to get updated IDs
+      const updatedCustomerIds = existingCustomers.filter((cust) => cust._id !== customerId).map((cust) => cust._id)
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            customers: updatedCustomerIds,
+          }),
         },
-        body: JSON.stringify({
-          customers: updatedCustomerIds,
-        }),
-      })
+      )
 
       if (response.ok) {
         toast.success("Customer removed")
-        onClose()
-        onCustomersUpdated() 
-        // Refresh customer data
-        fetchExistingCustomers()
+        onCustomersUpdated() // Notify parent component of update
+        fetchExistingCustomers() // Refresh existing customers list
+        fetchAllCustomers() // Refresh all customers list to update filtered list
+      } else {
+        toast.error("Failed to remove customer. Server error.")
       }
     } catch (error) {
       console.error("Error removing customer:", error)
@@ -194,19 +204,17 @@ export function CustomerManagementModal({
   }
 
   // Filter customers based on search term (exclude already added customers and previous customers)
-let filteredCustomers: typeof allCustomers = [];
-
-if (allCustomers && allCustomers.length > 0) {
-  filteredCustomers = allCustomers.filter(
-    (customer) =>
-      !existingCustomerIds.includes(customer._id) &&
-      (
-        customer.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.customerType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-  );
-}
+  let filteredCustomers: Customer[] = []
+  if (allCustomers && allCustomers.length > 0) {
+    filteredCustomers = allCustomers.filter(
+      (customer) =>
+        !existingCustomers.some((ec) => ec._id === customer._id) && // Exclude customers already in the current list
+        !previousCustomerIds.includes(customer._id) && // Exclude previous customers (if applicable)
+        (customer.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          customer.customerType?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          customer.emailAddress?.toLowerCase().includes(searchTerm.toLowerCase())),
+    )
+  }
 
   const getCustomerTypeColor = (type: string) => {
     const colors = {
@@ -220,7 +228,7 @@ if (allCustomers && allCustomers.length > 0) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[96vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[800px] max-h-[96vh] overflow-hidden flex flex-col p-6">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -234,8 +242,7 @@ if (allCustomers && allCustomers.length > 0) {
             </div>
           </div>
         </DialogHeader>
-
-        <div className="flex-1 space-y-4 overflow-auto">
+        <div className="flex-1 space-y-6 overflow-auto py-4">
           {/* Current Customers Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -245,7 +252,6 @@ if (allCustomers && allCustomers.length > 0) {
                 {showAddSection ? "Cancel" : "Add Customer"}
               </Button>
             </div>
-
             {loadingExisting ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -262,7 +268,7 @@ if (allCustomers && allCustomers.length > 0) {
                   {existingCustomers.map((customer) => (
                     <Card key={customer._id} className="border-l-4 border-l-green-500">
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-3">
                               <div className="p-1.5 bg-green-100 dark:bg-green-900 rounded-full">
@@ -295,19 +301,33 @@ if (allCustomers && allCustomers.length > 0) {
                               </div>
                             )}
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
-                            onClick={() => handleRemoveCustomer(customer._id)}
-                            disabled={removing === customer._id}
-                          >
-                            {removing === customer._id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+    e.stopPropagation(); // Prevent card selection
+    window.open(`/customer-details/${customer._id}`, "_blank");
+  }}
+  aria-label={`View details for ${customer.customerName}`}
+>
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
+                              onClick={() => handleRemoveCustomer(customer._id)}
+                              disabled={removing === customer._id}
+                              aria-label={`Remove ${customer.customerName}`}
+                            >
+                              {removing === customer._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -316,16 +336,12 @@ if (allCustomers && allCustomers.length > 0) {
               </ScrollArea>
             )}
           </div>
-
-          {/* Previous Customers Section */}
-
           {/* Add Customer Section */}
           {showAddSection && (
             <>
               <Separator />
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-blue-600 dark:text-blue-400">Add New Customer</Label>
-
                 {/* Search Input */}
                 <div className="space-y-2">
                   <Label htmlFor="search" className="text-sm font-medium">
@@ -342,7 +358,6 @@ if (allCustomers && allCustomers.length > 0) {
                     />
                   </div>
                 </div>
-
                 {/* Customer Selection */}
                 <div className="space-y-3">
                   {loading ? (
@@ -359,7 +374,7 @@ if (allCustomers && allCustomers.length > 0) {
                     </div>
                   ) : (
                     <ScrollArea className="h-[350px] pr-4">
-                      <div className="space-y-2">
+                      <div className="space-y-2 p-4">
                         {filteredCustomers.map((customer) => (
                           <Card
                             key={customer._id}
@@ -371,7 +386,7 @@ if (allCustomers && allCustomers.length > 0) {
                             onClick={() => setSelectedCustomer(customer)}
                           >
                             <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between gap-4">
                                 <div className="flex-1 space-y-2">
                                   <div className="flex items-center gap-3">
                                     <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-full">
@@ -404,11 +419,24 @@ if (allCustomers && allCustomers.length > 0) {
                                     </div>
                                   )}
                                 </div>
-                                {selectedCustomer?._id === customer._id && (
-                                  <div className="ml-2 p-1 bg-blue-500 rounded-full">
-                                    <div className="h-2 w-2 bg-white rounded-full" />
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                   onClick={(e) => {
+    e.stopPropagation(); // Prevent card selection
+    window.open(`/customer-details/${customer._id}`, "_blank");
+  }}
+  aria-label={`View details for ${customer.customerName}`}
+>
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                  {selectedCustomer?._id === customer._id && (
+                                    <div className="ml-2 p-1 bg-blue-500 rounded-full">
+                                      <div className="h-2 w-2 bg-white rounded-full" />
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -417,7 +445,6 @@ if (allCustomers && allCustomers.length > 0) {
                     </ScrollArea>
                   )}
                 </div>
-
                 {/* Selected Customer Preview */}
                 {selectedCustomer && (
                   <div className="space-y-2">
@@ -445,7 +472,6 @@ if (allCustomers && allCustomers.length > 0) {
             </>
           )}
         </div>
-
         <DialogFooter className="gap-2 pt-4">
           <Button variant="outline" onClick={handleClose} disabled={adding}>
             Close

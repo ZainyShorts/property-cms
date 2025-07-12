@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, User, UserPlus, Search, Trash2, Users } from "lucide-react"
+import { Loader2, User, UserPlus, Search, Trash2, Users , ExternalLink} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -216,8 +216,8 @@ if (allCustomers && allCustomers.length > 0) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[96vh] overflow-hidden flex flex-col">
+     <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[800px] max-h-[96vh] overflow-hidden flex flex-col p-6">
         <DialogHeader className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -231,8 +231,7 @@ if (allCustomers && allCustomers.length > 0) {
             </div>
           </div>
         </DialogHeader>
-
-        <div className="flex-1 space-y-4 overflow-auto">
+        <div className="flex-1 space-y-6 overflow-auto py-4">
           {/* Current Customers Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -242,7 +241,6 @@ if (allCustomers && allCustomers.length > 0) {
                 {showAddSection ? "Cancel" : "Add Customer"}
               </Button>
             </div>
-
             {loadingExisting ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -259,7 +257,7 @@ if (allCustomers && allCustomers.length > 0) {
                   {existingCustomers.map((customer) => (
                     <Card key={customer._id} className="border-l-4 border-l-green-500">
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-4">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-3">
                               <div className="p-1.5 bg-green-100 dark:bg-green-900 rounded-full">
@@ -292,19 +290,33 @@ if (allCustomers && allCustomers.length > 0) {
                               </div>
                             )}
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
-                            onClick={() => handleRemoveCustomer(customer._id)}
-                            disabled={removing === customer._id}
-                          >
-                            {removing === customer._id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4" />
-                            )}
-                          </Button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+    e.stopPropagation(); // Prevent card selection
+    window.open(`/customer-details/${customer._id}`, "_blank");
+  }}
+  aria-label={`View details for ${customer.customerName}`}
+>
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
+                              onClick={() => handleRemoveCustomer(customer._id)}
+                              disabled={removing === customer._id}
+                              aria-label={`Remove ${customer.customerName}`}
+                            >
+                              {removing === customer._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -313,16 +325,12 @@ if (allCustomers && allCustomers.length > 0) {
               </ScrollArea>
             )}
           </div>
-
-          {/* Previous Customers Section */}
-
           {/* Add Customer Section */}
           {showAddSection && (
             <>
               <Separator />
               <div className="space-y-4">
                 <Label className="text-sm font-medium text-blue-600 dark:text-blue-400">Add New Customer</Label>
-
                 {/* Search Input */}
                 <div className="space-y-2">
                   <Label htmlFor="search" className="text-sm font-medium">
@@ -339,7 +347,6 @@ if (allCustomers && allCustomers.length > 0) {
                     />
                   </div>
                 </div>
-
                 {/* Customer Selection */}
                 <div className="space-y-3">
                   {loading ? (
@@ -356,19 +363,19 @@ if (allCustomers && allCustomers.length > 0) {
                     </div>
                   ) : (
                     <ScrollArea className="h-[350px] pr-4">
-                      <div className="space-y-2">
+                      <div className="space-y-2 p-4">
                         {filteredCustomers.map((customer) => (
                           <Card
                             key={customer._id}
-                            className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            className={`cursor-pointer p-2 transition-all duration-200 hover:shadow-md ${
                               selectedCustomer?._id === customer._id
                                 ? "ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-950"
-                                : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                                : "hover:bg-gray-100 dark:hover:bg-gray-800"
                             }`}
                             onClick={() => setSelectedCustomer(customer)}
                           >
                             <CardContent className="p-4">
-                              <div className="flex items-center justify-between">
+                              <div className="flex items-center justify-between gap-4">
                                 <div className="flex-1 space-y-2">
                                   <div className="flex items-center gap-3">
                                     <div className="p-1.5 bg-gray-100 dark:bg-gray-800 rounded-full">
@@ -401,11 +408,24 @@ if (allCustomers && allCustomers.length > 0) {
                                     </div>
                                   )}
                                 </div>
-                                {selectedCustomer?._id === customer._id && (
-                                  <div className="ml-2 p-1 bg-blue-500 rounded-full">
-                                    <div className="h-2 w-2 bg-white rounded-full" />
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                   onClick={(e) => {
+    e.stopPropagation(); // Prevent card selection
+    window.open(`/customer-details/${customer._id}`, "_blank");
+  }}
+  aria-label={`View details for ${customer.customerName}`}
+>
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                  {selectedCustomer?._id === customer._id && (
+                                    <div className="ml-2 p-1 bg-blue-500 rounded-full">
+                                      <div className="h-2 w-2 bg-white rounded-full" />
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </CardContent>
                           </Card>
@@ -414,7 +434,6 @@ if (allCustomers && allCustomers.length > 0) {
                     </ScrollArea>
                   )}
                 </div>
-
                 {/* Selected Customer Preview */}
                 {selectedCustomer && (
                   <div className="space-y-2">
@@ -442,7 +461,6 @@ if (allCustomers && allCustomers.length > 0) {
             </>
           )}
         </div>
-
         <DialogFooter className="gap-2 pt-4">
           <Button variant="outline" onClick={handleClose} disabled={adding}>
             Close
