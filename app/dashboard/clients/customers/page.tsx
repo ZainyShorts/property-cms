@@ -1,4 +1,5 @@
 "use client"
+
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import type React from "react"
 import { useState, useEffect } from "react"
@@ -36,6 +37,7 @@ import { CustomerFilterSidebar } from "./filter-sidebar/customer-filter-sidebar"
 import { DeleteConfirmationModal } from "./delete-confirmation-modal"
 import useSWR from "swr"
 import { ImportCustomersModal } from "./import-modal/import-modal"
+import { AssignedPropertiesModal } from "./assigned-properties-modal" // Import the new modal
 
 interface ApiResponse {
   message: string
@@ -87,6 +89,7 @@ export interface Customer {
   officeLocation: string
   createdAt: string
   updatedAt: string
+  assigned?: Array<{ id: string; name: string; propertyName: string }> // Add assigned property
 }
 
 const tableHeaders = [
@@ -109,8 +112,8 @@ const tableHeaders = [
   { key: "mobile1", label: "MOBILE 1" },
   { key: "mobile2", label: "MOBILE 2" },
   { key: "webAddress", label: "WEB ADDRESS" },
-  { key: "officeLocation", label: "OFFICE LOCATION" },  
-    { key: "view", label: "View" },
+  { key: "officeLocation", label: "OFFICE LOCATION" },
+  { key: "view", label: "View" },
   { key: "edit", label: "EDIT" },
   { key: "delete", label: "DELETE" },
 ]
@@ -141,6 +144,7 @@ const customerContactDetails = [
 ]
 
 const actions = ["view", "edit", "delete"]
+
 const fetcher = async <T,>(url: string): Promise<T> => {
   const res = await fetch(url)
   if (!res.ok) {
@@ -218,6 +222,12 @@ export default function CustomerPage() {
     startDate: undefined,
     endDate: undefined,
   })
+
+  // New state for assigned properties modal
+  const [isAssignedModalOpen, setIsAssignedModalOpen] = useState(false)
+  const [assignedPropertiesToShow, setAssignedPropertiesToShow] = useState<
+    Array<{ id: string; name: string; propertyName: string }>
+  >([])
 
   const { data, error } = useSWR<any>("/api/me", fetcher)
 
@@ -311,6 +321,7 @@ export default function CustomerPage() {
       params.append("page", String(targetPage))
       params.append("sortOrder", String(sortOrder))
       params.append("limit", String(limit))
+
       if (!reset) {
         // Apply sidebar filters
         buildFilterParams(params, filters)
@@ -457,21 +468,44 @@ export default function CustomerPage() {
     setIsModalOpen(true)
   }
 
-  const handleDeleteClick = (recordId: string) => {
-    // Check if user is admin 
-   if (data?.role !== "admin" && data?.role !== "manager") {
-  toast.error("Permission not granted. Only administrators can delete records.");
-  return;
-}
+  const handleDeleteClick = async (recordId: string) => {
+    // Check if user is admin
+    if (data?.role !== "admin" && data?.role !== "manager") {
+      toast.error("Permission not granted. Only administrators can delete records.")
+      return
+    }
 
-    // If admin, show confirmation modal
-    setRecordToDelete(recordId)
-    setIsDeleteModalOpen(true)
+    // setIsDeleting(true) 
+    try {
+      const response = await axios.get<{ data: Customer }>(
+        `${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/${recordId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${data?.token}`,
+          },
+        },
+      )
+      const customerData = response.data.data
+
+      if (customerData.assigned && customerData.assigned.length > 0) {
+        // If assigned array is not empty, show the assigned properties modal
+        setAssignedPropertiesToShow(customerData.assigned)
+        setIsAssignedModalOpen(true)
+      } else {
+        // If assigned array is empty, proceed with delete confirmation
+        setRecordToDelete(recordId)
+        setIsDeleteModalOpen(true)
+      }
+    } catch (error) {
+      console.error("Error fetching customer details for deletion:", error)
+      toast.error("Failed to retrieve customer details. Please try again.")
+    } finally {
+      setIsDeleting(false) // Reset loading state
+    }
   }
 
   const handleDeleteConfirm = async () => {
     if (!recordToDelete) return
-
     setIsDeleting(true)
     try {
       await axios.delete(`${process.env.NEXT_PUBLIC_CMS_SERVER}/customer/${recordToDelete}`, {
@@ -479,12 +513,9 @@ export default function CustomerPage() {
           Authorization: `Bearer ${data?.token}`,
         },
       })
-
       toast.success("Record deleted successfully")
-
       // Refresh the records
       await fetchRecords()
-
       // Close the modal and reset state
       setIsDeleteModalOpen(false)
       setRecordToDelete(null)
@@ -559,12 +590,12 @@ export default function CustomerPage() {
         [columnKey]: !prev[columnKey],
       }))
     }
-  } 
- const handleViewDetails = (customerId: string) => {
-  const url = `/customer-details/${customerId}`;
-  window.open(url, '_blank'); // opens in a new tab
-};
+  }
 
+  const handleViewDetails = (customerId: string) => {
+    const url = `/customer-details/${customerId}`
+    window.open(url, "_blank") // opens in a new tab
+  }
 
   const renderCellContent = (record: Customer, key: string, index: number) => {
     switch (key) {
@@ -617,8 +648,7 @@ export default function CustomerPage() {
           </a>
         ) : (
           "-"
-        ) 
-        
+        )
       case "edit":
         return (
           <Button
@@ -630,20 +660,6 @@ export default function CustomerPage() {
             <Edit className="h-4 w-4 mr-1" />
             Edit
           </Button>
-        ) 
-        case "view":
-        return (
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700 bg-transparent"
-              onClick={() => handleViewDetails(record._id)}
-            >
-              <Eye className="h-4 w-4 mr-1" />
-              View
-            </Button>
-          </div>
         )
       case "delete":
         return (
@@ -652,9 +668,10 @@ export default function CustomerPage() {
             size="sm"
             className="h-8 px-2 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 bg-transparent"
             onClick={() => handleDeleteClick(record._id)}
+            disabled={isDeleting} // Disable button while fetching assigned data
           >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
+            {isDeleting ? "Checking..." : <Trash2 className="h-4 w-4 mr-1" />}
+            {isDeleting ? "" : "Delete"}
           </Button>
         )
       default:
@@ -732,6 +749,13 @@ export default function CustomerPage() {
         onConfirm={handleDeleteConfirm}
       />
 
+      {/* Assigned Properties Modal */}
+      <AssignedPropertiesModal
+        isOpen={isAssignedModalOpen}
+        onClose={() => setIsAssignedModalOpen(false)}
+        assignedProperties={assignedPropertiesToShow}
+      />
+
       {/* Filter Sidebar */}
       <CustomerFilterSidebar
         open={isFilterSidebarOpen}
@@ -776,7 +800,6 @@ export default function CustomerPage() {
           </div>
         </div>
       </div>
-
       <div className="p-4 space-y-4">
         {/* Filters */}
         <div className="flex flex-wrap gap-2">
@@ -843,7 +866,6 @@ export default function CustomerPage() {
             </Button>
           </div>
         </div>
-
         <Card>
           <CardContent className="p-0">
             <div className="flex w-full items-center mb-2 mt-2">
@@ -992,7 +1014,7 @@ export default function CustomerPage() {
                             header.key === "mobile1" && "w-[120px]",
                             header.key === "mobile2" && "w-[120px]",
                             header.key === "webAddress" && "w-[200px]",
-                            header.key === "officeLocation" && "w-[200px]", 
+                            header.key === "officeLocation" && "w-[200px]",
                             header.key === "view" && "w-[120px]",
                             header.key === "edit" && "w-[100px]",
                             header.key === "delete" && "w-[100px]",
@@ -1119,7 +1141,6 @@ export default function CustomerPage() {
           </CardContent>
         </Card>
       </div>
-
       {/* Import Modal */}
       <ImportCustomersModal
         isOpen={isImportModalOpen}

@@ -108,94 +108,83 @@ export function CustomerManagementModal({
   }
 
   const handleAddCustomer = async () => {
-    if (!selectedCustomer || !rowId) {
-      toast.error("Please select a customer")
-      return
-    }
-
-    // Check if customer is already added using the current state
-    const isAlreadyAdded = existingCustomers.some((cust) => cust._id === selectedCustomer._id)
-    if (isAlreadyAdded) {
-      toast.error("This customer is already added to this property")
-      return
-    }
-
-    setAdding(true)
-    try {
-      // Get current existing customer IDs from state, then add the new one
-      const currentExistingIds = existingCustomers.map((cust) => cust._id)
-      const updatedCustomerIds = [...currentExistingIds, selectedCustomer._id]
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            customers: updatedCustomerIds,
-          }),
-        },
-      )
-
-      if (response.ok) {
-        toast.success("Customer added successfully!")
-        onCustomersUpdated() // Notify parent component of update
-        setSelectedCustomer(null) 
-        onClose()
-        setSearchTerm("") // Clear search term after adding
-        setShowAddSection(false) // Hide add section after adding
-        fetchExistingCustomers() // Refresh existing customers list
-        fetchAllCustomers() // Refresh all customers list to update filtered list
-      } else {
-        toast.error("Failed to add customer. Server error.")
-      }
-    } catch (error) {
-      console.error("Error adding customer:", error)
-      toast.error("Failed to add customer. Please try again.")
-    } finally {
-      setAdding(false)
-    }
+  if (!selectedCustomer || !rowId) {
+    toast.error("Please select a customer");
+    return;
   }
+
+  const isAlreadyAdded = existingCustomers.some((cust) => cust._id === selectedCustomer._id);
+  if (isAlreadyAdded) {
+    toast.error("This customer is already added to this property");
+    return;
+  }
+
+  setAdding(true);
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${rowId}/customers/${selectedCustomer._id}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      toast.success("Customer added successfully!");
+      onCustomersUpdated();
+      setSelectedCustomer(null);
+      onClose();
+      setSearchTerm("");
+      setShowAddSection(false);
+      fetchExistingCustomers();
+      fetchAllCustomers();
+    } else {
+      toast.error("Failed to add customer. Server error.");
+    }
+  } catch (error) {
+    console.error("Error adding customer:", error);
+    toast.error("Failed to add customer. Please try again.");
+  } finally {
+    setAdding(false);
+  }
+};
+
 
   const handleRemoveCustomer = async (customerId: string) => {
-    if (!rowId) return
-    setRemoving(customerId)
-    try {
-      // Filter existingCustomers state to get updated IDs
-      const updatedCustomerIds = existingCustomers.filter((cust) => cust._id !== customerId).map((cust) => cust._id)
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/updateSingleRecord/${rowId}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            customers: updatedCustomerIds,
-          }),
+  if (!rowId) return;
+  setRemoving(customerId);
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_CMS_SERVER}/masterDevelopment/${rowId}/customers/${customerId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      )
-
-      if (response.ok) {
-        toast.success("Customer removed")
-        onCustomersUpdated() // Notify parent component of update
-        fetchExistingCustomers() // Refresh existing customers list
-        fetchAllCustomers() // Refresh all customers list to update filtered list
-      } else {
-        toast.error("Failed to remove customer. Server error.")
       }
-    } catch (error) {
-      console.error("Error removing customer:", error)
-      toast.error("Failed to remove customer. Please try again.")
-    } finally {
-      setRemoving(null)
+    );
+
+    if (response.ok) {
+      toast.success("Customer removed");
+      onCustomersUpdated();
+      fetchExistingCustomers(); 
+      
+      fetchAllCustomers();
+      onClose()
+    } else {
+      toast.error("Failed to remove customer. Server error.");
     }
+  } catch (error) {
+    console.error("Error removing customer:", error);
+    toast.error("Failed to remove customer. Please try again.");
+  } finally {
+    setRemoving(null);
   }
+};
+
 
   const handleClose = () => {
     setSelectedCustomer(null)

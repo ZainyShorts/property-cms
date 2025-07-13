@@ -110,81 +110,82 @@ export function CustomerManagementModal({
   }
 
   const handleAddCustomer = async () => {
-    if (!selectedCustomer || !rowId) {
-      toast.error("Please select a customer")
-      return
-    }
+   if (!selectedCustomer || !rowId) {
+     toast.error("Please select a customer");
+     return;
+   }
+ 
+   const isAlreadyAdded = existingCustomers.some((cust) => cust._id === selectedCustomer._id);
+   if (isAlreadyAdded) {
+     toast.error("This customer is already added to this property");
+     return;
+   }
+ 
+   setAdding(true);
+   try {
+     const response = await fetch(
+       `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${rowId}/customers/${selectedCustomer._id}`,
+       {
+         method: "POST",
+         headers: {
+           "Content-Type": "application/json",
+           Authorization: `Bearer ${token}`,
+         },
+       }
+     );
+ 
+     if (response.ok) {
+       toast.success("Customer added successfully!");
+       onCustomersUpdated();
+       setSelectedCustomer(null);
+       onClose();
+       setSearchTerm("");
+       setShowAddSection(false);
+       fetchExistingCustomers();
+       fetchAllCustomers();
+     } else {
+       toast.error("Failed to add customer. Server error.");
+     }
+   } catch (error) {
+     console.error("Error adding customer:", error);
+     toast.error("Failed to add customer. Please try again.");
+   } finally {
+     setAdding(false);
+   }
+ };
+ 
+ 
+   const handleRemoveCustomer = async (customerId: string) => {
+   if (!rowId) return;
+   setRemoving(customerId);
+   try {
+     const response = await fetch(
+       `${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${rowId}/customers/${customerId}`,
+       {
+         method: "DELETE",
+         headers: {
+           Authorization: `Bearer ${token}`,
+         },
+       }
+     );
+ 
+     if (response.ok) {
+       toast.success("Customer removed");
+       onCustomersUpdated();
+       fetchExistingCustomers();
+       fetchAllCustomers(); 
+             onClose()
 
-    // Check if customer is already added
-    const isAlreadyAdded = existingCustomerIds.includes(selectedCustomer._id)
-    if (isAlreadyAdded) {
-      toast.error("This customer is already added to this property")
-      return
-    }
-
-    setAdding(true)
-    try {
-      // Create updated customers array with IDs
-      const updatedCustomerIds = [...existingCustomerIds, selectedCustomer._id]
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${rowId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          customers: updatedCustomerIds,
-        }),
-      })
-
-      if (response.ok) {
-        toast.success("Customer added successfully!")
-        onCustomersUpdated() 
-                onClose()
-
-        setSelectedCustomer(null)
-        setShowAddSection(false)
-        // Refresh customer data
-        fetchExistingCustomers()
-      }
-    } catch (error) {
-      console.error("Error adding customer:", error)
-      toast.error("Failed to add customer. Please try again.")
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  const handleRemoveCustomer = async (customerId: string) => {
-    if (!rowId) return
-    setRemoving(customerId)
-    try {
-      const updatedCustomerIds = existingCustomerIds.filter((id) => id !== customerId)
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_CMS_SERVER}/project/${rowId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          customers: updatedCustomerIds,
-        }),
-      })
-
-      if (response.ok) {
-        toast.success("Customer moved to previous customers!")
-        onCustomersUpdated()
-        // Refresh customer data
-        fetchExistingCustomers()
-      }
-    } catch (error) {
-      console.error("Error removing customer:", error)
-      toast.error("Failed to remove customer. Please try again.")
-    } finally {
-      setRemoving(null)
-    }
-  }
+     } else {
+       toast.error("Failed to remove customer. Server error.");
+     }
+   } catch (error) {
+     console.error("Error removing customer:", error);
+     toast.error("Failed to remove customer. Please try again.");
+   } finally {
+     setRemoving(null);
+   }
+ };
 
   const handleClose = () => {
     setSelectedCustomer(null)
